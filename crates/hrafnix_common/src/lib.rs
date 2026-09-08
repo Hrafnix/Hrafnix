@@ -4,3 +4,5 @@
 pub mod math;
 /// Signal and physical connection types.
 pub mod port;
+/// Quarter-turn rotation values.
+pub mod rotation;
