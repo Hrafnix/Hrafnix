@@ -1,6 +1,5 @@
 use crate::background_decoration::data::BackgroundDecoration;
 use crate::background_decoration::reader::v1::BackgroundDecorationDocument;
-use crate::common::{deserialize_object, read_document};
 use crate::component::ROOT;
 use crate::component::data::ComponentFile;
 use crate::foreground_decoration::data::ForegroundDecoration;
@@ -20,7 +19,6 @@ use serde::Deserialize;
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
 struct ComponentDocument {
     /// Descriptive information about the component as an object with named fields.
-    #[serde(deserialize_with = "deserialize_object")]
     metadata: MetadataDocument,
     /// Background decorations in drawing order; absent in older files.
     #[serde(default)]
