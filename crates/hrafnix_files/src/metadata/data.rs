@@ -1,12 +1,14 @@
+use hrafnix_shareable_string::ShareableString;
+
 /// Descriptive information shared by model and component files.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct Metadata {
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MetadataFile {
     /// Name shown to users.
-    pub display_name: String,
+    pub display_name: ShareableString,
     /// Free-form description.
-    pub description: String,
+    pub description: ShareableString,
     /// Author of the file.
-    pub author: String,
+    pub author: ShareableString,
     /// Major part of the minimum Hrafnix version required to open the file.
     pub minimum_version_major: u16,
     /// Minor part of the minimum Hrafnix version required to open the file.

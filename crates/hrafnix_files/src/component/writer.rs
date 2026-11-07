@@ -1,56 +1,31 @@
-use crate::common::write_json_file;
-use crate::component::ROOT;
 use crate::component::data::ComponentFile;
-use crate::metadata::writer::MetadataDocument;
-use camino::Utf8Path;
-use hrafnix_message::message::Message;
+use crate::metadata::writer::MetadataWriter;
 use serde::Serialize;
 
-/// The current JSON representation of the `component` entry used to write a
-/// [`ComponentFile`] to disk.
-///
-/// The file version is emitted beside the entry at the top level by [`write_json_file`].
+/// The current component file envelope.
 #[derive(Debug, Serialize)]
-struct ComponentDocument<'a> {
-    /// Descriptive information about the component.
-    metadata: MetadataDocument<'a>,
+#[serde(rename_all = "kebab-case")]
+pub(crate) struct ComponentWriter {
+    /// Version tag identifying the serialized schema.
+    file_version: String,
+    /// Component contents under the named root entry.
+    component: ComponentDataWriter,
 }
 
-impl<'a> From<&'a ComponentFile> for ComponentDocument<'a> {
-    fn from(component: &'a ComponentFile) -> Self {
+/// The current JSON representation of component contents.
+#[derive(Debug, Serialize)]
+struct ComponentDataWriter {
+    /// Descriptive information about the component.
+    metadata: MetadataWriter,
+}
+
+impl From<ComponentFile> for ComponentWriter {
+    fn from(component: ComponentFile) -> Self {
         Self {
-            metadata: MetadataDocument::from(&component.metadata),
+            file_version: "1".to_owned(),
+            component: ComponentDataWriter {
+                metadata: MetadataWriter::from(&component.metadata),
+            },
         }
     }
-}
-
-/// Serializes a component as UTF-8 JSON, atomically creating or replacing the file at `path`.
-///
-/// The document is written to a temporary file beside the destination and renamed over it,
-/// so failures before replacement leave an existing file untouched. Parent directories
-/// must already exist. On Unix, the parent directory is synced after replacement.
-///
-/// # Errors
-///
-/// Returns a localized error if serialization fails, the complete serialized file exceeds
-/// [`MAX_FILE_SIZE`](crate::common::MAX_FILE_SIZE), the file cannot be created or written,
-/// or an existing file at `path` is read-only.
-/// A directory-sync error explicitly reports that the file has already been replaced,
-/// but persistence across a crash could not be confirmed.
-///
-/// # Examples
-///
-/// ```no_run
-/// use camino::Utf8PathBuf;
-/// use hrafnix_files::component::{reader::read_component_file, writer::write_component_file};
-///
-/// # fn main() -> Result<(), hrafnix_message::message::Message> {
-/// let path = Utf8PathBuf::from("component.hxc");
-/// let component = read_component_file(&path)?;
-/// write_component_file(&path, &component)?;
-/// # Ok(())
-/// # }
-/// ```
-pub fn write_component_file(path: &Utf8Path, component: &ComponentFile) -> Result<(), Message> {
-    write_json_file(path, ROOT, &ComponentDocument::from(component))
 }

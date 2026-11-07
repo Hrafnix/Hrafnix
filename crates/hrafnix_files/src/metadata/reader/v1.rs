@@ -1,4 +1,4 @@
-use crate::metadata::data::Metadata;
+use crate::metadata::data::MetadataFile;
 use serde::Deserialize;
 
 /// The version 1 JSON representation of the `metadata` entry, separate from the
@@ -8,7 +8,7 @@ use serde::Deserialize;
 /// dropped when the file is written back.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
-pub(crate) struct MetadataDocument {
+pub(crate) struct MetadataReaderV1 {
     /// Name shown to users.
     display_name: String,
     /// Free-form description.
@@ -21,14 +21,14 @@ pub(crate) struct MetadataDocument {
     minimum_version_minor: u16,
 }
 
-impl From<MetadataDocument> for Metadata {
-    fn from(document: MetadataDocument) -> Self {
+impl From<MetadataReaderV1> for MetadataFile {
+    fn from(metadata: MetadataReaderV1) -> Self {
         Self {
-            display_name: document.display_name,
-            description: document.description,
-            author: document.author,
-            minimum_version_major: document.minimum_version_major,
-            minimum_version_minor: document.minimum_version_minor,
+            display_name: metadata.display_name.into(),
+            description: metadata.description.into(),
+            author: metadata.author.into(),
+            minimum_version_major: metadata.minimum_version_major,
+            minimum_version_minor: metadata.minimum_version_minor,
         }
     }
 }

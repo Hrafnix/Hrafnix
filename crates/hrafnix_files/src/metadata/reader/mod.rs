@@ -1,2 +1,2 @@
-/// Version 1 JSON representation of metadata.
+/// Version 1 metadata deserialization.
 pub(crate) mod v1;

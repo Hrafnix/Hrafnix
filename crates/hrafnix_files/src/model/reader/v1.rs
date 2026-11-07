@@ -1,34 +1,23 @@
-use crate::common::{deserialize_object, read_document};
-use crate::metadata::reader::v1::MetadataDocument;
-use crate::model::ROOT;
+use crate::metadata::reader::v1::MetadataReaderV1;
 use crate::model::data::ModelFile;
-use camino::Utf8Path;
-use hrafnix_message::message::Message;
 use serde::Deserialize;
 
-/// The version 1 JSON representation of the `model` entry, separate from the
+/// The version 1 JSON representation of a model, separate from the
 /// application's model data.
 ///
-/// The file version lives beside the entry at the top level, which [`read_document`]
-/// handles. Unknown fields are rejected: anything silently ignored here would be
-/// dropped when the file is written back, so unexpected content is an error instead.
+/// Unknown fields are rejected so unexpected content is an error instead of
+/// being silently dropped.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ModelDocument {
-    /// Descriptive information about the model as an object with named fields.
-    #[serde(deserialize_with = "deserialize_object")]
-    metadata: MetadataDocument,
+pub(crate) struct ModelReaderV1 {
+    /// Descriptive information about the model.
+    metadata: MetadataReaderV1,
 }
 
-impl From<ModelDocument> for ModelFile {
-    fn from(document: ModelDocument) -> Self {
+impl From<ModelReaderV1> for ModelFile {
+    fn from(model: ModelReaderV1) -> Self {
         Self {
-            metadata: document.metadata.into(),
+            metadata: model.metadata.into(),
         }
     }
-}
-
-/// Deserializes version 1 model data after the version has been checked.
-pub(super) fn read_model(source: &str, path: &Utf8Path) -> Result<ModelFile, Message> {
-    read_document::<ModelDocument>(source, path, ROOT).map(ModelFile::from)
 }

@@ -7,7 +7,7 @@ mod common;
 
 use camino::Utf8PathBuf;
 use common::{METADATA, TestDirectory};
-use hrafnix_files::model::{data::ModelFile, reader::read_model_file, writer::write_model_file};
+use hrafnix_files::model::{data::ModelFile, read_model_file, write_model_file};
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;
 use std::fs;
@@ -19,16 +19,36 @@ fn minimal_model() -> ModelFile {
     }
 }
 
-/// Returns the LF-normalized fixture text for [`minimal_model`].
+/// Returns the fixture text with LF line endings and no final newline.
 fn minimal_text() -> String {
     fs::read_to_string(Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/minimal.hxm"))
         .unwrap()
         .replace("\r\n", "\n")
+        .trim_end_matches('\n')
+        .to_owned()
 }
 
 #[test]
-fn root_must_be_an_object() {
-    common::assert_object_root("model", |path| read_model_file(path).map(|_| ()));
+fn root_accepts_named_fields_and_positional_arrays() {
+    common::assert_root_structure("model", |path| read_model_file(path).map(|_| ()));
+}
+
+#[test]
+fn version_one_document_variants_preserve_metadata() {
+    common::assert_document_variants("model", |path| {
+        assert_eq!(read_model_file(path)?, minimal_model());
+        Ok(())
+    });
+}
+
+#[test]
+fn malformed_documents_report_json_categories_and_positions() {
+    common::assert_malformed_documents("model", |path| read_model_file(path).map(|_| ()));
+}
+
+#[test]
+fn validates_the_document_schema_and_metadata() {
+    common::assert_document_schema("model", |path| read_model_file(path).map(|_| ()));
 }
 
 #[test]
@@ -50,18 +70,18 @@ fn opening_fifo_does_not_block() {
 #[cfg(unix)]
 #[test]
 fn saving_below_fifo_does_not_block() {
-    common::assert_fifo_parent_rejected(|path| write_model_file(path, &minimal_model()));
+    common::assert_fifo_parent_rejected(|path| write_model_file(minimal_model(), path));
 }
 
 #[cfg(unix)]
 #[test]
 fn directory_access_failure_does_not_replace_existing_file() {
-    common::assert_save_error_preserves_file(|path| write_model_file(path, &minimal_model()));
+    common::assert_save_error_preserves_file(|path| write_model_file(minimal_model(), path));
 }
 
 #[test]
 fn read_only_model_file_is_not_replaced() {
-    common::assert_read_only_file_preserved(|path| write_model_file(path, &minimal_model()));
+    common::assert_read_only_file_preserved(|path| write_model_file(minimal_model(), path));
 }
 
 #[test]
@@ -76,7 +96,7 @@ fn unknown_content_is_rejected_instead_of_being_dropped() {
     fs::write(
         &path,
         format!(
-            "{{\"file-version\": 1, \"model\": {{\"metadata\": {METADATA}, \"unknown\": {{}}}}}}"
+            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"unknown\": {{}}}}}}"
         ),
     )
     .unwrap();
@@ -95,7 +115,7 @@ fn model_round_trips_through_the_writer_and_disk() {
     let source = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/minimal.hxm");
     let destination = directory.path.join("round-trip.hxm");
     let model = read_model_file(&source).unwrap();
-    write_model_file(&destination, &model).unwrap();
+    write_model_file(model.clone(), &destination).unwrap();
 
     assert_eq!(fs::read_to_string(&destination).unwrap(), minimal_text());
     assert_eq!(read_model_file(&destination).unwrap(), model);
@@ -112,7 +132,7 @@ fn writing_replaces_an_existing_model_file() {
     .unwrap();
     let model = minimal_model();
 
-    write_model_file(&path, &model).unwrap();
+    write_model_file(model, &path).unwrap();
 
     assert_eq!(fs::read_to_string(&path).unwrap(), minimal_text());
     assert_eq!(read_model_file(&path).unwrap(), minimal_model());
@@ -124,7 +144,7 @@ fn writing_replaces_an_existing_model_file() {
 fn writing_long_filenames_succeeds() {
     common::assert_long_filenames(
         "hxm",
-        |path| write_model_file(path, &minimal_model()),
+        |path| write_model_file(minimal_model(), path),
         |path| read_model_file(path).map(|_| ()),
     );
 }
@@ -135,7 +155,7 @@ fn writing_to_a_directory_fails_and_leaves_its_contents_and_no_temporary_file() 
     fs::write(directory.path.join("keep.txt"), "kept").unwrap();
     let model = minimal_model();
 
-    let error = write_model_file(&directory.path, &model).unwrap_err();
+    let error = write_model_file(model, &directory.path).unwrap_err();
 
     assert_eq!(
         error.category(),
@@ -157,7 +177,7 @@ fn writing_to_a_missing_parent_reports_localized_io_error() {
     let directory = TestDirectory::new();
     let path = directory.path.join("missing").join("model.hxm");
     let model = minimal_model();
-    let error = write_model_file(&path, &model).unwrap_err();
+    let error = write_model_file(model, &path).unwrap_err();
     let map = generate_translation_map(&SharedStringStore::new());
 
     assert_eq!(
@@ -179,7 +199,7 @@ fn writing_to_a_missing_parent_reports_localized_io_error() {
 fn writing_to_an_invalid_path_reports_localized_io_error() {
     let path = Utf8PathBuf::from("invalid\0.hxm");
     let model = minimal_model();
-    let error = write_model_file(&path, &model).unwrap_err();
+    let error = write_model_file(model, &path).unwrap_err();
 
     assert_eq!(
         error.translate_data().message_key().as_str(),

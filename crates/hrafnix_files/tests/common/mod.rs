@@ -1,12 +1,14 @@
 //! Shared support for file integration tests.
 
 use camino::{Utf8Path, Utf8PathBuf};
-use hrafnix_files::common::MAX_FILE_SIZE;
-use hrafnix_files::metadata::data::Metadata;
+use hrafnix_files::metadata::data::MetadataFile;
 use hrafnix_message::message::Message;
 use std::fs;
 use std::io::ErrorKind;
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+/// Maximum supported file size, in bytes (256 MiB).
+const MAX_FILE_SIZE: u64 = 256 * 1024 * 1024;
 
 /// Valid version 1 metadata entry.
 pub(super) const METADATA: &str = "{\"display-name\": \"\", \"description\": \"\", \"author\": \"\", \"minimum-version-major\": 0, \"minimum-version-minor\": 0}";
@@ -15,11 +17,11 @@ pub(super) const METADATA: &str = "{\"display-name\": \"\", \"description\": \"\
 pub(super) const CONTENTS: &str = "{\"metadata\": {\"display-name\": \"\", \"description\": \"\", \"author\": \"\", \"minimum-version-major\": 0, \"minimum-version-minor\": 0}}";
 
 /// Returns the metadata stored in the `minimal` test data files for `kind`.
-pub(super) fn metadata(kind: &str) -> Metadata {
-    Metadata {
-        display_name: "Example".to_owned(),
-        description: format!("An example {kind}."),
-        author: "Hrafnix".to_owned(),
+pub(super) fn metadata(kind: &str) -> MetadataFile {
+    MetadataFile {
+        display_name: "Example".into(),
+        description: format!("An example {kind}.").into(),
+        author: "Hrafnix".into(),
         minimum_version_major: 1,
         minimum_version_minor: 2,
     }
@@ -102,19 +104,32 @@ pub(super) fn assert_long_filenames(
     }
 }
 
-/// Checks that root entries must be objects rather than arrays or scalar values.
-pub(super) fn assert_object_root(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+/// Checks named and positional struct fields while rejecting invalid root values.
+pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
     let directory = TestDirectory::new();
     let path = directory.path.join("root.json");
     fs::write(
         &path,
-        format!("{{\"file-version\":1,\"{root}\":{CONTENTS}}}"),
+        format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS}}}"),
     )
     .unwrap();
     read(&path).unwrap();
 
+    for body in [
+        format!("[{METADATA}]"),
+        "{\"metadata\":[\"\", \"\", \"\", 0, 0]}".to_owned(),
+        "[[\"\", \"\", \"\", 0, 0]]".to_owned(),
+    ] {
+        fs::write(
+            &path,
+            format!("{{\"file-version\":\"1\",\"{root}\":{body}}}"),
+        )
+        .unwrap();
+        read(&path).unwrap();
+    }
+
     for body in ["[]", "[{}]", "[1]", "[[]]", "null", "true", "1", "\"text\""] {
-        let document = format!("{{\"file-version\":1,\"{root}\":{body}}}");
+        let document = format!("{{\"file-version\":\"1\",\"{root}\":{body}}}");
         fs::write(&path, &document).unwrap();
         let error = read(&path).unwrap_err();
         assert_eq!(
@@ -135,13 +150,262 @@ pub(super) fn assert_object_root(root: &str, read: fn(&Utf8Path) -> Result<(), M
     }
 }
 
+/// Checks supported formatting, field order, and escaped root names.
+pub(super) fn assert_document_variants(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("variants.json");
+    let contents = format!(
+        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}}}}"
+    );
+    let escaped_root = root.replace('o', "\\u006f");
+    for document in [
+        format!("{{\"file-version\":\"1\",\"{root}\":{contents}}}"),
+        format!("{{\"{root}\":{contents},\"file-version\":\"1\"}}"),
+        format!("{{\n  \"file-version\": \"1\",\n  \"{root}\": {contents}\n}}\n"),
+        format!(" \t\r\n{{ \"file-version\" : \"1\" , \"{root}\" : {contents} }} \t\r\n"),
+        format!("\u{feff}{{\"file-version\":\"1\",\"{root}\":{contents}}}"),
+        format!("{{\"file-version\":\"1\",\"{escaped_root}\":{contents}}}"),
+    ] {
+        fs::write(&path, &document).unwrap();
+        read(&path).unwrap_or_else(|error| panic!("{document}: {error:?}"));
+    }
+}
+
+/// Checks JSON syntax and EOF diagnostics, including their exact parser positions.
+pub(super) fn assert_malformed_documents(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("malformed.json");
+    for (document, key, line, column) in [
+        (String::new(), "files_json_unexpected_eof", "1", "0"),
+        (" \n".to_owned(), "files_json_unexpected_eof", "2", "0"),
+        ("{".to_owned(), "files_json_unexpected_eof", "1", "1"),
+        (
+            "{\"file-version\": \"1\"".to_owned(),
+            "files_json_unexpected_eof",
+            "1",
+            "20",
+        ),
+        (
+            format!("{{\"file-version\":\"1\",\"{root}\":{{\n\"metadata\":"),
+            "files_json_unexpected_eof",
+            "2",
+            "11",
+        ),
+        ("not JSON".to_owned(), "files_json_syntax", "1", "2"),
+        (
+            "{\"file-version\": \"1\",}".to_owned(),
+            "files_json_syntax",
+            "1",
+            "22",
+        ),
+        (
+            "{\"file-version\": 01}".to_owned(),
+            "files_json_syntax",
+            "1",
+            "19",
+        ),
+        (
+            "{\"file-version\": +1}".to_owned(),
+            "files_json_syntax",
+            "1",
+            "18",
+        ),
+        (
+            "{'file-version': \"1\"}".to_owned(),
+            "files_json_syntax",
+            "1",
+            "2",
+        ),
+        (
+            "\u{a0}{\"file-version\":\"1\"}".to_owned(),
+            "files_json_syntax",
+            "1",
+            "1",
+        ),
+        (
+            format!("\u{feff}\u{feff}{{\"file-version\":\"1\",\"{root}\":{CONTENTS}}}"),
+            "files_json_syntax",
+            "1",
+            "1",
+        ),
+    ] {
+        fs::write(&path, &document).unwrap();
+        let error = read(&path).unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            key,
+            "{document}"
+        );
+        for (name, expected) in [("path", path.as_str()), ("line", line), ("column", column)] {
+            assert_eq!(
+                error
+                    .translate_data()
+                    .message_params()
+                    .get(name)
+                    .map(hrafnix_shareable_string::ShareableString::as_str),
+                Some(expected),
+                "{document}: {name}"
+            );
+        }
+        assert!(
+            error.extra_detail().is_some_and(|detail| detail
+                .as_str()
+                .ends_with(&format!("at line {line} column {column}"))),
+            "{document}: {:?}",
+            error.extra_detail()
+        );
+    }
+}
+
+/// Checks the versioned envelope and rejects invalid metadata.
+pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("schema.json");
+    fs::write(
+        &path,
+        format!("{{\"{root}\":{CONTENTS},\"file-version\":\"1\"}}"),
+    )
+    .unwrap();
+    read(&path).unwrap();
+
+    let other_root = if root == "model" {
+        "component"
+    } else {
+        "model"
+    };
+    let mut invalid_documents = vec![
+        "[]".to_owned(),
+        format!("[{{\"file-version\":\"1\",\"{root}\":{CONTENTS}}}]"),
+        "\"text\"".to_owned(),
+        "1".to_owned(),
+        "true".to_owned(),
+        "null".to_owned(),
+        "{}".to_owned(),
+        format!("{{\"{root}\":{CONTENTS}}}"),
+        "{\"file-version\":\"1\"}".to_owned(),
+        format!("{{\"file-version\":\"1\",\"{other_root}\":{CONTENTS}}}"),
+        format!("{{\"file-version\":\"1\",\"wrapper\":{{\"{root}\":{CONTENTS}}}}}"),
+        format!(
+            "{{\"file-version\":\"1\",\"{}\":{CONTENTS}}}",
+            root.to_uppercase()
+        ),
+        format!("{{\"FILE-VERSION\":\"1\",\"{root}\":{CONTENTS}}}"),
+        format!("{{\"file_version\":\"1\",\"{root}\":{CONTENTS}}}"),
+        format!("{{\"{root}\":{{\"file-version\":\"1\"}}}}"),
+        format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS},\"unknown\":{{}}}}"),
+        format!("{{\"unknown\":null,\"file-version\":\"1\",\"{root}\":{CONTENTS}}}"),
+        format!("{{\"\":1,\"file-version\":\"1\",\"{root}\":{CONTENTS}}}"),
+        format!("{{\"file-version\":\"1\",\"file-version\":\"1\",\"{root}\":{CONTENTS}}}"),
+        format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS},\"file-version\":\"1\"}}"),
+        format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS},\"{root}\":{CONTENTS}}}"),
+        format!("{{\"file-version\":\"1\",\"{root}\":{{}}}}"),
+        format!(
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA}}}}}"
+        ),
+        format!(
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"file-version\":\"1\"}}}}"
+        ),
+    ];
+    for version in [
+        "1",
+        "1.0",
+        "1e0",
+        "-1",
+        "-0",
+        "4294967296",
+        "18446744073709551616",
+        "null",
+        "true",
+        "[]",
+        "[1]",
+        "{}",
+        "\"0\"",
+        "\"2\"",
+        "\"\"",
+        "\"01\"",
+    ] {
+        invalid_documents.push(format!(
+            "{{\"file-version\":{version},\"{root}\":{CONTENTS}}}"
+        ));
+    }
+    for metadata in [
+        "[]".to_owned(),
+        "null".to_owned(),
+        "{}".to_owned(),
+        METADATA.replace(
+            "\"minimum-version-major\": 0",
+            "\"minimum-version-major\": -1",
+        ),
+        METADATA.replace(
+            "\"minimum-version-major\": 0",
+            "\"minimum-version-major\": 65536",
+        ),
+        METADATA.replace(
+            "\"minimum-version-minor\": 0",
+            "\"minimum-version-minor\": 65536",
+        ),
+        METADATA.replace(
+            "\"minimum-version-minor\": 0",
+            "\"minimum-version-minor\": -1",
+        ),
+        METADATA.replace(
+            "\"minimum-version-major\": 0",
+            "\"minimum-version-major\": 1.5",
+        ),
+        METADATA.replace(
+            "\"minimum-version-minor\": 0",
+            "\"minimum-version-minor\": \"0\"",
+        ),
+        METADATA.replace("\"display-name\": \"\"", "\"display-name\": 1"),
+        METADATA.replace("\"description\": \"\"", "\"description\": null"),
+        METADATA.replace("\"author\": \"\"", "\"author\": true"),
+        METADATA.replace("\"display-name\"", "\"displayName\""),
+        METADATA.replace(", \"minimum-version-minor\": 0", ""),
+        METADATA.replace(
+            "\"display-name\": \"\"",
+            "\"display-name\": \"\", \"display-name\": \"\"",
+        ),
+        METADATA.replace('}', ", \"unknown\": true}"),
+    ] {
+        invalid_documents.push(format!(
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata}}}}}"
+        ));
+    }
+    for document in invalid_documents {
+        fs::write(&path, &document).unwrap();
+        let error = read(&path).unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "files_json_data",
+            "{document}"
+        );
+        assert_eq!(
+            error
+                .translate_data()
+                .message_params()
+                .get("path")
+                .unwrap()
+                .as_str(),
+            path.as_str(),
+            "{document}"
+        );
+        for name in ["line", "column"] {
+            assert!(
+                error.translate_data().message_params().contains_key(name),
+                "{document}: {name}"
+            );
+        }
+        assert!(error.extra_detail().is_some(), "{document}");
+    }
+}
+
 /// Checks rejection of anything after the top-level object while allowing JSON whitespace.
 pub(super) fn assert_json_trailing_content(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
     let directory = TestDirectory::new();
     let path = directory.path.join("trailing.json");
     for document in [
-        format!("{{\"file-version\": 1, \"{root}\": {CONTENTS}}}"),
-        format!("{{\n  \"file-version\": 1,\n  \"{root}\": {CONTENTS}\n}}"),
+        format!("{{\"file-version\": \"1\", \"{root}\": {CONTENTS}}}"),
+        format!("{{\n  \"file-version\": \"1\",\n  \"{root}\": {CONTENTS}\n}}"),
     ] {
         for suffix in ["", " \t\r\n", "\n\n"] {
             fs::write(&path, format!("{document}{suffix}")).unwrap();
@@ -157,7 +421,7 @@ pub(super) fn assert_json_trailing_content(root: &str, read: fn(&Utf8Path) -> Re
             ("\u{a0}", "files_json_syntax"),
             ("\u{feff}", "files_json_syntax"),
             ("\"", "files_json_syntax"),
-            ("{\"file-version\": 1}", "files_json_syntax"),
+            ("{\"file-version\": \"1\"}", "files_json_syntax"),
         ] {
             fs::write(&path, format!("{document} \n{suffix}")).unwrap();
             let error = read(&path).unwrap_err();
@@ -192,9 +456,13 @@ pub(super) fn assert_json_trailing_content(root: &str, read: fn(&Utf8Path) -> Re
 /// Checks that a UTF-8 BOM is accepted while invalid UTF-8 is rejected with its byte
 /// position before any JSON is parsed.
 pub(super) fn assert_utf8_handling(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    use hrafnix_message::message::{MessageCategory, MessageLevel};
+    use hrafnix_shareable_string::SharedStringStore;
+    use hrafnix_translation::generate_translation_map;
+
     let directory = TestDirectory::new();
     let path = directory.path.join("encoding.json");
-    let document = format!("{{\"file-version\": 1, \"{root}\": {CONTENTS}}}");
+    let document = format!("{{\"file-version\": \"1\", \"{root}\": {CONTENTS}}}");
 
     fs::write(&path, format!("\u{feff}{document}")).unwrap();
     read(&path).unwrap();
@@ -206,21 +474,34 @@ pub(super) fn assert_utf8_handling(root: &str, read: fn(&Utf8Path) -> Result<(),
     .concat();
     let truncated = [document.as_bytes(), b"\n\xE2\x82".as_slice()].concat();
     let truncated_at = document.len().checked_add(1).unwrap().to_string();
-    for (bytes, key, params) in [
+    let map = generate_translation_map(&SharedStringStore::new());
+    for (bytes, key, params, english) in [
         (
             invalid,
             "files_invalid_utf8",
             vec![("position", "2".to_owned()), ("length", "3".to_owned())],
+            format!("'{path}': Invalid UTF-8 at byte 2 (invalid sequence length: 3)"),
         ),
         (
             truncated,
             "files_incomplete_utf8",
-            vec![("position", truncated_at)],
+            vec![("position", truncated_at.clone())],
+            format!("'{path}': Incomplete UTF-8 sequence at byte {truncated_at}"),
         ),
     ] {
+        let diagnostic = String::from_utf8(bytes.clone())
+            .unwrap_err()
+            .utf8_error()
+            .to_string();
         fs::write(&path, bytes).unwrap();
         let error = read(&path).unwrap_err();
+        assert_eq!(error.level(), MessageLevel::Error);
+        assert_eq!(error.category(), MessageCategory::File);
         assert_eq!(error.translate_data().message_key().as_str(), key);
+        assert_eq!(
+            error.translate_data().message_params().len(),
+            params.len().checked_add(1).unwrap()
+        );
         assert_eq!(
             error
                 .translate_data()
@@ -242,7 +523,24 @@ pub(super) fn assert_utf8_handling(root: &str, read: fn(&Utf8Path) -> Result<(),
                 "{key}: {name}"
             );
         }
-        assert!(error.extra_detail().is_some());
+        assert_eq!(error.extra_detail().unwrap().as_str(), diagnostic);
+        assert_eq!(
+            error.translated_message(&map, "en").unwrap().as_str(),
+            english
+        );
+        for language in ["en", "zh", "de", "es", "fr", "ja", "ko"] {
+            let translated = error.translated_message(&map, language).unwrap();
+            assert!(!translated.as_str().contains("%{"), "{key}: {language}");
+            for value in error.translate_data().message_params().values() {
+                assert!(
+                    translated.as_str().contains(value.as_str()),
+                    "{key}: {language}: {value}"
+                );
+            }
+            if language != "en" {
+                assert_ne!(translated.as_str(), english, "{key}: {language}");
+            }
+        }
     }
 }
 
