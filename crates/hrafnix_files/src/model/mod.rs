@@ -1,9 +1,14 @@
-/// Model file data structures.
-pub mod data;
-/// Model file readers.
-pub mod reader;
-/// Model file writers.
-pub mod writer;
+use camino::Utf8Path;
+use hrafnix_message::message::Message;
+use crate::common::read_file_to_string;
+use crate::model::data::ModelFile;
 
-/// The key of the top-level entry that holds every model file's contents.
-const ROOT: &str = "model";
+pub mod data;
+pub(crate) mod writer;
+pub(crate) mod reader;
+
+pub fn read_model_file(path: &Utf8Path) -> Result<ModelFile, Message> {
+    let string = read_file_to_string(path)?;
+
+
+}

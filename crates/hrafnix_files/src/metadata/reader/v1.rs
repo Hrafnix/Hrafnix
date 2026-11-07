@@ -1,4 +1,3 @@
-use crate::metadata::data::Metadata;
 use serde::Deserialize;
 
 /// The version 1 JSON representation of the `metadata` entry, separate from the
@@ -8,7 +7,7 @@ use serde::Deserialize;
 /// dropped when the file is written back.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "kebab-case")]
-pub(crate) struct MetadataDocument {
+pub(crate) struct Metadata {
     /// Name shown to users.
     display_name: String,
     /// Free-form description.
@@ -19,16 +18,4 @@ pub(crate) struct MetadataDocument {
     minimum_version_major: u16,
     /// Minor part of the minimum Hrafnix version.
     minimum_version_minor: u16,
-}
-
-impl From<MetadataDocument> for Metadata {
-    fn from(document: MetadataDocument) -> Self {
-        Self {
-            display_name: document.display_name,
-            description: document.description,
-            author: document.author,
-            minimum_version_major: document.minimum_version_major,
-            minimum_version_minor: document.minimum_version_minor,
-        }
-    }
 }
