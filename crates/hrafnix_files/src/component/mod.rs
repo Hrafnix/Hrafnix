@@ -1,3 +1,4 @@
+use crate::common::deserialize::RootObject;
 use crate::common::error::{json_error, json_serialization_error};
 use crate::common::file::{read_file_to_string, write_string_to_file};
 use crate::component::data::ComponentFile;
@@ -22,9 +23,9 @@ pub(crate) mod writer;
 pub fn read_component_file(path: &Utf8Path) -> Result<ComponentFile, Message> {
     let component_string = read_file_to_string(path)?;
 
-    let component_deserialized: ComponentReader =
+    let component_deserialized: RootObject<ComponentReader> =
         serde_json::from_str(&component_string).map_err(|error| json_error(path, error))?;
-    let component_file: ComponentFile = component_deserialized.into();
+    let component_file: ComponentFile = component_deserialized.document.into();
     Ok(component_file)
 }
 

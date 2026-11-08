@@ -3,7 +3,8 @@
 //! Model and component documents use a string `"file-version"` tag and a named
 //! `"model"` or `"component"` object containing metadata. Version 1 is currently
 //! supported. Readers accept a leading UTF-8 BOM and reject unknown fields.
-//! Struct contents may also use Serde's positional-array representation.
+//! Documents and their struct contents must be JSON objects; positional arrays
+//! are rejected.
 //!
 //! The public read and write functions live in [`model`] and [`component`].
 //! Writers consume the file data and atomically replace the destination with

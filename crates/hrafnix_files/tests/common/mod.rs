@@ -104,7 +104,7 @@ pub(super) fn assert_long_filenames(
     }
 }
 
-/// Checks named and positional struct fields while rejecting invalid root values.
+/// Checks named struct fields while rejecting positional arrays and invalid root values.
 pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
     let directory = TestDirectory::new();
     let path = directory.path.join("root.json");
@@ -115,21 +115,24 @@ pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<()
     .unwrap();
     read(&path).unwrap();
 
-    for body in [
+    let invalid_bodies = [
         format!("[{METADATA}]"),
         "{\"metadata\":[\"\", \"\", \"\", 0, 0]}".to_owned(),
         "[[\"\", \"\", \"\", 0, 0]]".to_owned(),
-    ] {
-        fs::write(
-            &path,
-            format!("{{\"file-version\":\"1\",\"{root}\":{body}}}"),
-        )
-        .unwrap();
-        read(&path).unwrap();
-    }
-
-    for body in ["[]", "[{}]", "[1]", "[[]]", "null", "true", "1", "\"text\""] {
-        let document = format!("{{\"file-version\":\"1\",\"{root}\":{body}}}");
+        "[]".to_owned(),
+        "[{}]".to_owned(),
+        "[1]".to_owned(),
+        "[[]]".to_owned(),
+        "null".to_owned(),
+        "true".to_owned(),
+        "1".to_owned(),
+        "\"text\"".to_owned(),
+    ];
+    let documents = invalid_bodies
+        .iter()
+        .map(|body| format!("{{\"file-version\":\"1\",\"{root}\":{body}}}"))
+        .chain([format!("[\"1\",{CONTENTS}]")]);
+    for document in documents {
         fs::write(&path, &document).unwrap();
         let error = read(&path).unwrap_err();
         assert_eq!(

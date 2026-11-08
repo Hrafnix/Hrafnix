@@ -1,3 +1,4 @@
+use crate::common::deserialize::deserialize_object;
 use crate::metadata::reader::v1::MetadataReaderV1;
 use crate::model::data::ModelFile;
 use serde::Deserialize;
@@ -11,6 +12,7 @@ use serde::Deserialize;
 #[serde(deny_unknown_fields)]
 pub(crate) struct ModelReaderV1 {
     /// Descriptive information about the model.
+    #[serde(deserialize_with = "deserialize_object")]
     metadata: MetadataReaderV1,
 }
 

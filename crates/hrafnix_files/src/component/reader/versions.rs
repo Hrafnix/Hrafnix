@@ -1,3 +1,4 @@
+use crate::common::deserialize::deserialize_object;
 use crate::component::data::ComponentFile;
 use crate::component::reader::v1::ComponentReaderV1;
 use serde::Deserialize;
@@ -10,6 +11,7 @@ pub(crate) enum ComponentReader {
     #[serde(rename = "1")]
     V1 {
         /// Component contents under the named root entry.
+        #[serde(deserialize_with = "deserialize_object")]
         component: ComponentReaderV1,
     },
 }
