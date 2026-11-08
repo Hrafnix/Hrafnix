@@ -29,7 +29,7 @@ fn minimal_text() -> String {
 }
 
 #[test]
-fn root_accepts_named_fields_and_positional_arrays() {
+fn root_accepts_named_fields_and_rejects_positional_arrays() {
     common::assert_root_structure("component", |path| read_component_file(path).map(|_| ()));
 }
 

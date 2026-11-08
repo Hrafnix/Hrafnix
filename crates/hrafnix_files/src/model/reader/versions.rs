@@ -1,3 +1,4 @@
+use crate::common::deserialize::deserialize_object;
 use crate::model::data::ModelFile;
 use crate::model::reader::v1::ModelReaderV1;
 use serde::Deserialize;
@@ -10,6 +11,7 @@ pub(crate) enum ModelReader {
     #[serde(rename = "1")]
     V1 {
         /// Model contents under the named root entry.
+        #[serde(deserialize_with = "deserialize_object")]
         model: ModelReaderV1,
     },
 }

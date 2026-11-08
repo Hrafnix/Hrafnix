@@ -1,3 +1,5 @@
+/// Shared Serde deserialization helpers.
+pub(crate) mod deserialize;
 /// Localized file and JSON diagnostics.
 pub(crate) mod error;
 /// Bounded UTF-8 file reads and atomic writes.

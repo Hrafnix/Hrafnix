@@ -1,3 +1,4 @@
+use crate::common::deserialize::deserialize_object;
 use crate::component::data::ComponentFile;
 use crate::metadata::reader::v1::MetadataReaderV1;
 use serde::Deserialize;
@@ -7,6 +8,7 @@ use serde::Deserialize;
 #[serde(deny_unknown_fields)]
 pub(crate) struct ComponentReaderV1 {
     /// Descriptive information about the component.
+    #[serde(deserialize_with = "deserialize_object")]
     metadata: MetadataReaderV1,
 }
 

@@ -1,3 +1,4 @@
+use crate::common::deserialize::RootObject;
 use crate::common::error::{json_error, json_serialization_error};
 use crate::common::file::{read_file_to_string, write_string_to_file};
 use crate::model::data::ModelFile;
@@ -22,9 +23,9 @@ pub(crate) mod writer;
 pub fn read_model_file(path: &Utf8Path) -> Result<ModelFile, Message> {
     let model_string = read_file_to_string(path)?;
 
-    let model_deserialized: ModelReader =
+    let model_deserialized: RootObject<ModelReader> =
         serde_json::from_str(&model_string).map_err(|error| json_error(path, error))?;
-    let model_file: ModelFile = model_deserialized.into();
+    let model_file: ModelFile = model_deserialized.document.into();
     Ok(model_file)
 }
 
