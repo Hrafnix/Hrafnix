@@ -7,6 +7,8 @@
       "author": "Hrafnix",
       "minimum-version-major": 1,
       "minimum-version-minor": 2
-    }
+    },
+    "foreground_decorations": [],
+    "background_decorations": []
   }
 }

@@ -5,6 +5,16 @@
 //! supported. Readers accept a leading UTF-8 BOM and reject unknown fields.
 //! Documents and their struct contents must be JSON objects; positional arrays
 //! are rejected.
+//! Model and component contents require `foreground_decorations` and
+//! `background_decorations` arrays, including when those arrays are empty.
+//! Every decoration style property is required and sits directly inside its
+//! text or shape object. Font sizes, stroke widths, and corner radii are plain
+//! integers in hundredths of a drawing unit (`1234` means `12.34`); decimal and
+//! exponent values are rejected.
+//!
+//! Decoration structs expose public fields, while the [`graphics`] value types
+//! (positions, dimensions, hundredths, and colors) use constructors and
+//! accessors.
 //!
 //! The public read and write functions live in [`model`] and [`component`].
 //! Writers consume the file data and atomically replace the destination with
@@ -33,10 +43,16 @@
     )
 )]
 
+/// Shapes drawn behind model and component contents.
+pub mod background_decoration;
 /// Shared file I/O and localized diagnostics.
 mod common;
 /// Component definitions and behavior.
 pub mod component;
+/// Text and images drawn in front of model and component contents.
+pub mod foreground_decoration;
+/// Geometry, styling values, and colors shared by graphical elements.
+pub mod graphics;
 /// Metadata shared by model and component files.
 pub mod metadata;
 /// Simulation model definitions.

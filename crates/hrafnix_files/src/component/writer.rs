@@ -1,4 +1,6 @@
+use crate::background_decoration::writer::BackgroundDecorationWriter;
 use crate::component::data::ComponentFile;
+use crate::foreground_decoration::writer::ForegroundDecorationWriter;
 use crate::metadata::writer::MetadataWriter;
 use serde::Serialize;
 
@@ -17,6 +19,10 @@ pub(crate) struct ComponentWriter {
 struct ComponentDataWriter {
     /// Descriptive information about the component.
     metadata: MetadataWriter,
+    /// Decorations drawn in front of component contents.
+    foreground_decorations: Vec<ForegroundDecorationWriter>,
+    /// Decorations drawn behind component contents.
+    background_decorations: Vec<BackgroundDecorationWriter>,
 }
 
 impl From<ComponentFile> for ComponentWriter {
@@ -25,6 +31,16 @@ impl From<ComponentFile> for ComponentWriter {
             file_version: "1".to_owned(),
             component: ComponentDataWriter {
                 metadata: MetadataWriter::from(&component.metadata),
+                foreground_decorations: component
+                    .foreground_decorations
+                    .iter()
+                    .map(Into::into)
+                    .collect(),
+                background_decorations: component
+                    .background_decorations
+                    .iter()
+                    .map(Into::into)
+                    .collect(),
             },
         }
     }

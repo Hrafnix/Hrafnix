@@ -16,6 +16,8 @@ use std::fs;
 fn minimal_component() -> ComponentFile {
     ComponentFile {
         metadata: common::metadata("component"),
+        foreground_decorations: Vec::new(),
+        background_decorations: Vec::new(),
     }
 }
 
@@ -31,6 +33,11 @@ fn minimal_text() -> String {
 #[test]
 fn root_accepts_named_fields_and_rejects_positional_arrays() {
     common::assert_root_structure("component", |path| read_component_file(path).map(|_| ()));
+}
+
+#[test]
+fn decorations_reject_positional_arrays_and_unknown_fields() {
+    common::assert_decoration_structure("component", |path| read_component_file(path).map(|_| ()));
 }
 
 #[test]
@@ -97,7 +104,7 @@ fn unknown_content_is_rejected_instead_of_being_dropped() {
     let path = directory.path.join("unknown.hxc");
     fs::write(
         &path,
-        format!("{{\"file-version\": \"1\", \"component\": {{\"metadata\": {METADATA}, \"unknown\": {{}}}}}}"),
+        format!("{{\"file-version\": \"1\", \"component\": {{\"metadata\": {METADATA}, \"foreground_decorations\": [], \"background_decorations\": [], \"unknown\": {{}}}}}}"),
     )
     .unwrap();
 
@@ -119,6 +126,23 @@ fn component_round_trips_through_the_writer_and_disk() {
 
     assert_eq!(fs::read_to_string(&destination).unwrap(), minimal_text());
     assert_eq!(read_component_file(&destination).unwrap(), component);
+}
+
+#[test]
+fn component_decorations_round_trip_through_disk() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("decorations.hxc");
+    let mut component = minimal_component();
+    component
+        .foreground_decorations
+        .push(common::foreground_decoration());
+    component
+        .background_decorations
+        .push(common::background_decoration());
+
+    write_component_file(component.clone(), &path).unwrap();
+
+    assert_eq!(read_component_file(&path).unwrap(), component);
 }
 
 #[test]

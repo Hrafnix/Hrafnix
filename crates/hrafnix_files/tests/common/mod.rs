@@ -1,8 +1,18 @@
 //! Shared support for file integration tests.
 
 use camino::{Utf8Path, Utf8PathBuf};
+use hrafnix_files::background_decoration::data::{
+    BackgroundDecoration, BackgroundDecorationKind, RoundedRectangleStyle,
+};
+use hrafnix_files::foreground_decoration::data::{
+    ForegroundDecoration, ForegroundDecorationKind, TextDecoration,
+};
+use hrafnix_files::graphics::data::{
+    Color, CornerRadius, Dimension, FontSize, Position, Rgba, StrokeWidth,
+};
 use hrafnix_files::metadata::data::MetadataFile;
 use hrafnix_message::message::Message;
+use serde_json::{Value, json};
 use std::fs;
 use std::io::ErrorKind;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -14,7 +24,36 @@ const MAX_FILE_SIZE: u64 = 256 * 1024 * 1024;
 pub(super) const METADATA: &str = "{\"display-name\": \"\", \"description\": \"\", \"author\": \"\", \"minimum-version-major\": 0, \"minimum-version-minor\": 0}";
 
 /// Valid version 1 contents of a model or component root entry.
-pub(super) const CONTENTS: &str = "{\"metadata\": {\"display-name\": \"\", \"description\": \"\", \"author\": \"\", \"minimum-version-major\": 0, \"minimum-version-minor\": 0}}";
+pub(super) const CONTENTS: &str = "{\"metadata\": {\"display-name\": \"\", \"description\": \"\", \"author\": \"\", \"minimum-version-major\": 0, \"minimum-version-minor\": 0}, \"foreground_decorations\": [], \"background_decorations\": []}";
+
+/// Returns a text decoration for document-level round trips.
+pub(super) fn foreground_decoration() -> ForegroundDecoration {
+    ForegroundDecoration {
+        id: "label".into(),
+        position: Position::new(-10, 20),
+        dimensions: Dimension::new(100, 50),
+        kind: ForegroundDecorationKind::Text(TextDecoration {
+            text: "Title".into(),
+            font_size: FontSize::new(2050),
+            text_color: Color::ThemeDefault,
+        }),
+    }
+}
+
+/// Returns a rounded rectangle for document-level round trips.
+pub(super) fn background_decoration() -> BackgroundDecoration {
+    BackgroundDecoration {
+        id: "shape".into(),
+        position: Position::new(-20, -30),
+        dimensions: Dimension::new(120, 80),
+        kind: BackgroundDecorationKind::RoundedRectangle(RoundedRectangleStyle {
+            fill_color: Color::Custom(Rgba::new(255, 255, 255, 128)),
+            stroke_color: Color::ThemeDefault,
+            stroke_width: StrokeWidth::new(125),
+            corner_radius: CornerRadius::new(200),
+        }),
+    }
+}
 
 /// Returns the metadata stored in the `minimal` test data files for `kind`.
 pub(super) fn metadata(kind: &str) -> MetadataFile {
@@ -117,7 +156,7 @@ pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<()
 
     let invalid_bodies = [
         format!("[{METADATA}]"),
-        "{\"metadata\":[\"\", \"\", \"\", 0, 0]}".to_owned(),
+        "{\"metadata\":[\"\", \"\", \"\", 0, 0],\"foreground_decorations\":[],\"background_decorations\":[]}".to_owned(),
         "[[\"\", \"\", \"\", 0, 0]]".to_owned(),
         "[]".to_owned(),
         "[{}]".to_owned(),
@@ -153,12 +192,173 @@ pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<()
     }
 }
 
+/// Checks that decoration structs require JSON objects and reject unknown fields.
+#[allow(
+    clippy::indexing_slicing,
+    reason = "Tests deliberately mutate known-valid JSON fixtures."
+)]
+pub(super) fn assert_decoration_structure(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("decorations.json");
+    let mut document: Value =
+        serde_json::from_str(&format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS}}}")).unwrap();
+    let position = json!({"x": -10, "y": 20});
+    let dimensions = json!({"width": 100, "height": 50});
+    let foreground = [
+        json!({
+            "id": "text",
+            "position": position,
+            "dimensions": dimensions,
+            "kind": {"Text": {
+                "text": "Title",
+                "font_size": 2050,
+                "text_color": "theme-default",
+            }},
+        }),
+        json!({
+            "id": "image",
+            "position": position,
+            "dimensions": dimensions,
+            "kind": {"Image": {"path": "image.png", "fit": "Contain"}},
+        }),
+    ];
+    let background = [
+        json!({
+            "id": "rectangle",
+            "position": position,
+            "dimensions": dimensions,
+            "kind": {"Rectangle": {
+                "fill_color": "theme-default",
+                "stroke_color": "theme-default",
+                "stroke_width": 100,
+            }},
+        }),
+        json!({
+            "id": "rounded",
+            "position": position,
+            "dimensions": dimensions,
+            "kind": {"RoundedRectangle": {
+                "fill_color": "theme-default",
+                "stroke_color": "theme-default",
+                "stroke_width": 100,
+                "corner_radius": 200,
+            }},
+        }),
+        json!({
+            "id": "frame",
+            "position": position,
+            "dimensions": dimensions,
+            "kind": {"Frame": {
+                "stroke_color": "theme-default",
+                "stroke_width": 100,
+            }},
+        }),
+    ];
+    document[root]["foreground_decorations"] = json!(foreground);
+    document[root]["background_decorations"] = json!(background);
+    fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+    read(&path).unwrap();
+
+    let mut invalid_documents = Vec::new();
+    for (field, decorations) in [
+        ("foreground_decorations", foreground.as_slice()),
+        ("background_decorations", background.as_slice()),
+    ] {
+        for (index, decoration) in decorations.iter().enumerate() {
+            let mut invalid = document.clone();
+            invalid[root][field][index] = json!([
+                decoration["id"],
+                decoration["position"],
+                decoration["dimensions"],
+                decoration["kind"],
+            ]);
+            invalid_documents.push(invalid);
+
+            let mut invalid = document.clone();
+            invalid[root][field][index]["unknown"] = json!(true);
+            invalid_documents.push(invalid);
+
+            for (property, array) in [
+                ("position", json!([-10, 20])),
+                ("dimensions", json!([100, 50])),
+            ] {
+                let mut invalid = document.clone();
+                invalid[root][field][index][property] = array;
+                invalid_documents.push(invalid);
+
+                let mut invalid = document.clone();
+                invalid[root][field][index][property]["unknown"] = json!(true);
+                invalid_documents.push(invalid);
+            }
+
+            let (kind, payload) = decoration["kind"]
+                .as_object()
+                .unwrap()
+                .iter()
+                .next()
+                .unwrap();
+            let properties: &[&str] = match kind.as_str() {
+                "Text" => &["text", "font_size", "text_color"],
+                "Image" => &["path", "fit"],
+                "Rectangle" => &["fill_color", "stroke_color", "stroke_width"],
+                "RoundedRectangle" => &[
+                    "fill_color",
+                    "stroke_color",
+                    "stroke_width",
+                    "corner_radius",
+                ],
+                "Frame" => &["stroke_color", "stroke_width"],
+                _ => panic!("unexpected decoration kind: {kind}"),
+            };
+            let mut invalid = document.clone();
+            invalid[root][field][index]["kind"][kind] = json!(
+                properties
+                    .iter()
+                    .map(|property| payload[property].clone())
+                    .collect::<Vec<_>>()
+            );
+            invalid_documents.push(invalid);
+
+            let mut invalid = document.clone();
+            invalid[root][field][index]["kind"]["unknown"] = json!(true);
+            invalid_documents.push(invalid);
+
+            let mut invalid = document.clone();
+            invalid[root][field][index]["kind"][kind]["unknown"] = json!(true);
+            invalid_documents.push(invalid);
+
+            for property in ["font_size", "stroke_width", "corner_radius"] {
+                if let Some(value) = payload.get(property) {
+                    for wrapped in [json!([value]), json!({"value": value})] {
+                        let mut invalid = document.clone();
+                        invalid[root][field][index]["kind"][kind][property] = wrapped;
+                        invalid_documents.push(invalid);
+                    }
+                }
+            }
+        }
+    }
+
+    for document in invalid_documents {
+        fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+        let Err(error) = read(&path) else {
+            panic!("accepted invalid decoration: {document}");
+        };
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "files_json_data",
+            "{document}"
+        );
+        assert!(error.extra_detail().is_some(), "{document}");
+    }
+}
+
 /// Checks supported formatting, field order, and escaped root names.
 pub(super) fn assert_document_variants(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
     let directory = TestDirectory::new();
     let path = directory.path.join("variants.json");
     let contents = format!(
-        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}}}}"
+        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}},\"foreground_decorations\":[],\"background_decorations\":[]}}"
     );
     let escaped_root = root.replace('o', "\\u006f");
     for document in [
@@ -303,10 +503,10 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS},\"{root}\":{CONTENTS}}}"),
         format!("{{\"file-version\":\"1\",\"{root}\":{{}}}}"),
         format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA}}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
         ),
         format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"file-version\":\"1\"}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"foreground_decorations\":[],\"background_decorations\":[],\"file-version\":\"1\"}}}}"
         ),
     ];
     for version in [
@@ -330,6 +530,19 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         invalid_documents.push(format!(
             "{{\"file-version\":{version},\"{root}\":{CONTENTS}}}"
         ));
+    }
+    for field in ["foreground_decorations", "background_decorations"] {
+        let contents = CONTENTS.replace(&format!(", \"{field}\": []"), "");
+        assert_ne!(contents, CONTENTS);
+        invalid_documents.push(format!("{{\"file-version\":\"1\",\"{root}\":{contents}}}"));
+        for value in ["null", "{}", "true", "1", "\"text\"", "[null]", "[{}]"] {
+            let contents = CONTENTS.replace(
+                &format!("\"{field}\": []"),
+                &format!("\"{field}\": {value}"),
+            );
+            assert_ne!(contents, CONTENTS);
+            invalid_documents.push(format!("{{\"file-version\":\"1\",\"{root}\":{contents}}}"));
+        }
     }
     for metadata in [
         "[]".to_owned(),
@@ -371,7 +584,7 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         METADATA.replace('}', ", \"unknown\": true}"),
     ] {
         invalid_documents.push(format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata}}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
         ));
     }
     for document in invalid_documents {

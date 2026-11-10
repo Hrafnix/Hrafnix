@@ -26,6 +26,14 @@ pub(crate) fn deserialize_object<'de, T: Deserialize<'de>, D: Deserializer<'de>>
     })
 }
 
+/// Deserializes an array of objects, rejecting positional arrays for its elements.
+pub(crate) fn deserialize_objects<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Vec<T>, D::Error> {
+    Vec::<RootObject<T>>::deserialize(deserializer)
+        .map(|objects| objects.into_iter().map(|object| object.document).collect())
+}
+
 /// Accepts only maps and forwards their entries to `T`'s own deserializer.
 struct ObjectVisitor<T> {
     /// The type produced from the map.
