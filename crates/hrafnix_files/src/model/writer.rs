@@ -1,3 +1,5 @@
+use crate::background_decoration::writer::BackgroundDecorationWriter;
+use crate::foreground_decoration::writer::ForegroundDecorationWriter;
 use crate::metadata::writer::MetadataWriter;
 use crate::model::data::ModelFile;
 use serde::Serialize;
@@ -17,6 +19,10 @@ pub(crate) struct ModelWriter {
 struct ModelDataWriter {
     /// Descriptive information about the model.
     metadata: MetadataWriter,
+    /// Decorations drawn in front of model contents.
+    foreground_decorations: Vec<ForegroundDecorationWriter>,
+    /// Decorations drawn behind model contents.
+    background_decorations: Vec<BackgroundDecorationWriter>,
 }
 
 impl From<ModelFile> for ModelWriter {
@@ -25,6 +31,16 @@ impl From<ModelFile> for ModelWriter {
             file_version: "1".to_owned(),
             model: ModelDataWriter {
                 metadata: MetadataWriter::from(&model.metadata),
+                foreground_decorations: model
+                    .foreground_decorations
+                    .iter()
+                    .map(Into::into)
+                    .collect(),
+                background_decorations: model
+                    .background_decorations
+                    .iter()
+                    .map(Into::into)
+                    .collect(),
             },
         }
     }

@@ -16,6 +16,8 @@ use std::fs;
 fn minimal_model() -> ModelFile {
     ModelFile {
         metadata: common::metadata("model"),
+        foreground_decorations: Vec::new(),
+        background_decorations: Vec::new(),
     }
 }
 
@@ -31,6 +33,11 @@ fn minimal_text() -> String {
 #[test]
 fn root_accepts_named_fields_and_rejects_positional_arrays() {
     common::assert_root_structure("model", |path| read_model_file(path).map(|_| ()));
+}
+
+#[test]
+fn decorations_reject_positional_arrays_and_unknown_fields() {
+    common::assert_decoration_structure("model", |path| read_model_file(path).map(|_| ()));
 }
 
 #[test]
@@ -96,7 +103,7 @@ fn unknown_content_is_rejected_instead_of_being_dropped() {
     fs::write(
         &path,
         format!(
-            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"unknown\": {{}}}}}}"
+            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"foreground_decorations\": [], \"background_decorations\": [], \"unknown\": {{}}}}}}"
         ),
     )
     .unwrap();
@@ -119,6 +126,23 @@ fn model_round_trips_through_the_writer_and_disk() {
 
     assert_eq!(fs::read_to_string(&destination).unwrap(), minimal_text());
     assert_eq!(read_model_file(&destination).unwrap(), model);
+}
+
+#[test]
+fn model_decorations_round_trip_through_disk() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("decorations.hxm");
+    let mut model = minimal_model();
+    model
+        .foreground_decorations
+        .push(common::foreground_decoration());
+    model
+        .background_decorations
+        .push(common::background_decoration());
+
+    write_model_file(model.clone(), &path).unwrap();
+
+    assert_eq!(read_model_file(&path).unwrap(), model);
 }
 
 #[test]
