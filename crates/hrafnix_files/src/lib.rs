@@ -7,14 +7,13 @@
 //! are rejected.
 //! Model and component contents require `foreground_decorations` and
 //! `background_decorations` arrays, including when those arrays are empty.
-//! Every decoration style property is required and sits directly inside its
-//! text or shape object. Font sizes, stroke widths, and corner radii are plain
-//! integers in hundredths of a drawing unit (`1234` means `12.34`); decimal and
-//! exponent values are rejected.
+//! Every text decoration property is required and sits directly inside its
+//! text object. Background decoration kinds are plain strings such as
+//! `"Frame"`. Font sizes are plain integers in hundredths of a drawing unit
+//! (`1234` means `12.34`); decimal and exponent values are rejected.
 //!
 //! Decoration structs expose public fields, while the [`graphics`] value types
-//! (positions, dimensions, hundredths, and colors) use constructors and
-//! accessors.
+//! (positions, dimensions, and font sizes) use constructors and accessors.
 //!
 //! The public read and write functions live in [`model`] and [`component`].
 //! Writers consume the file data and atomically replace the destination with
@@ -51,7 +50,7 @@ mod common;
 pub mod component;
 /// Text and images drawn in front of model and component contents.
 pub mod foreground_decoration;
-/// Geometry, styling values, and colors shared by graphical elements.
+/// Geometry and styling values shared by graphical elements.
 pub mod graphics;
 /// Metadata shared by model and component files.
 pub mod metadata;

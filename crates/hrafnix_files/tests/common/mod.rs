@@ -1,15 +1,11 @@
 //! Shared support for file integration tests.
 
 use camino::{Utf8Path, Utf8PathBuf};
-use hrafnix_files::background_decoration::data::{
-    BackgroundDecoration, BackgroundDecorationKind, RoundedRectangleStyle,
-};
+use hrafnix_files::background_decoration::data::{BackgroundDecoration, BackgroundDecorationKind};
 use hrafnix_files::foreground_decoration::data::{
     ForegroundDecoration, ForegroundDecorationKind, TextDecoration,
 };
-use hrafnix_files::graphics::data::{
-    Color, CornerRadius, Dimension, FontSize, Position, Rgba, StrokeWidth,
-};
+use hrafnix_files::graphics::data::{Dimension, FontSize, Position};
 use hrafnix_files::metadata::data::MetadataFile;
 use hrafnix_message::message::Message;
 use serde_json::{Value, json};
@@ -35,23 +31,17 @@ pub(super) fn foreground_decoration() -> ForegroundDecoration {
         kind: ForegroundDecorationKind::Text(TextDecoration {
             text: "Title".into(),
             font_size: FontSize::new(2050),
-            text_color: Color::ThemeDefault,
         }),
     }
 }
 
-/// Returns a rounded rectangle for document-level round trips.
+/// Returns a frame for document-level round trips.
 pub(super) fn background_decoration() -> BackgroundDecoration {
     BackgroundDecoration {
         id: "shape".into(),
         position: Position::new(-20, -30),
         dimensions: Dimension::new(120, 80),
-        kind: BackgroundDecorationKind::RoundedRectangle(RoundedRectangleStyle {
-            fill_color: Color::Custom(Rgba::new(255, 255, 255, 128)),
-            stroke_color: Color::ThemeDefault,
-            stroke_width: StrokeWidth::new(125),
-            corner_radius: CornerRadius::new(200),
-        }),
+        kind: BackgroundDecorationKind::Frame,
     }
 }
 
@@ -212,7 +202,6 @@ pub(super) fn assert_decoration_structure(root: &str, read: fn(&Utf8Path) -> Res
             "kind": {"Text": {
                 "text": "Title",
                 "font_size": 2050,
-                "text_color": "theme-default",
             }},
         }),
         json!({
@@ -222,38 +211,12 @@ pub(super) fn assert_decoration_structure(root: &str, read: fn(&Utf8Path) -> Res
             "kind": {"Image": {"path": "image.png", "fit": "Contain"}},
         }),
     ];
-    let background = [
-        json!({
-            "id": "rectangle",
-            "position": position,
-            "dimensions": dimensions,
-            "kind": {"Rectangle": {
-                "fill_color": "theme-default",
-                "stroke_color": "theme-default",
-                "stroke_width": 100,
-            }},
-        }),
-        json!({
-            "id": "rounded",
-            "position": position,
-            "dimensions": dimensions,
-            "kind": {"RoundedRectangle": {
-                "fill_color": "theme-default",
-                "stroke_color": "theme-default",
-                "stroke_width": 100,
-                "corner_radius": 200,
-            }},
-        }),
-        json!({
-            "id": "frame",
-            "position": position,
-            "dimensions": dimensions,
-            "kind": {"Frame": {
-                "stroke_color": "theme-default",
-                "stroke_width": 100,
-            }},
-        }),
-    ];
+    let background = [json!({
+        "id": "frame",
+        "position": position,
+        "dimensions": dimensions,
+        "kind": "Frame",
+    })];
     document[root]["foreground_decorations"] = json!(foreground);
     document[root]["background_decorations"] = json!(background);
     fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
@@ -291,23 +254,23 @@ pub(super) fn assert_decoration_structure(root: &str, read: fn(&Utf8Path) -> Res
                 invalid_documents.push(invalid);
             }
 
-            let (kind, payload) = decoration["kind"]
-                .as_object()
-                .unwrap()
-                .iter()
-                .next()
-                .unwrap();
+            let Some(kind_object) = decoration["kind"].as_object() else {
+                for kind in [
+                    json!("Unknown"),
+                    json!(["Frame"]),
+                    json!({"Frame": null}),
+                    json!({"Frame": {}}),
+                ] {
+                    let mut invalid = document.clone();
+                    invalid[root][field][index]["kind"] = kind;
+                    invalid_documents.push(invalid);
+                }
+                continue;
+            };
+            let (kind, payload) = kind_object.iter().next().unwrap();
             let properties: &[&str] = match kind.as_str() {
-                "Text" => &["text", "font_size", "text_color"],
+                "Text" => &["text", "font_size"],
                 "Image" => &["path", "fit"],
-                "Rectangle" => &["fill_color", "stroke_color", "stroke_width"],
-                "RoundedRectangle" => &[
-                    "fill_color",
-                    "stroke_color",
-                    "stroke_width",
-                    "corner_radius",
-                ],
-                "Frame" => &["stroke_color", "stroke_width"],
                 _ => panic!("unexpected decoration kind: {kind}"),
             };
             let mut invalid = document.clone();
@@ -327,7 +290,7 @@ pub(super) fn assert_decoration_structure(root: &str, read: fn(&Utf8Path) -> Res
             invalid[root][field][index]["kind"][kind]["unknown"] = json!(true);
             invalid_documents.push(invalid);
 
-            for property in ["font_size", "stroke_width", "corner_radius"] {
+            for property in ["font_size"] {
                 if let Some(value) = payload.get(property) {
                     for wrapped in [json!([value]), json!({"value": value})] {
                         let mut invalid = document.clone();

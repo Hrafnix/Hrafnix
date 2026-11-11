@@ -2,9 +2,7 @@ use crate::common::deserialize::deserialize_object;
 use crate::foreground_decoration::data::{
     ForegroundDecoration, ForegroundDecorationKind, ImageDecoration, ImageFit, TextDecoration,
 };
-use crate::graphics::reader::v1::{
-    ColorReaderV1, DimensionReaderV1, FontSizeReaderV1, PositionReaderV1,
-};
+use crate::graphics::reader::v1::{DimensionReaderV1, FontSizeReaderV1, PositionReaderV1};
 use serde::Deserialize;
 
 /// The version 1 JSON representation of a foreground decoration.
@@ -61,9 +59,6 @@ pub(crate) struct TextDecorationReaderV1 {
     pub text: String,
     /// Font size in hundredths of a drawing unit: `2000` represents `20.00`.
     pub font_size: FontSizeReaderV1,
-    /// Text color, using the theme's foreground color for
-    /// [`ThemeDefault`](crate::graphics::data::Color::ThemeDefault).
-    pub text_color: ColorReaderV1,
 }
 
 impl From<TextDecorationReaderV1> for TextDecoration {
@@ -71,7 +66,6 @@ impl From<TextDecorationReaderV1> for TextDecoration {
         Self {
             text: component.text.into(),
             font_size: component.font_size.into(),
-            text_color: component.text_color.into(),
         }
     }
 }
@@ -124,7 +118,6 @@ mod tests {
     use crate::foreground_decoration::data::{
         ForegroundDecoration, ForegroundDecorationKind, ImageFit,
     };
-    use crate::graphics::data::{Color, Rgba};
     use serde_json::{Value, json};
 
     /// Reads the current nested reader schema through its object-only envelope.
@@ -134,7 +127,7 @@ mod tests {
         Ok(reader.document.into())
     }
 
-    /// Creates text with explicit font and color fields.
+    /// Creates text with explicit text and font size fields.
     fn text_json() -> Value {
         json!({
             "id": " label \u{3b1} ",
@@ -144,7 +137,6 @@ mod tests {
                 "Text": {
                     "text": " Title \u{3b1}\n ",
                     "font_size": 2050,
-                    "text_color": "#AABBCC80",
                 },
             },
         })
@@ -171,10 +163,6 @@ mod tests {
         };
         assert_eq!(text.text.as_str(), " Title \u{3b1}\n ");
         assert_eq!(text.font_size.size(), 2050);
-        assert_eq!(
-            text.text_color,
-            Color::Custom(Rgba::new(170, 187, 204, 128))
-        );
     }
 
     #[test]
@@ -221,7 +209,7 @@ mod tests {
 
     #[test]
     fn required_fields_and_unknown_field_checks_are_preserved() {
-        for field in ["text", "font_size", "text_color"] {
+        for field in ["text", "font_size"] {
             let mut value = text_json();
             value["kind"]["Text"].as_object_mut().unwrap().remove(field);
             assert!(read(&value).is_err());
@@ -254,7 +242,7 @@ mod tests {
         let mut text = text_json();
         text["kind"]["Text"]["font_size"] = json!([2050]);
         assert!(read(&text).is_err());
-        text["kind"]["Text"] = json!(["Title", 2050, "theme-default"]);
+        text["kind"]["Text"] = json!(["Title", 2050]);
         assert!(read(&text).is_err());
         let mut image = image_json("image.png", "Contain");
         image["kind"]["Image"] = json!(["image.png", "Contain"]);
