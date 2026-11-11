@@ -1,4 +1,4 @@
-use crate::graphics::data::{Color, Dimension, FontSize, Position};
+use crate::graphics::data::{Dimension, FontSize, Position};
 use camino::Utf8PathBuf;
 use hrafnix_shareable_string::ShareableString;
 
@@ -31,8 +31,6 @@ pub struct TextDecoration {
     pub text: ShareableString,
     /// Font size in hundredths of a drawing unit: `2000` represents `20.00`.
     pub font_size: FontSize,
-    /// Text color, using the theme's foreground color for [`Color::ThemeDefault`].
-    pub text_color: Color,
 }
 
 /// Image content and fitting for a foreground decoration.

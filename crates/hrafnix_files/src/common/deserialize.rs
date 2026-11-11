@@ -1,5 +1,5 @@
-use serde::de::value::MapAccessDeserializer;
-use serde::de::{MapAccess, Visitor};
+use serde::de::value::{MapAccessDeserializer, StrDeserializer};
+use serde::de::{Error, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use std::fmt;
 use std::marker::PhantomData;
@@ -32,6 +32,34 @@ pub(crate) fn deserialize_objects<'de, T: Deserialize<'de>, D: Deserializer<'de>
 ) -> Result<Vec<T>, D::Error> {
     Vec::<RootObject<T>>::deserialize(deserializer)
         .map(|objects| objects.into_iter().map(|object| object.document).collect())
+}
+
+/// Deserializes a unit-only enum from a plain string, rejecting the object form
+/// (such as `{"Variant": null}`) that Serde otherwise accepts.
+pub(crate) fn deserialize_unit_variant<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<T, D::Error> {
+    deserializer.deserialize_str(UnitVariantVisitor {
+        variant: PhantomData,
+    })
+}
+
+/// Accepts only strings and forwards them to `T`'s own deserializer.
+struct UnitVariantVisitor<T> {
+    /// The enum produced from the string.
+    variant: PhantomData<T>,
+}
+
+impl<'de, T: Deserialize<'de>> Visitor<'de> for UnitVariantVisitor<T> {
+    type Value = T;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a variant name string")
+    }
+
+    fn visit_str<E: Error>(self, value: &str) -> Result<Self::Value, E> {
+        T::deserialize(StrDeserializer::new(value))
+    }
 }
 
 /// Accepts only maps and forwards their entries to `T`'s own deserializer.

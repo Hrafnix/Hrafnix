@@ -2,7 +2,7 @@ use crate::common::serialize::serialize_shareable_string;
 use crate::foreground_decoration::data::{
     ForegroundDecoration, ForegroundDecorationKind, ImageDecoration, ImageFit, TextDecoration,
 };
-use crate::graphics::writer::{ColorWriter, DimensionWriter, FontSizeWriter, PositionWriter};
+use crate::graphics::writer::{DimensionWriter, FontSizeWriter, PositionWriter};
 use hrafnix_shareable_string::ShareableString;
 use serde::Serialize;
 
@@ -56,8 +56,6 @@ struct TextDecorationWriter {
     text: ShareableString,
     /// Font size in stored hundredths.
     font_size: FontSizeWriter,
-    /// Text color.
-    text_color: ColorWriter,
 }
 
 impl From<&TextDecoration> for TextDecorationWriter {
@@ -65,7 +63,6 @@ impl From<&TextDecoration> for TextDecorationWriter {
         Self {
             text: text.text.clone(),
             font_size: FontSizeWriter::from(&text.font_size),
-            text_color: ColorWriter::from(&text.text_color),
         }
     }
 }
@@ -117,7 +114,7 @@ mod tests {
         ForegroundDecoration, ForegroundDecorationKind, ImageDecoration, ImageFit, TextDecoration,
     };
     use crate::foreground_decoration::reader::v1::ForegroundDecorationReaderV1;
-    use crate::graphics::data::{Color, Dimension, FontSize, Position, Rgba};
+    use crate::graphics::data::{Dimension, FontSize, Position};
     use serde_json::{Value, json};
 
     /// Checks the exact wire format and reads it back through the independent reader.
@@ -130,38 +127,29 @@ mod tests {
 
     #[test]
     fn text_matches_the_nested_reader_schema() {
-        for (color, encoded) in [
-            (Color::ThemeDefault, "theme-default"),
-            (Color::Custom(Rgba::new(0, 0, 0, 255)), "#000000"),
-            (Color::Custom(Rgba::new(170, 187, 204, 128)), "#aabbcc80"),
-            (Color::Custom(Rgba::new(170, 187, 204, 0)), "#aabbcc00"),
-        ] {
-            let decoration = ForegroundDecoration {
-                id: "label".into(),
-                position: Position::new(-10, 20),
-                dimensions: Dimension::new(100, 50),
-                kind: ForegroundDecorationKind::Text(TextDecoration {
-                    text: "Title \u{3b1}".into(),
-                    font_size: FontSize::new(2050),
-                    text_color: color,
-                }),
-            };
-            assert_round_trip(
-                &decoration,
-                &json!({
-                    "id": "label",
-                    "position": {"x": -10, "y": 20},
-                    "dimensions": {"width": 100, "height": 50},
-                    "kind": {
-                        "Text": {
-                            "text": "Title \u{3b1}",
-                            "font_size": 2050,
-                            "text_color": encoded,
-                        },
+        let decoration = ForegroundDecoration {
+            id: "label".into(),
+            position: Position::new(-10, 20),
+            dimensions: Dimension::new(100, 50),
+            kind: ForegroundDecorationKind::Text(TextDecoration {
+                text: "Title \u{3b1}".into(),
+                font_size: FontSize::new(2050),
+            }),
+        };
+        assert_round_trip(
+            &decoration,
+            &json!({
+                "id": "label",
+                "position": {"x": -10, "y": 20},
+                "dimensions": {"width": 100, "height": 50},
+                "kind": {
+                    "Text": {
+                        "text": "Title \u{3b1}",
+                        "font_size": 2050,
                     },
-                }),
-            );
-        }
+                },
+            }),
+        );
     }
 
     #[test]
