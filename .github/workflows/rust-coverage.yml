@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
       - name: Update Rust
         run: rustup update
       - name: Install cargo-llvm-cov
@@ -22,7 +22,7 @@ jobs:
           cargo test --workspace --all-features --locked --config 'target."cfg(all())".rustflags=["-D", "warnings"]'
           cargo llvm-cov report --html
       - name: Upload coverage report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: rust-coverage
           path: target/llvm-cov/html
