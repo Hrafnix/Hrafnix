@@ -130,7 +130,7 @@ impl TableEditable {
     pub fn add_row(&mut self, row: usize) {
         let mut full_row = Vec::new();
         for (_, definition) in self.definition.iter() {
-            full_row.push(definition.default_value().clone());
+            full_row.push(definition.default_value());
         }
         if row < self.rows.len() {
             self.rows.insert(row, full_row);
