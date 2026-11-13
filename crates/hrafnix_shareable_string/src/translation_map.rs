@@ -151,15 +151,15 @@ impl SharedStringTranslationMap {
     pub fn set_translation_key<K, K2, V2>(&self, key: K, data: HashMap<K2, V2>)
     where
         K: Into<ShareableString> + AsRef<str>,
-        K2: Into<ShareableString> + AsRef<str> + Clone,
-        V2: Into<ShareableString> + AsRef<str> + Clone,
+        K2: Into<ShareableString> + AsRef<str>,
+        V2: Into<ShareableString> + AsRef<str>,
     {
         let interned_key = self.store.launder(key);
         let mut interned_data =
             HashMap::with_capacity_and_hasher(data.len(), RandomState::default());
         for (lang, translation) in data {
-            let interned_lang = self.store.launder(lang.clone());
-            let interned_translation = self.store.launder(translation.clone());
+            let interned_lang = self.store.launder(lang);
+            let interned_translation = self.store.launder(translation);
             interned_data.insert(interned_lang, interned_translation);
         }
         let mut write_lock = self.data.write();
