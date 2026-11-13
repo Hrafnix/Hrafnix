@@ -7,6 +7,9 @@
 //! are rejected.
 //! Model and component contents require `foreground_decorations` and
 //! `background_decorations` arrays, including when those arrays are empty.
+//! Component contents also require a `gui_metadata` object with `dimensions`
+//! (`width` and `height` as unsigned 16-bit integers) and an `icon` path string.
+//! Icon paths are stored unchanged, without opening or resolving them.
 //! Every text decoration property is required and sits directly inside its
 //! text object. Background decoration kinds are plain strings such as
 //! `"Frame"`. Font sizes are plain integers in hundredths of a drawing unit
@@ -52,6 +55,8 @@ pub mod component;
 pub mod foreground_decoration;
 /// Geometry and styling values shared by graphical elements.
 pub mod graphics;
+/// Drawing dimensions and icons associated with components.
+pub mod gui_metadata;
 /// Metadata shared by model and component files.
 pub mod metadata;
 /// Simulation model definitions.

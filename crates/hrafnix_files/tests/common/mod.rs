@@ -19,8 +19,22 @@ const MAX_FILE_SIZE: u64 = 256 * 1024 * 1024;
 /// Valid version 1 metadata entry.
 pub(super) const METADATA: &str = "{\"display-name\": \"\", \"description\": \"\", \"author\": \"\", \"minimum-version-major\": 0, \"minimum-version-minor\": 0}";
 
+/// The required GUI metadata entry for components; models do not have one.
+fn gui_metadata_entry(root: &str) -> &'static str {
+    if root == "component" {
+        ", \"gui_metadata\": {\"dimensions\": {\"width\": 100, \"height\": 50}, \"icon\": \"../icons/component.svg\"}"
+    } else {
+        ""
+    }
+}
+
 /// Valid version 1 contents of a model or component root entry.
-pub(super) const CONTENTS: &str = "{\"metadata\": {\"display-name\": \"\", \"description\": \"\", \"author\": \"\", \"minimum-version-major\": 0, \"minimum-version-minor\": 0}, \"foreground_decorations\": [], \"background_decorations\": []}";
+pub(super) fn contents(root: &str) -> String {
+    let gui_metadata = gui_metadata_entry(root);
+    format!(
+        "{{\"metadata\": {METADATA}{gui_metadata}, \"foreground_decorations\": [], \"background_decorations\": []}}"
+    )
+}
 
 /// Returns a text decoration for document-level round trips.
 pub(super) fn foreground_decoration() -> ForegroundDecoration {
@@ -135,18 +149,22 @@ pub(super) fn assert_long_filenames(
 
 /// Checks named struct fields while rejecting positional arrays and invalid root values.
 pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let contents = contents(root);
+    let gui_metadata = gui_metadata_entry(root);
     let directory = TestDirectory::new();
     let path = directory.path.join("root.json");
     fs::write(
         &path,
-        format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS}}}"),
+        format!("{{\"file-version\":\"1\",\"{root}\":{contents}}}"),
     )
     .unwrap();
     read(&path).unwrap();
 
     let invalid_bodies = [
         format!("[{METADATA}]"),
-        "{\"metadata\":[\"\", \"\", \"\", 0, 0],\"foreground_decorations\":[],\"background_decorations\":[]}".to_owned(),
+        format!(
+            "{{\"metadata\":[\"\", \"\", \"\", 0, 0]{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}"
+        ),
         "[[\"\", \"\", \"\", 0, 0]]".to_owned(),
         "[]".to_owned(),
         "[{}]".to_owned(),
@@ -160,7 +178,7 @@ pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<()
     let documents = invalid_bodies
         .iter()
         .map(|body| format!("{{\"file-version\":\"1\",\"{root}\":{body}}}"))
-        .chain([format!("[\"1\",{CONTENTS}]")]);
+        .chain([format!("[\"1\",{contents}]")]);
     for document in documents {
         fs::write(&path, &document).unwrap();
         let error = read(&path).unwrap_err();
@@ -188,10 +206,11 @@ pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<()
     reason = "Tests deliberately mutate known-valid JSON fixtures."
 )]
 pub(super) fn assert_decoration_structure(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let contents = contents(root);
     let directory = TestDirectory::new();
     let path = directory.path.join("decorations.json");
     let mut document: Value =
-        serde_json::from_str(&format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS}}}")).unwrap();
+        serde_json::from_str(&format!("{{\"file-version\":\"1\",\"{root}\":{contents}}}")).unwrap();
     let position = json!({"x": -10, "y": 20});
     let dimensions = json!({"width": 100, "height": 50});
     let foreground = [
@@ -318,10 +337,11 @@ pub(super) fn assert_decoration_structure(root: &str, read: fn(&Utf8Path) -> Res
 
 /// Checks supported formatting, field order, and escaped root names.
 pub(super) fn assert_document_variants(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let gui_metadata = gui_metadata_entry(root);
     let directory = TestDirectory::new();
     let path = directory.path.join("variants.json");
     let contents = format!(
-        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}},\"foreground_decorations\":[],\"background_decorations\":[]}}"
+        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}"
     );
     let escaped_root = root.replace('o', "\\u006f");
     for document in [
@@ -339,6 +359,7 @@ pub(super) fn assert_document_variants(root: &str, read: fn(&Utf8Path) -> Result
 
 /// Checks JSON syntax and EOF diagnostics, including their exact parser positions.
 pub(super) fn assert_malformed_documents(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let contents = contents(root);
     let directory = TestDirectory::new();
     let path = directory.path.join("malformed.json");
     for (document, key, line, column) in [
@@ -389,7 +410,7 @@ pub(super) fn assert_malformed_documents(root: &str, read: fn(&Utf8Path) -> Resu
             "1",
         ),
         (
-            format!("\u{feff}\u{feff}{{\"file-version\":\"1\",\"{root}\":{CONTENTS}}}"),
+            format!("\u{feff}\u{feff}{{\"file-version\":\"1\",\"{root}\":{contents}}}"),
             "files_json_syntax",
             "1",
             "1",
@@ -425,11 +446,13 @@ pub(super) fn assert_malformed_documents(root: &str, read: fn(&Utf8Path) -> Resu
 
 /// Checks the versioned envelope and rejects invalid metadata.
 pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let contents = contents(root);
+    let gui_metadata = gui_metadata_entry(root);
     let directory = TestDirectory::new();
     let path = directory.path.join("schema.json");
     fs::write(
         &path,
-        format!("{{\"{root}\":{CONTENTS},\"file-version\":\"1\"}}"),
+        format!("{{\"{root}\":{contents},\"file-version\":\"1\"}}"),
     )
     .unwrap();
     read(&path).unwrap();
@@ -441,35 +464,35 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
     };
     let mut invalid_documents = vec![
         "[]".to_owned(),
-        format!("[{{\"file-version\":\"1\",\"{root}\":{CONTENTS}}}]"),
+        format!("[{{\"file-version\":\"1\",\"{root}\":{contents}}}]"),
         "\"text\"".to_owned(),
         "1".to_owned(),
         "true".to_owned(),
         "null".to_owned(),
         "{}".to_owned(),
-        format!("{{\"{root}\":{CONTENTS}}}"),
+        format!("{{\"{root}\":{contents}}}"),
         "{\"file-version\":\"1\"}".to_owned(),
-        format!("{{\"file-version\":\"1\",\"{other_root}\":{CONTENTS}}}"),
-        format!("{{\"file-version\":\"1\",\"wrapper\":{{\"{root}\":{CONTENTS}}}}}"),
+        format!("{{\"file-version\":\"1\",\"{other_root}\":{contents}}}"),
+        format!("{{\"file-version\":\"1\",\"wrapper\":{{\"{root}\":{contents}}}}}"),
         format!(
-            "{{\"file-version\":\"1\",\"{}\":{CONTENTS}}}",
+            "{{\"file-version\":\"1\",\"{}\":{contents}}}",
             root.to_uppercase()
         ),
-        format!("{{\"FILE-VERSION\":\"1\",\"{root}\":{CONTENTS}}}"),
-        format!("{{\"file_version\":\"1\",\"{root}\":{CONTENTS}}}"),
+        format!("{{\"FILE-VERSION\":\"1\",\"{root}\":{contents}}}"),
+        format!("{{\"file_version\":\"1\",\"{root}\":{contents}}}"),
         format!("{{\"{root}\":{{\"file-version\":\"1\"}}}}"),
-        format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS},\"unknown\":{{}}}}"),
-        format!("{{\"unknown\":null,\"file-version\":\"1\",\"{root}\":{CONTENTS}}}"),
-        format!("{{\"\":1,\"file-version\":\"1\",\"{root}\":{CONTENTS}}}"),
-        format!("{{\"file-version\":\"1\",\"file-version\":\"1\",\"{root}\":{CONTENTS}}}"),
-        format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS},\"file-version\":\"1\"}}"),
-        format!("{{\"file-version\":\"1\",\"{root}\":{CONTENTS},\"{root}\":{CONTENTS}}}"),
+        format!("{{\"file-version\":\"1\",\"{root}\":{contents},\"unknown\":{{}}}}"),
+        format!("{{\"unknown\":null,\"file-version\":\"1\",\"{root}\":{contents}}}"),
+        format!("{{\"\":1,\"file-version\":\"1\",\"{root}\":{contents}}}"),
+        format!("{{\"file-version\":\"1\",\"file-version\":\"1\",\"{root}\":{contents}}}"),
+        format!("{{\"file-version\":\"1\",\"{root}\":{contents},\"file-version\":\"1\"}}"),
+        format!("{{\"file-version\":\"1\",\"{root}\":{contents},\"{root}\":{contents}}}"),
         format!("{{\"file-version\":\"1\",\"{root}\":{{}}}}"),
         format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
         ),
         format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"foreground_decorations\":[],\"background_decorations\":[],\"file-version\":\"1\"}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[],\"file-version\":\"1\"}}}}"
         ),
     ];
     for version in [
@@ -491,20 +514,24 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         "\"01\"",
     ] {
         invalid_documents.push(format!(
-            "{{\"file-version\":{version},\"{root}\":{CONTENTS}}}"
+            "{{\"file-version\":{version},\"{root}\":{contents}}}"
         ));
     }
     for field in ["foreground_decorations", "background_decorations"] {
-        let contents = CONTENTS.replace(&format!(", \"{field}\": []"), "");
-        assert_ne!(contents, CONTENTS);
-        invalid_documents.push(format!("{{\"file-version\":\"1\",\"{root}\":{contents}}}"));
+        let missing_field = contents.replace(&format!(", \"{field}\": []"), "");
+        assert_ne!(missing_field, contents);
+        invalid_documents.push(format!(
+            "{{\"file-version\":\"1\",\"{root}\":{missing_field}}}"
+        ));
         for value in ["null", "{}", "true", "1", "\"text\"", "[null]", "[{}]"] {
-            let contents = CONTENTS.replace(
+            let invalid_field = contents.replace(
                 &format!("\"{field}\": []"),
                 &format!("\"{field}\": {value}"),
             );
-            assert_ne!(contents, CONTENTS);
-            invalid_documents.push(format!("{{\"file-version\":\"1\",\"{root}\":{contents}}}"));
+            assert_ne!(invalid_field, contents);
+            invalid_documents.push(format!(
+                "{{\"file-version\":\"1\",\"{root}\":{invalid_field}}}"
+            ));
         }
     }
     for metadata in [
@@ -547,7 +574,7 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         METADATA.replace('}', ", \"unknown\": true}"),
     ] {
         invalid_documents.push(format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
         ));
     }
     for document in invalid_documents {
@@ -580,11 +607,12 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
 
 /// Checks rejection of anything after the top-level object while allowing JSON whitespace.
 pub(super) fn assert_json_trailing_content(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let contents = contents(root);
     let directory = TestDirectory::new();
     let path = directory.path.join("trailing.json");
     for document in [
-        format!("{{\"file-version\": \"1\", \"{root}\": {CONTENTS}}}"),
-        format!("{{\n  \"file-version\": \"1\",\n  \"{root}\": {CONTENTS}\n}}"),
+        format!("{{\"file-version\": \"1\", \"{root}\": {contents}}}"),
+        format!("{{\n  \"file-version\": \"1\",\n  \"{root}\": {contents}\n}}"),
     ] {
         for suffix in ["", " \t\r\n", "\n\n"] {
             fs::write(&path, format!("{document}{suffix}")).unwrap();
@@ -641,7 +669,8 @@ pub(super) fn assert_utf8_handling(root: &str, read: fn(&Utf8Path) -> Result<(),
 
     let directory = TestDirectory::new();
     let path = directory.path.join("encoding.json");
-    let document = format!("{{\"file-version\": \"1\", \"{root}\": {CONTENTS}}}");
+    let contents = contents(root);
+    let document = format!("{{\"file-version\": \"1\", \"{root}\": {contents}}}");
 
     fs::write(&path, format!("\u{feff}{document}")).unwrap();
     read(&path).unwrap();
