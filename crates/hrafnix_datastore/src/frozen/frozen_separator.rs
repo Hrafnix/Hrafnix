@@ -15,7 +15,6 @@ pub struct SeparatorFrozen {
 impl SeparatorFrozen {
     /// Creates a new `SeparatorFrozen` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(definition: SeparatorDefinition) -> Self {
         let mut s = Self {
             definition,
@@ -27,7 +26,6 @@ impl SeparatorFrozen {
 
     /// Creates a new `SeparatorFrozen` instance from a given `SeparatorEditable` value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_from_editable(separator: &SeparatorEditable) -> Self {
         let definition = separator.definition().clone();
         let mut s = Self {
@@ -40,7 +38,6 @@ impl SeparatorFrozen {
 
     /// Converts the current `SeparatorFrozen` instance into a `SeparatorEditable` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn thaw(&self) -> SeparatorEditable {
         SeparatorEditable::new(self)
     }
@@ -52,7 +49,6 @@ impl SeparatorFrozen {
     }
 
     /// Recomputes and stores the BLAKE3 hash.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn update_hash(&mut self) {
         let mut h = blake3::Hasher::new();
 
@@ -86,21 +82,18 @@ impl SeparatorFrozen {
 }
 
 impl PartialEq<&SeparatorFrozen> for SeparatorFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&SeparatorFrozen) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<SeparatorFrozen> for &SeparatorFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &SeparatorFrozen) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for SeparatorFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

@@ -25,7 +25,6 @@ use std::collections::{BTreeMap, HashMap};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 /// Rejects floating-point values that cannot be safely represented in computed output.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn finite_float(value: f64, source: &ShareableString, span: Span) -> Result<f64, Message> {
     if value.is_finite() {
         Ok(canonicalize_f64(value))
@@ -41,7 +40,6 @@ fn finite_float(value: f64, source: &ShareableString, span: Span) -> Result<f64,
 }
 
 /// Rejects computed values containing non-finite floating-point data.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn ensure_finite_computed_item(
     item: ComputedItem,
     source: &ShareableString,
@@ -77,7 +75,6 @@ fn ensure_finite_computed_item(
 }
 
 /// Looks up `variable_name` in `computed_data`, returning its value or an evaluation error.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn lookup_variable(
     computed_data: &BTreeMap<ShareableString, ComputedItem>,
     variable_name: &str,
@@ -125,7 +122,6 @@ const fn float_unit(item: &ComputedItem) -> UnitId {
 }
 
 /// Returns whether an expression is a float literal, optionally prefixed with a single negation.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn is_signed_float_literal(expression: &Expression) -> bool {
     match expression {
         Expression::Literal(_, Literal::Float(_)) => true,
@@ -147,7 +143,6 @@ fn is_signed_float_literal(expression: &Expression) -> bool {
 /// Celsius or Fahrenheit, even if the other operand is unitless. Otherwise, if either unit is
 /// `None`, the value is unchanged, and units from different families are rejected. Other
 /// operators (e.g., `*` and `/`) may combine any units, so the value is returned unchanged.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn align_right_operand_unit(
     operator: &Operators,
     left_unit: UnitId,
@@ -258,7 +253,6 @@ enum ConstraintViolation {
 }
 
 /// Checks `value` against a floating-point constraint.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn number_constraint_violation(
     value: f64,
     constraint: &NumberConstraintEnum,
@@ -291,7 +285,6 @@ fn number_constraint_violation(
 }
 
 /// Checks `value` against an integer constraint.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn integer_constraint_violation(
     value: i64,
     constraint: &IntegerConstraintEnum,
@@ -325,7 +318,6 @@ fn integer_constraint_violation(
 
 /// Builds the error for a constraint violation. When `column` is provided, the table-cell
 /// variant of the message is used.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn constraint_violation_error(
     violation: ConstraintViolation,
     value: &dyn std::fmt::Display,
@@ -373,7 +365,6 @@ fn constraint_violation_error(
 }
 
 /// Builds the error returned when a computed value doesn't match its definition's type.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn expected_definition_value_error(
     expected: &str,
     computed: &ComputedItem,
@@ -395,7 +386,6 @@ fn expected_definition_value_error(
 }
 
 /// Builds the error returned when `operator` isn't supported for operands of `type_name`.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn unsupported_operator_error(
     operator: &Operators,
     type_name: &str,
@@ -417,7 +407,6 @@ fn unsupported_operator_error(
 }
 
 /// Applies a unary `operator` to `operand_value`, returning the result or an error.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn evaluate_unary_operation(
     operator: Operators,
     operand_value: ComputedItem,
@@ -459,7 +448,6 @@ fn evaluate_unary_operation(
 }
 
 /// Applies a binary `operator` to two boolean operands.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn evaluate_boolean_binary_operation(
     operator: &Operators,
     left_value: bool,
@@ -490,7 +478,6 @@ fn evaluate_boolean_binary_operation(
 }
 
 /// Applies a binary `operator` to two `f64` operands.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn evaluate_float_binary_operation(
     operator: &Operators,
     left_value: f64,
@@ -567,7 +554,6 @@ fn evaluate_float_binary_operation(
 }
 
 /// Applies a binary `operator` to two `i64` operands, using checked arithmetic to detect overflow.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn evaluate_integer_binary_operation(
     operator: &Operators,
     left_value: i64,
@@ -702,7 +688,6 @@ fn evaluate_integer_binary_operation(
 }
 
 /// Applies a binary `operator` to two string operands (equality and inequality only).
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn evaluate_string_binary_operation(
     operator: &Operators,
     left_value: &ShareableString,
@@ -732,7 +717,6 @@ fn evaluate_string_binary_operation(
 
 /// Looks up `function_name` in `functions`, evaluates each argument, validates the argument count,
 /// and calls the function, returning its result.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn evaluate_function_call_operation(
     computed_data: &BTreeMap<ShareableString, ComputedItem>,
     function_name: &str,
@@ -852,7 +836,6 @@ fn evaluate_function_call_operation(
 }
 
 /// Evaluates a subscript-index expression (e.g. `table[0][col]`), returning the referenced cell value.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn evaluate_index_operation(
     computed_data: &BTreeMap<ShareableString, ComputedItem>,
     name: &str,
@@ -1088,7 +1071,6 @@ fn evaluate_index_operation(
 }
 
 /// Recursively evaluates an [`Expression`] node against `computed_data` and returns the result.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn evaluate_expression(
     computed_data: &BTreeMap<ShareableString, ComputedItem>,
     functions: &FunctionDefinitions,
@@ -1362,7 +1344,6 @@ fn evaluate_expression(
 
 /// Validates a bare-identifier choice value (e.g. `option_1`) directly against the choice
 /// definition's list of valid choices, without treating it as a variable reference.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn evaluate_bare_identifier_choice(
     choice_definition: &hrafnix_datastore::definition::ChoiceDefinition,
     name: &str,
@@ -1386,7 +1367,6 @@ fn evaluate_bare_identifier_choice(
 }
 
 /// Validates that a computed unit value belongs to a unit definition's family.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn validate_unit_value(
     unit_definition: &hrafnix_datastore::definition::UnitDefinition,
     computed: &ComputedItem,

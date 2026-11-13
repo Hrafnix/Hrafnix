@@ -13,7 +13,6 @@ pub struct ChoiceItemDefinition {
 
 impl ChoiceItemDefinition {
     /// Creates a new `ChoiceItemDefinition` with the specified value and description.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new<K: Into<StoreKey>, S: Into<ShareableString>>(id: K, description: S) -> Self {
         Self {
             id: id.into(),
@@ -23,14 +22,12 @@ impl ChoiceItemDefinition {
 
     /// Returns the ID of the choice item.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn id(&self) -> StoreKey {
         self.id.clone()
     }
 
     /// Returns the description of the choice item.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn description(&self) -> ShareableString {
         self.description.clone()
     }
@@ -43,7 +40,6 @@ impl ChoiceItemDefinition {
 
     /// Returns a new `ChoiceItemDefinition` with strings laundered through the provided store.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         Self {
             id: self.id.launder(store),
@@ -65,7 +61,6 @@ pub struct ChoiceDefinition {
 
 impl ChoiceDefinition {
     /// Creates a new `ChoiceDefinition` with the specified choices.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new<S: Into<ShareableString>>(
         description: S,
         choices: Vec<ChoiceItemDefinition>,
@@ -78,7 +73,6 @@ impl ChoiceDefinition {
     }
 
     /// Creates a new `ChoiceDefinition` with the specified choices and default value.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_default<S1: Into<ShareableString>, S2: Into<ShareableString>>(
         description: S1,
         choices: Vec<ChoiceItemDefinition>,
@@ -98,7 +92,6 @@ impl ChoiceDefinition {
     }
 
     /// Returns true if the given value is a valid choice.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn contains<S: Into<ShareableString>>(&self, value: S) -> bool {
         let value = value.into();
         self.choices.iter().any(|choice| choice.id() == value)
@@ -106,14 +99,12 @@ impl ChoiceDefinition {
 
     /// Returns a vector of IDs for the choices.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn ids(&self) -> Vec<StoreKey> {
         self.choices.iter().map(ChoiceItemDefinition::id).collect()
     }
 
     /// Returns a vector of descriptions for the choices.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn descriptions(&self) -> Vec<ShareableString> {
         self.choices
             .iter()
@@ -123,7 +114,6 @@ impl ChoiceDefinition {
 
     /// Returns a new `ChoiceDefinition` with strings laundered through the provided store.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         Self {
             description: store.launder(&self.description),
@@ -138,7 +128,6 @@ impl ChoiceDefinition {
 
     /// Returns the description of the parameter.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn description(&self) -> ShareableString {
         self.description.clone()
     }
@@ -151,7 +140,6 @@ impl ChoiceDefinition {
 
     /// Returns the default value of the parameter.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn default_value(&self) -> ShareableString {
         self.default_value.clone()
     }
@@ -166,7 +154,6 @@ impl ChoiceDefinition {
     ///
     /// Descriptions and defaults are ignored; the set of choice IDs must match.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn is_merge_compatible(&self, other: &Self) -> bool {
         let ids = |def: &Self| {
             def.choices
@@ -179,21 +166,18 @@ impl ChoiceDefinition {
 }
 
 impl PartialEq<&ChoiceDefinition> for ChoiceDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&ChoiceDefinition) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<ChoiceDefinition> for &ChoiceDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ChoiceDefinition) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for ChoiceDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

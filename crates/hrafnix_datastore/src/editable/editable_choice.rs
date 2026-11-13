@@ -15,7 +15,6 @@ pub struct ChoiceEditable {
 impl ChoiceEditable {
     /// Creates a new `ChoiceEditable` instance from a given `ChoiceFrozen` value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(frozen_choice: &ChoiceFrozen) -> Self {
         Self {
             definition: frozen_choice.definition().clone(),
@@ -25,14 +24,12 @@ impl ChoiceEditable {
 
     /// Converts the current `ChoiceEditable` instance into a `ChoiceFrozen` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn freeze(&self) -> ChoiceFrozen {
         ChoiceFrozen::new_from_editable(self)
     }
 
     /// Returns the unevaluated value as a `ShareableString`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn value(&self) -> ShareableString {
         self.value.clone()
     }
@@ -44,28 +41,24 @@ impl ChoiceEditable {
     }
 
     /// Sets the unevaluated value.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn set<S: Into<ShareableString>>(&mut self, value: S) {
         self.value = value.into();
     }
 }
 
 impl PartialEq<&ChoiceEditable> for ChoiceEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&ChoiceEditable) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<ChoiceEditable> for &ChoiceEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ChoiceEditable) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for ChoiceEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

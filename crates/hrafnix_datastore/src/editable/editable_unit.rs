@@ -15,7 +15,6 @@ pub struct UnitEditable {
 impl UnitEditable {
     /// Creates a new `UnitEditable` instance from a given `UnitFrozen` value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(frozen_unit: &UnitFrozen) -> Self {
         Self {
             definition: frozen_unit.definition().clone(),
@@ -25,14 +24,12 @@ impl UnitEditable {
 
     /// Converts the current `UnitEditable` instance into a `UnitFrozen` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn freeze(&self) -> UnitFrozen {
         UnitFrozen::new_from_editable(self)
     }
 
     /// Returns the unevaluated value as a `ShareableString`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn value(&self) -> ShareableString {
         self.value.clone()
     }
@@ -44,28 +41,24 @@ impl UnitEditable {
     }
 
     /// Sets the unevaluated value.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn set<S: Into<ShareableString>>(&mut self, value: S) {
         self.value = value.into();
     }
 }
 
 impl PartialEq<&UnitEditable> for UnitEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&UnitEditable) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<UnitEditable> for &UnitEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &UnitEditable) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for UnitEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

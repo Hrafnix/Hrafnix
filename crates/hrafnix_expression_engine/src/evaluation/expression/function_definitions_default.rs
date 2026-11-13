@@ -9,7 +9,6 @@ use hrafnix_units::{UnitId, conversion::convert};
 use std::ops::{Div, Mul};
 
 /// Creates a translated error for a failed built-in function.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn function_error(
     key: impl Into<ShareableString>,
     params: impl IntoIterator<Item = (ShareableString, ShareableString)>,
@@ -24,7 +23,6 @@ fn function_error(
 }
 
 /// Creates a translated error that identifies the built-in function that failed.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn function_argument_error(key: impl Into<ShareableString>, function_name: &str) -> Message {
     function_error(key, [("function".into(), function_name.into())])
 }
@@ -38,7 +36,6 @@ const I64_MAX_F64: f64 = 9_223_372_036_854_775_807.0;
 
 /// Truncates `value` to an `i64` via `trunc()`, returning an error if `value` is non-finite
 /// or outside the representable `i64` range.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn truncated_f64_to_i64(value: f64, function_name: &str) -> Result<i64, Message> {
     if !value.is_finite() {
         return Err(function_argument_error(
@@ -65,7 +62,6 @@ fn truncated_f64_to_i64(value: f64, function_name: &str) -> Result<i64, Message>
 
 /// Converts `value` to an `f64`, returning an error if it is outside the range that
 /// can be represented exactly (i.e., beyond `±MAX_EXACT_INTEGER_IN_F64`).
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn i64_to_f64(value: i64, function_name: &str) -> Result<f64, Message> {
     if !(-MAX_EXACT_INTEGER_IN_F64..=MAX_EXACT_INTEGER_IN_F64).contains(&value) {
         return Err(function_argument_error(
@@ -86,7 +82,6 @@ fn i64_to_f64(value: i64, function_name: &str) -> Result<f64, Message> {
 /// slice. Callers are expected to only be invoked after `ArgumentCount`
 /// validation, so a missing argument here indicates an internal error
 /// rather than a user-facing one.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn arg<'a>(
     args: &'a [ComputedItem],
     index: usize,
@@ -101,7 +96,6 @@ fn arg<'a>(
 }
 
 /// Computes the sine of a float argument (radians).
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn sin(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let arg = arg(args, 0, "sin")?;
 
@@ -109,7 +103,6 @@ fn sin(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Computes the cosine of a float argument (radians).
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn cos(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let arg = arg(args, 0, "cos")?;
 
@@ -117,7 +110,6 @@ fn cos(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Computes the tangent of a float argument (radians).
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn tan(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let arg = arg(args, 0, "tan")?;
 
@@ -125,7 +117,6 @@ fn tan(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Computes the arcsine of a float argument, returning a value in radians.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn arcsin(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let arg = arg(args, 0, "arcsin")?;
 
@@ -133,7 +124,6 @@ fn arcsin(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Computes the arccosine of a float argument, returning a value in radians.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn arccos(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let arg = arg(args, 0, "arccos")?;
 
@@ -141,7 +131,6 @@ fn arccos(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Computes the arctangent of a float argument, returning a value in radians.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn arctan(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let arg = arg(args, 0, "arctan")?;
 
@@ -152,7 +141,6 @@ fn arctan(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 /// unit-bearing floats are accepted; integers are intentionally rejected so
 /// that integer and floating-point values are never silently converted into
 /// one another.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn as_float(item: &ComputedItem, function_name: &str) -> Result<f64, Message> {
     match item {
         ComputedItem::Float(value) | ComputedItem::FloatWithUnit { value, .. } => Ok(*value),
@@ -173,7 +161,6 @@ fn as_float(item: &ComputedItem, function_name: &str) -> Result<f64, Message> {
 /// Builds the error returned when a function that requires all of its
 /// numeric arguments to share the same type (`Integer` or `Float`) is called
 /// with a mix of the two.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn mixed_numeric_types_error(function_name: &str) -> Message {
     function_argument_error(
         "expression_engine_function_arguments_mixed_numeric_types",
@@ -182,7 +169,6 @@ fn mixed_numeric_types_error(function_name: &str) -> Message {
 }
 
 /// Returns the absolute value of a numeric argument (float or integer).
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn abs(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     match arg(args, 0, "abs")? {
         ComputedItem::Float(value) | ComputedItem::FloatWithUnit { value, .. } => {
@@ -206,14 +192,12 @@ fn abs(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Computes the square root of a float argument.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn sqrt(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "sqrt")?, "sqrt")?;
     Ok(ComputedItem::Float(libm::sqrt(value)))
 }
 
 /// Returns the smallest integer greater than or equal to the argument.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn ceil(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     match arg(args, 0, "ceil")? {
         ComputedItem::Float(value) | ComputedItem::FloatWithUnit { value, .. } => {
@@ -234,7 +218,6 @@ fn ceil(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Returns the largest integer less than or equal to the argument.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn floor(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     match arg(args, 0, "floor")? {
         ComputedItem::Float(value) | ComputedItem::FloatWithUnit { value, .. } => {
@@ -255,7 +238,6 @@ fn floor(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Rounds the argument to the nearest integer (ties round away from zero).
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn round(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     match arg(args, 0, "round")? {
         ComputedItem::Float(value) | ComputedItem::FloatWithUnit { value, .. } => {
@@ -279,7 +261,6 @@ fn round(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 /// unit-bearing values are converted to the unit of the first concrete unit-bearing argument so
 /// they can be compared. Plain floats and `None` units are taken as-is, units from different
 /// families are rejected, and any non-float argument is a mixed-type error.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn unit_aligned_floats(
     args: &[ComputedItem],
     function_name: &str,
@@ -332,7 +313,6 @@ fn unit_aligned_floats(
 }
 
 /// Wraps a float result in unit metadata only when the unit is concrete.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn float_with_optional_unit(value: f64, unit: UnitId) -> ComputedItem {
     if unit == UnitId::None {
         ComputedItem::Float(value)
@@ -342,7 +322,6 @@ fn float_with_optional_unit(value: f64, unit: UnitId) -> ComputedItem {
 }
 
 /// Returns the minimum value among one or more numeric arguments of the same type.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn min(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     match arg(args, 0, "min")? {
         ComputedItem::Float(first) | ComputedItem::FloatWithUnit { value: first, .. } => {
@@ -384,7 +363,6 @@ fn min(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Returns the maximum value among one or more numeric arguments of the same type.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn max(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     match arg(args, 0, "max")? {
         ComputedItem::Float(first) | ComputedItem::FloatWithUnit { value: first, .. } => {
@@ -426,7 +404,6 @@ fn max(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Clamps the first argument to the inclusive range `[min, max]`.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn clamp(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     match (
         arg(args, 0, "clamp")?,
@@ -473,35 +450,30 @@ fn clamp(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Computes the natural logarithm of a float argument.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn log(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "log")?, "log")?;
     Ok(ComputedItem::Float(libm::log(value)))
 }
 
 /// Computes the base-2 logarithm of a float argument.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn log2(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "log2")?, "log2")?;
     Ok(ComputedItem::Float(libm::log2(value)))
 }
 
 /// Computes the base-10 logarithm of a float argument.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn log10(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "log10")?, "log10")?;
     Ok(ComputedItem::Float(libm::log10(value)))
 }
 
 /// Computes `e^x` for a float argument.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn exp(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "exp")?, "exp")?;
     Ok(ComputedItem::Float(libm::exp(value)))
 }
 
 /// Computes `atan2(y, x)` for two float arguments, returning the angle in radians.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn arctan2(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let y = as_float(arg(args, 0, "arctan2")?, "arctan2")?;
     let x = as_float(arg(args, 1, "arctan2")?, "arctan2")?;
@@ -509,28 +481,24 @@ fn arctan2(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Computes the hyperbolic sine of a float argument.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn sinh(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "sinh")?, "sinh")?;
     Ok(ComputedItem::Float(libm::sinh(value)))
 }
 
 /// Computes the hyperbolic cosine of a float argument.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn cosh(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "cosh")?, "cosh")?;
     Ok(ComputedItem::Float(libm::cosh(value)))
 }
 
 /// Computes the hyperbolic tangent of a float argument.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn tanh(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "tanh")?, "tanh")?;
     Ok(ComputedItem::Float(libm::tanh(value)))
 }
 
 /// Converts a float argument from degrees to radians.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn to_radians(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "to_radians")?, "to_radians")?;
     Ok(ComputedItem::Float(
@@ -539,7 +507,6 @@ fn to_radians(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Converts a float argument from radians to degrees.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn to_degrees(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "to_degrees")?, "to_degrees")?;
     Ok(ComputedItem::Float(
@@ -548,7 +515,6 @@ fn to_degrees(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Returns the number of characters in a string argument as an integer.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn len(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let arg = arg(args, 0, "len")?;
 
@@ -575,7 +541,6 @@ fn len(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Converts a numeric argument to an integer, truncating towards zero for floats.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn to_int(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     match arg(args, 0, "to_int")? {
         ComputedItem::Integer(value) => Ok(ComputedItem::Integer(*value)),
@@ -597,7 +562,6 @@ fn to_int(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Returns the numeric value of a float argument without its unit.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn drop_units(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let value = as_float(arg(args, 0, "drop_units")?, "drop_units")?;
     Ok(ComputedItem::Float(value))
@@ -605,7 +569,6 @@ fn drop_units(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 
 /// Converts a numeric argument to a float, returning an error for integers outside the
 /// exactly representable range.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn to_float(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     match arg(args, 0, "to_float")? {
         ComputedItem::Float(value) | ComputedItem::FloatWithUnit { value, .. } => {
@@ -629,7 +592,6 @@ fn to_float(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Returns `true_value` if the boolean first argument is `true`, otherwise `false_value`.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn if_function(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
     let condition = arg(args, 0, "if")?;
     let true_value = arg(args, 1, "if")?;
@@ -659,7 +621,6 @@ fn if_function(args: &[ComputedItem]) -> Result<ComputedItem, Message> {
 }
 
 /// Returns a `FunctionDefinitions` containing the default mathematical functions.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 pub(crate) fn default_function_definitions() -> FunctionDefinitions {
     FunctionDefinitions::new()
         .with(FunctionDefinition::new(

@@ -29,20 +29,17 @@ impl TableEditable {
 
     /// Converts this `TableEditable` into a `TableFrozen`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn freeze(&self) -> TableFrozen {
         TableFrozen::new_from_editable(self)
     }
 
     /// Returns the value of a cell by row and column index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn cell_by_index(&self, row: usize, column: usize) -> Option<&ShareableString> {
         self.rows.get(row)?.get(column)
     }
 
     /// Returns the value of a cell by row index and column name.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn cell_by_name<S: Into<ShareableString>>(
         &self,
         row: usize,
@@ -56,7 +53,6 @@ impl TableEditable {
 
     /// Returns the row at the specified index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn row(&self, row: usize) -> Option<&Vec<ShareableString>> {
         self.rows.get(row)
     }
@@ -81,7 +77,6 @@ impl TableEditable {
 
     /// Returns the number of columns in the table.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn column_count(&self) -> usize {
         self.definition.count()
     }
@@ -92,7 +87,6 @@ impl TableEditable {
     ///
     /// Returns an error message if `column_name` does not match a column in the
     /// table's definition or if the row is out of bounds.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn set_cell<S: Into<ShareableString>, V: Into<ShareableString>>(
         &mut self,
         row: usize,
@@ -126,7 +120,6 @@ impl TableEditable {
     }
 
     /// Inserts a row of column default values at `row`, or appends it if `row` is out of bounds.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn add_row(&mut self, row: usize) {
         let mut full_row = Vec::new();
         for (_, definition) in self.definition.iter() {
@@ -140,7 +133,6 @@ impl TableEditable {
     }
 
     /// Removes the row at `row`, or the last row if `row` is out of bounds.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn remove_row(&mut self, row: usize) {
         if self.rows.is_empty() {
             return;
@@ -154,7 +146,6 @@ impl TableEditable {
     }
 
     /// Set the parameter value for the table.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn set_parameter<S: Into<ShareableString>>(&mut self, parameter: S) {
         self.parameter = parameter.into();
     }
@@ -167,21 +158,18 @@ impl TableEditable {
 }
 
 impl PartialEq<&TableEditable> for TableEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&TableEditable) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<TableEditable> for &TableEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &TableEditable) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for TableEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

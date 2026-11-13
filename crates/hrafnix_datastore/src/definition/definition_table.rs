@@ -25,7 +25,6 @@ impl TableDefinition {
     ///
     /// If duplicate keys are provided, the last occurrence will be used, and the order of the keys will
     /// reflect the order of their last occurrence.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new<S1: Into<ShareableString>, K: Into<StoreKey>>(
         description: S1,
         columns: Vec<(K, NumberDefinition)>,
@@ -42,7 +41,6 @@ impl TableDefinition {
     /// Creates a table with each column's adjacent-row requirement fixed at construction.
     ///
     /// Duplicate keys use the last definition and requirement, in last-occurrence order.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_column_requirements<S: Into<ShareableString>, K: Into<StoreKey>>(
         description: S,
         columns: Vec<(K, NumberDefinition, TableColumnRequirement)>,
@@ -71,7 +69,6 @@ impl TableDefinition {
     }
 
     /// Creates a new `TableDefinition` with a default table.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_default<
         S1: Into<ShareableString>,
         S2: Into<ShareableString>,
@@ -95,7 +92,6 @@ impl TableDefinition {
     ///
     /// Duplicate keys use the last definition and requirement, in last-occurrence order.
     /// Default rows are padded or truncated to the resulting column count.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_column_requirements_and_default<
         S1: Into<ShareableString>,
         S2: Into<ShareableString>,
@@ -122,20 +118,17 @@ impl TableDefinition {
 
     /// Returns the description of the table.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn description(&self) -> ShareableString {
         self.description.clone()
     }
 
     /// Returns true if the table contains a column with the specified key.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn contains_key<S: Into<ShareableString>>(&self, key: S) -> bool {
         let key = key.into();
         self.columns.contains_key(&key)
     }
 
     /// Returns a reference to the column definition for the specified key.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&NumberDefinition> {
         let key = key.into();
         self.columns.get(&key)
@@ -143,7 +136,6 @@ impl TableDefinition {
 
     /// Returns a reference to the column definition for the specified index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_by_index(&self, index: usize) -> Option<&NumberDefinition> {
         self.ordered_keys
             .get(index)
@@ -175,7 +167,6 @@ impl TableDefinition {
     }
 
     /// Returns the index of the column with the specified key.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_column_index_by_name<S: Into<ShareableString>>(&self, key: S) -> Option<usize> {
         let key = key.into();
         for (index, column_key) in self.ordered_keys.iter().enumerate() {
@@ -188,26 +179,22 @@ impl TableDefinition {
 
     /// Returns true if the table contains a column with the specified key string.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn contains_key_str(&self, key: &str) -> bool {
         self.columns.contains_key(key)
     }
 
     /// Returns a reference to the column definition for the specified key string.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_str(&self, key: &str) -> Option<&NumberDefinition> {
         self.columns.get(key)
     }
 
     /// Returns an iterator over the keys of the columns.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn keys(&self) -> impl Iterator<Item = &StoreKey> {
         self.ordered_keys.iter()
     }
 
     /// Returns an iterator over the column definitions.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &NumberDefinition)> {
         self.ordered_keys
             .iter()
@@ -215,7 +202,6 @@ impl TableDefinition {
     }
 
     /// Returns each column's adjacent-row requirement in insertion order.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn column_requirements(&self) -> impl Iterator<Item = (&StoreKey, TableColumnRequirement)> {
         self.ordered_keys.iter().map(move |key| {
             (
@@ -230,7 +216,6 @@ impl TableDefinition {
 
     /// Returns the number of columns in the table.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn count(&self) -> usize {
         self.columns.len()
     }
@@ -249,7 +234,6 @@ impl TableDefinition {
 
     /// Returns a new `TableDefinition` with strings laundered through the provided store.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         Self {
             description: store.launder(&self.description),
@@ -281,7 +265,6 @@ impl TableDefinition {
     /// order and each column's row requirement must match, since merged rows are kept under
     /// `self`'s definition without re-validation.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn is_merge_compatible(&self, other: &Self) -> bool {
         self.ordered_keys == other.ordered_keys
             && self.column_requirements == other.column_requirements
@@ -289,21 +272,18 @@ impl TableDefinition {
 }
 
 impl PartialEq<&TableDefinition> for TableDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&TableDefinition) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<TableDefinition> for &TableDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &TableDefinition) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for TableDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

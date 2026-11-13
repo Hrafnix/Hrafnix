@@ -17,7 +17,6 @@ pub struct StringFrozen {
 impl StringFrozen {
     /// Creates a new `StringFrozen` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(definition: StringDefinition) -> Self {
         let value = definition.default_value();
 
@@ -32,7 +31,6 @@ impl StringFrozen {
 
     /// Creates a new `StringFrozen` instance with a specified value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_value(definition: StringDefinition, value: ShareableString) -> Self {
         let mut s = Self {
             definition,
@@ -45,7 +43,6 @@ impl StringFrozen {
 
     /// Creates a new `StringFrozen` instance from a given `StringEditable` value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_from_editable(basic: &StringEditable) -> Self {
         let definition = basic.definition().clone();
         let value = basic.value();
@@ -60,7 +57,6 @@ impl StringFrozen {
 
     /// Converts the current `StringFrozen` instance into a `StringEditable` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn thaw(&self) -> StringEditable {
         StringEditable::new(self)
     }
@@ -72,7 +68,6 @@ impl StringFrozen {
     }
 
     /// Recomputes and stores the BLAKE3 hash of the current value.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn update_hash(&mut self) {
         let mut h = blake3::Hasher::new();
 
@@ -88,7 +83,6 @@ impl StringFrozen {
 
     /// Returns the unevaluated value as a `ShareableString`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn value(&self) -> ShareableString {
         self.value.clone()
     }
@@ -108,7 +102,6 @@ impl StringFrozen {
     /// Copies the value from `other` into `self`; string definitions are always merge compatible.
     ///
     /// `self` keeps its own definition. Returns true if `self` was modified.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub(crate) fn update_value_from(&mut self, other: &Self) -> bool {
         if self.value == other.value {
             return false;
@@ -120,21 +113,18 @@ impl StringFrozen {
 }
 
 impl PartialEq<&StringFrozen> for StringFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&StringFrozen) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<StringFrozen> for &StringFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &StringFrozen) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for StringFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

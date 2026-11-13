@@ -121,7 +121,6 @@ impl ChoiceCompileTime {
 
     /// Returns true if the given value is a valid choice.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn contains(&self, value: &str) -> bool {
         self.choices
             .iter()
@@ -129,13 +128,11 @@ impl ChoiceCompileTime {
     }
 
     /// Returns an iterator over the IDs of the choices.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn ids(&self) -> impl Iterator<Item = ConstStoreKey> + '_ {
         self.choices.iter().map(|choice| choice.id)
     }
 
     /// Returns an iterator over the descriptions of the choices.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn descriptions(&self) -> impl Iterator<Item = &'static str> + '_ {
         self.choices.iter().map(|choice| choice.description)
     }

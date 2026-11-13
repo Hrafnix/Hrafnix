@@ -10,7 +10,6 @@ pub struct SeparatorDefinition {
 
 impl SeparatorDefinition {
     /// Creates a new separator-based `SeparatorDefinition`.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new<S: Into<ShareableString>>(description: S) -> Self {
         Self {
             description: description.into(),
@@ -19,7 +18,6 @@ impl SeparatorDefinition {
 
     /// Returns a new `SeparatorDefinition` with strings laundered through the provided store.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         Self {
             description: store.launder(&self.description),
@@ -28,7 +26,6 @@ impl SeparatorDefinition {
 
     /// Returns the description of the parameter.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn description(&self) -> ShareableString {
         self.description.clone()
     }
@@ -41,21 +38,18 @@ impl SeparatorDefinition {
 }
 
 impl PartialEq<&SeparatorDefinition> for SeparatorDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&SeparatorDefinition) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<SeparatorDefinition> for &SeparatorDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &SeparatorDefinition) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for SeparatorDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

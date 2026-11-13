@@ -166,7 +166,6 @@ impl ExpressionRequirements {
     /// Classifies a name (e.g. `g_foo`, `p_bar`, `v_baz`) into the appropriate
     /// requirement bucket based on its prefix, recording it only the first time
     /// it is encountered.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn record_name(
         name: &str,
         global: &mut Vec<ShareableString>,
@@ -190,7 +189,6 @@ impl ExpressionRequirements {
 
     /// Recursively walks an `Expression` tree, collecting the globals,
     /// parameters, variables, and function names it references.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn collect_requirements(
         expression: &Expression,
         global: &mut Vec<ShareableString>,

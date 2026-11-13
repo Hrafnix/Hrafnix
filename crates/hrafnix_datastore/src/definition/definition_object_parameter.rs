@@ -19,7 +19,6 @@ pub struct ParameterObjectDefinitionBuilder {
 
 impl ParameterObjectDefinitionBuilder {
     /// Creates a new `ParameterObjectDefinitionBuilder` with a description.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new<S: Into<ShareableString>>(description: S) -> Self {
         Self {
             description: description.into(),
@@ -33,7 +32,6 @@ impl ParameterObjectDefinitionBuilder {
     /// This method will overwrite existing items with the same keys.
     /// Will keep the order of the existing keys and append new keys at the end.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn inherit(mut self, definition: &ParameterObjectDefinition) -> Self {
         for key in definition.items.keys() {
             if !self.items.contains_key(key) {
@@ -56,7 +54,6 @@ impl ParameterObjectDefinitionBuilder {
     /// # Errors
     ///
     /// Returns an error message if any key already exists in the builder.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn inherit_with_check(
         mut self,
         definition: &ParameterObjectDefinition,
@@ -89,7 +86,6 @@ impl ParameterObjectDefinitionBuilder {
     /// This method will overwrite existing items with the same keys.
     /// Will keep the order of the existing keys and append new keys at the end.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn inherit_from_builder(mut self, builder: ParameterObjectDefinitionBuilder) -> Self {
         for key in builder.items.keys() {
             if !self.items.contains_key(key) {
@@ -110,7 +106,6 @@ impl ParameterObjectDefinitionBuilder {
     /// # Errors
     ///
     /// Returns an error message if any key already exists in the builder.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn inherit_from_builder_with_check(
         mut self,
         builder: ParameterObjectDefinitionBuilder,
@@ -142,7 +137,6 @@ impl ParameterObjectDefinitionBuilder {
     /// This method will overwrite existing items with the same keys.
     /// If the key does not exist, it will be appended to the end of the ordered keys.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn with<K: Into<ParameterKey>, T: Into<ItemDefinitionType>>(
         mut self,
         key: K,
@@ -156,7 +150,6 @@ impl ParameterObjectDefinitionBuilder {
     ///
     /// This method will overwrite existing items with the same keys.
     /// If the key does not exist, it will be appended to the end of the ordered keys.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn insert<K: Into<ParameterKey>, T: Into<ItemDefinitionType>>(
         &mut self,
         key: K,
@@ -178,7 +171,6 @@ impl ParameterObjectDefinitionBuilder {
     /// inserting it at the requested index. The index is clamped to the
     /// current number of keys.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn with_at<K: Into<ParameterKey>, T: Into<ItemDefinitionType>>(
         mut self,
         index: usize,
@@ -195,7 +187,6 @@ impl ParameterObjectDefinitionBuilder {
     /// If the key already exists, its previous position is removed before
     /// inserting it at the requested index. The index is clamped to the
     /// current number of keys.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn insert_at<K: Into<ParameterKey>, T: Into<ItemDefinitionType>>(
         &mut self,
         index: usize,
@@ -220,7 +211,6 @@ impl ParameterObjectDefinitionBuilder {
     /// If the reference key does not exist, the item is appended to the end
     /// of the ordered keys.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn with_before<
         R: Into<ParameterKey>,
         K: Into<ParameterKey>,
@@ -240,7 +230,6 @@ impl ParameterObjectDefinitionBuilder {
     /// This method will overwrite existing items with the same keys.
     /// If the reference key does not exist, the item is appended to the end
     /// of the ordered keys.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn insert_before<
         R: Into<ParameterKey>,
         K: Into<ParameterKey>,
@@ -267,7 +256,6 @@ impl ParameterObjectDefinitionBuilder {
     /// If the reference key does not exist, the item is appended to the end
     /// of the ordered keys.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn with_after<R: Into<ParameterKey>, K: Into<ParameterKey>, T: Into<ItemDefinitionType>>(
         mut self,
         reference: R,
@@ -283,7 +271,6 @@ impl ParameterObjectDefinitionBuilder {
     /// This method will overwrite existing items with the same keys.
     /// If the reference key does not exist, the item is appended to the end
     /// of the ordered keys.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn insert_after<
         R: Into<ParameterKey>,
         K: Into<ParameterKey>,
@@ -306,14 +293,12 @@ impl ParameterObjectDefinitionBuilder {
 
     /// Returns a new builder with the item removed.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn without<S: Into<ShareableString>>(mut self, key: S) -> Self {
         self.remove(key);
         self
     }
 
     /// Removes an item from the current builder.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn remove<S: Into<ShareableString>>(&mut self, key: S) {
         let key = key.into();
         self.ordered_keys.retain(|k| k != &key);
@@ -322,7 +307,6 @@ impl ParameterObjectDefinitionBuilder {
 
     /// Builds the `ParameterObjectDefinition`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn finish(self) -> ParameterObjectDefinition {
         ParameterObjectDefinition {
             description: self.description,
@@ -345,7 +329,6 @@ pub struct ParameterObjectDefinition {
 
 impl ParameterObjectDefinition {
     /// Returns a new `ParameterObjectDefinitionBuilder` with the specified description.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn builder<S: Into<ShareableString>>(description: S) -> ParameterObjectDefinitionBuilder {
         ParameterObjectDefinitionBuilder::new(description)
     }
@@ -353,7 +336,6 @@ impl ParameterObjectDefinition {
     /// Returns a new `ParameterObjectDefinitionBuilder` initialized with the items of this definition.
     ///
     /// The new builder will have the specified description and a copy of the current items.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn inherit<S: Into<ShareableString>>(
         &self,
         description: S,
@@ -367,7 +349,6 @@ impl ParameterObjectDefinition {
 
     /// Returns the description of the object.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn description(&self) -> ShareableString {
         self.description.clone()
     }
@@ -380,45 +361,38 @@ impl ParameterObjectDefinition {
 
     /// Returns the number of items in the object.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn count(&self) -> usize {
         self.items.len()
     }
 
     /// Returns true if the object contains an item with the specified key.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn contains<S: Into<ShareableString>>(&self, key: S) -> bool {
         self.items.contains_key(&key.into())
     }
 
     /// Returns true if the object contains an item with the specified key string.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn contains_str(&self, key: &str) -> bool {
         self.items.contains_key(key)
     }
 
     /// Returns a reference to the item definition for the specified key.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&ItemDefinitionType> {
         self.items.get(&key.into())
     }
 
     /// Returns a reference to the item definition for the specified key string.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_str(&self, key: &str) -> Option<&ItemDefinitionType> {
         self.items.get(key)
     }
 
     /// Returns an iterator over the keys of the items.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn keys(&self) -> impl Iterator<Item = &ParameterKey> {
         self.ordered_keys.iter()
     }
 
     /// Returns an iterator over the item definitions.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn iter(&self) -> impl Iterator<Item = (&ParameterKey, &ItemDefinitionType)> {
         self.ordered_keys
             .iter()
@@ -443,21 +417,18 @@ impl ParameterObjectDefinition {
 }
 
 impl PartialEq<&ParameterObjectDefinition> for ParameterObjectDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&ParameterObjectDefinition) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<ParameterObjectDefinition> for &ParameterObjectDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ParameterObjectDefinition) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for ParameterObjectDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,
@@ -483,7 +454,6 @@ impl TreePrint for ParameterObjectDefinition {
 }
 
 impl std::fmt::Display for ParameterObjectDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.tree_print(f, "", "", true)
     }
