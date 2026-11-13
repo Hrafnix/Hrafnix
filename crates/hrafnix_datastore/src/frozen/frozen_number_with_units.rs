@@ -19,7 +19,6 @@ pub struct NumberWithUnitsFrozen {
 impl NumberWithUnitsFrozen {
     /// Creates a new `NumberWithUnitsFrozen` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(definition: NumberWithUnitsDefinition) -> Self {
         let value = definition.default_value();
         let units = definition.preferred_units().string_id().into();
@@ -36,7 +35,6 @@ impl NumberWithUnitsFrozen {
 
     /// Creates a new `NumberWithUnitsFrozen` instance with a specified value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_value(
         definition: NumberWithUnitsDefinition,
         value: ShareableString,
@@ -54,7 +52,6 @@ impl NumberWithUnitsFrozen {
 
     /// Creates a new `NumberWithUnitsFrozen` instance from a given `NumberEditable` value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_from_editable(basic: &NumberWithUnitsEditable) -> Self {
         let definition = basic.definition().clone();
         let value = basic.value();
@@ -71,7 +68,6 @@ impl NumberWithUnitsFrozen {
 
     /// Converts the current `NumberWithUnitsFrozen` instance into a `NumberWithUnitsEditable` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn thaw(&self) -> NumberWithUnitsEditable {
         NumberWithUnitsEditable::new(self)
     }
@@ -87,7 +83,6 @@ impl NumberWithUnitsFrozen {
     }
 
     /// Recomputes and stores the BLAKE3 hash of the current value.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn update_hash(&mut self) {
         let mut h = blake3::Hasher::new();
 
@@ -104,14 +99,12 @@ impl NumberWithUnitsFrozen {
 
     /// Returns the unevaluated value as a `ShareableString`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn value(&self) -> ShareableString {
         self.value.clone()
     }
 
     /// Returns the units as a `ShareableString`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn units(&self) -> ShareableString {
         self.units.clone()
     }
@@ -131,7 +124,6 @@ impl NumberWithUnitsFrozen {
     /// Copies the value from `other` into `self` if their definitions are merge compatible.
     ///
     /// `self` keeps its own definition. Returns true if `self` was modified.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub(crate) fn update_value_from(&mut self, other: &Self) -> bool {
         if !self.definition.is_merge_compatible(&other.definition)
             || (self.value == other.value && self.units == other.units)
@@ -146,21 +138,18 @@ impl NumberWithUnitsFrozen {
 }
 
 impl PartialEq<&NumberWithUnitsFrozen> for NumberWithUnitsFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&NumberWithUnitsFrozen) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<NumberWithUnitsFrozen> for &NumberWithUnitsFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &NumberWithUnitsFrozen) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for NumberWithUnitsFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

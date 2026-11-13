@@ -158,7 +158,6 @@ impl ParameterObjectFrozen {
 
     /// Converts the current `ParameterObjectFrozen` instance into a `ParameterObjectEditable` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn thaw(&self) -> ParameterObjectEditable {
         ParameterObjectEditable::new_from_frozen(self)
     }
@@ -193,19 +192,16 @@ impl ParameterObjectFrozen {
     }
 
     /// Returns a reference to the parameter with the specified key if it exists.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&ItemFrozen> {
         self.items.get(&key.into())
     }
 
     /// Returns an iterator over the key-parameter pairs in the object.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn iter(&self) -> impl Iterator<Item = (&ParameterKey, &ItemFrozen)> {
         self.items.iter()
     }
 
     /// Returns an iterator over the key-item pairs in definition order.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn ordered_iter(&self) -> impl Iterator<Item = (&ParameterKey, &ItemFrozen)> {
         self.definition
             .keys()
@@ -259,7 +255,6 @@ impl ParameterObjectFrozen {
 }
 
 impl PartialEq for ParameterObjectFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &Self) -> bool {
         self.items.len() == other.items.len()
             && self.hash == other.hash
@@ -269,21 +264,18 @@ impl PartialEq for ParameterObjectFrozen {
 }
 
 impl PartialEq<&ParameterObjectFrozen> for ParameterObjectFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&ParameterObjectFrozen) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<ParameterObjectFrozen> for &ParameterObjectFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ParameterObjectFrozen) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for ParameterObjectFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,
@@ -311,7 +303,6 @@ impl TreePrint for ParameterObjectFrozen {
 }
 
 impl std::fmt::Display for ParameterObjectFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.tree_print(f, "", "", true)
     }

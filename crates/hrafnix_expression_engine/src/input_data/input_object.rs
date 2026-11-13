@@ -24,7 +24,6 @@ pub enum ObjectItemInputData {
 
 /// Converts a single `MapItemFrozen` (an entry within a `Map` item) into its
 /// corresponding `ObjectItemInputData`.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn map_item_to_input_data(map_item: &MapItemFrozen) -> ObjectItemInputData {
     match map_item {
         MapItemFrozen::Boolean(boolean) => ObjectItemInputData::Basic(BasicInputData::new(
@@ -84,7 +83,6 @@ fn map_item_to_input_data(map_item: &MapItemFrozen) -> ObjectItemInputData {
 /// Most item kinds map to a single entry, but `Map` items are flattened:
 /// each field of each entry becomes its own item, addressed by a
 /// `key[entry].field` path.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn item_to_input_data(
     map: &mut BTreeMap<ShareableString, ObjectItemInputData>,
     key: ShareableString,

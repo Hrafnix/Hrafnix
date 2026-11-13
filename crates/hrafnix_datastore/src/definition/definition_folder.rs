@@ -14,7 +14,6 @@ pub struct FolderDefinition {
 
 impl FolderDefinition {
     /// Creates a new folder-based `FolderDefinition`.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new<S: Into<ShareableString>>(description: S, is_input: bool) -> Self {
         Self {
             description: description.into(),
@@ -24,7 +23,6 @@ impl FolderDefinition {
     }
 
     /// Creates a new folder-based `FolderDefinition` with a default value.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_default<S1: Into<ShareableString>, S2: Into<ShareableString>>(
         description: S1,
         is_input: bool,
@@ -45,7 +43,6 @@ impl FolderDefinition {
 
     /// Returns a new `FolderDefinition` with strings laundered through the provided store.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         Self {
             description: store.launder(&self.description),
@@ -56,7 +53,6 @@ impl FolderDefinition {
 
     /// Returns the description of the parameter.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn description(&self) -> ShareableString {
         self.description.clone()
     }
@@ -69,7 +65,6 @@ impl FolderDefinition {
 
     /// Returns the default value of the parameter.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn default_value(&self) -> ShareableString {
         self.default_value.clone()
     }
@@ -90,21 +85,18 @@ impl FolderDefinition {
 }
 
 impl PartialEq<&FolderDefinition> for FolderDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&FolderDefinition) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<FolderDefinition> for &FolderDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &FolderDefinition) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for FolderDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

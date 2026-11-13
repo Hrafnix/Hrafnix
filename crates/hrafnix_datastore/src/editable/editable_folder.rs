@@ -15,7 +15,6 @@ pub struct FolderEditable {
 impl FolderEditable {
     /// Creates a new `FolderEditable` instance from a given `FolderFrozen` value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(frozen_folder: &FolderFrozen) -> Self {
         Self {
             definition: frozen_folder.definition().clone(),
@@ -25,14 +24,12 @@ impl FolderEditable {
 
     /// Converts the current `FolderEditable` instance into a `FolderFrozen` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn freeze(&self) -> FolderFrozen {
         FolderFrozen::new_from_editable(self)
     }
 
     /// Returns the unevaluated value as a `ShareableString`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn value(&self) -> ShareableString {
         self.value.clone()
     }
@@ -44,28 +41,24 @@ impl FolderEditable {
     }
 
     /// Sets the unevaluated value.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn set<S: Into<ShareableString>>(&mut self, value: S) {
         self.value = value.into();
     }
 }
 
 impl PartialEq<&FolderEditable> for FolderEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&FolderEditable) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<FolderEditable> for &FolderEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &FolderEditable) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for FolderEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

@@ -64,7 +64,6 @@ impl ItemFrozen {
 
     /// Returns the parameter definition.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn definition(&self) -> ItemDefinitionType {
         match self {
             ItemFrozen::Boolean(b) => ItemDefinitionType::Boolean(b.definition().clone()),
@@ -111,7 +110,6 @@ impl ItemFrozen {
 
     /// Returns the choice value if this parameter is a choice parameter.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_choice(&self) -> Option<ChoiceFrozen> {
         match self {
             Self::Choice(c) => Some(c.clone()),
@@ -133,7 +131,6 @@ impl ItemFrozen {
 
     /// Returns the unit value if this parameter is a unit parameter.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_unit(&self) -> Option<UnitFrozen> {
         match self {
             Self::Unit(unit) => Some(unit.clone()),
@@ -262,7 +259,6 @@ impl ItemFrozen {
     /// merge compatible.
     ///
     /// `self` keeps its own definition. Returns true if `self` was modified.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub(crate) fn update_value_from(&mut self, other: &Self) -> bool {
         match (self, other) {
             (Self::Boolean(a), Self::Boolean(b)) => a.update_value_from(b),
@@ -285,7 +281,6 @@ impl ItemFrozen {
 }
 
 impl TreePrint for ItemFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

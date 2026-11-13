@@ -158,7 +158,6 @@ impl VariableObjectFrozen {
 
     /// Converts the current `VariableObjectFrozen` instance into a `VariableObjectEditable` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn thaw(&self) -> VariableObjectEditable {
         VariableObjectEditable::new_from_frozen(self)
     }
@@ -193,19 +192,16 @@ impl VariableObjectFrozen {
     }
 
     /// Returns a reference to the parameter with the specified key if it exists.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&ItemFrozen> {
         self.items.get(&key.into())
     }
 
     /// Returns an iterator over the key-parameter pairs in the object.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn iter(&self) -> impl Iterator<Item = (&VariableKey, &ItemFrozen)> {
         self.items.iter()
     }
 
     /// Returns an iterator over the key-item pairs in definition order.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn ordered_iter(&self) -> impl Iterator<Item = (&VariableKey, &ItemFrozen)> {
         self.definition
             .keys()
@@ -256,7 +252,6 @@ impl VariableObjectFrozen {
 }
 
 impl PartialEq for VariableObjectFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &Self) -> bool {
         self.items.len() == other.items.len()
             && self.hash == other.hash
@@ -266,21 +261,18 @@ impl PartialEq for VariableObjectFrozen {
 }
 
 impl PartialEq<&VariableObjectFrozen> for VariableObjectFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&VariableObjectFrozen) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<VariableObjectFrozen> for &VariableObjectFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &VariableObjectFrozen) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for VariableObjectFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,
@@ -308,7 +300,6 @@ impl TreePrint for VariableObjectFrozen {
 }
 
 impl std::fmt::Display for VariableObjectFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.tree_print(f, "", "", true)
     }

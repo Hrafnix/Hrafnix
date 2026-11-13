@@ -88,7 +88,6 @@ impl TableWithUnitsFrozen {
 
     /// Converts this `TableWithUnitsFrozen` into a `TableWithUnitsEditable`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn thaw(&self) -> TableWithUnitsEditable {
         TableWithUnitsEditable::new(self)
     }
@@ -146,13 +145,11 @@ impl TableWithUnitsFrozen {
 
     /// Returns the value of a cell by row and column index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn cell_by_index(&self, row: usize, column: usize) -> Option<&ShareableString> {
         self.rows.get(row)?.get(column)
     }
 
     /// Returns the value of a cell by row index and column name.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn cell_by_name<S: Into<ShareableString>>(
         &self,
         row: usize,
@@ -166,7 +163,6 @@ impl TableWithUnitsFrozen {
 
     /// Returns the row at the specified index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn row(&self, row: usize) -> Option<&Vec<ShareableString>> {
         self.rows.get(row)
     }
@@ -185,13 +181,11 @@ impl TableWithUnitsFrozen {
 
     /// Returns the unit for the column at the given index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn unit_by_index(&self, column: usize) -> Option<&ShareableString> {
         self.units.get(column)
     }
 
     /// Returns the unit for the column with the given name.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn unit_by_name<S: Into<ShareableString>>(
         &self,
         column_name: S,
@@ -216,7 +210,6 @@ impl TableWithUnitsFrozen {
 
     /// Returns the number of columns in the table.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn column_count(&self) -> usize {
         self.definition.count()
     }
@@ -236,7 +229,6 @@ impl TableWithUnitsFrozen {
     /// Copies the value from `other` into `self` if their definitions are merge compatible.
     ///
     /// `self` keeps its own definition. Returns true if `self` was modified.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub(crate) fn update_value_from(&mut self, other: &Self) -> bool {
         if !self.definition.is_merge_compatible(&other.definition)
             || (self.units == other.units && self.rows == other.rows)
@@ -251,7 +243,6 @@ impl TableWithUnitsFrozen {
 }
 
 impl PartialEq for TableWithUnitsFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &Self) -> bool {
         self.units.len() == other.units.len()
             && self.rows.len() == other.rows.len()
@@ -264,21 +255,18 @@ impl PartialEq for TableWithUnitsFrozen {
 }
 
 impl PartialEq<&TableWithUnitsFrozen> for TableWithUnitsFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&TableWithUnitsFrozen) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<TableWithUnitsFrozen> for &TableWithUnitsFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &TableWithUnitsFrozen) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for TableWithUnitsFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

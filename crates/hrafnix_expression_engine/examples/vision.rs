@@ -23,7 +23,6 @@ struct Component {
 }
 
 impl Component {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn new(
         name: impl Into<ShareableString>,
         parameters: ParameterObjectInputData,
@@ -37,7 +36,6 @@ impl Component {
         }
     }
 
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn add_child(&mut self, child: Self) {
         self.children.push(child);
     }
@@ -94,7 +92,6 @@ impl<'a> EvaluationQueue<'a> {
         }
     }
 
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn dequeue(&mut self) -> Option<QueuedComponent<'a>> {
         self.pending.pop_front()
     }
@@ -134,7 +131,6 @@ impl Model {
         }
     }
 
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn add_child(&mut self, child: Component) {
         self.children.push(child);
     }
@@ -195,7 +191,6 @@ impl Model {
     }
 }
 
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn input_parameters(key: ConstParameterKey, expression: &str) -> ParameterObjectInputData {
     let definition = ParameterObjectDefinition::builder("Component parameters")
         .with(
@@ -207,7 +202,6 @@ fn input_parameters(key: ConstParameterKey, expression: &str) -> ParameterObject
     ParameterObjectInputData::new(&ParameterObjectFrozen::new(definition))
 }
 
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn input_variables(key: ConstVariableKey, expression: &str) -> VariableObjectInputData {
     let definition = VariableObjectDefinition::builder("Component variables")
         .with(
@@ -219,7 +213,6 @@ fn input_variables(key: ConstVariableKey, expression: &str) -> VariableObjectInp
     VariableObjectInputData::new(&VariableObjectFrozen::new(definition))
 }
 
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn create_extended_globals() -> GlobalObjectInputData {
     GlobalObjectInputData::new(&GlobalObjectFrozen::new(
         GlobalObjectDefinition::builder("Gantry crane design assumptions")
@@ -259,7 +252,6 @@ fn create_extended_globals() -> GlobalObjectInputData {
     ))
 }
 
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn create_settings() -> GlobalObjectInputData {
     GlobalObjectInputData::new(&GlobalObjectFrozen::new(
         GlobalObjectDefinition::builder("Gantry crane calculated settings")
@@ -274,7 +266,6 @@ fn create_settings() -> GlobalObjectInputData {
     ))
 }
 
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn create_girder_component() -> Component {
     let mut girder = Component::new(
         "Main Girder",
@@ -298,7 +289,6 @@ fn create_girder_component() -> Component {
     girder
 }
 
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn create_model() -> Model {
     let settings = create_settings();
     let mut model = Model::new(

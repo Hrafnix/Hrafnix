@@ -90,126 +90,108 @@ impl ConstComponentKey {
 }
 
 impl Display for ConstComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
 impl PartialEq<&str> for ConstComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&str) -> bool {
         self.0 == *other
     }
 }
 
 impl PartialEq<ConstComponentKey> for &str {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ConstComponentKey) -> bool {
         *self == other.0
     }
 }
 
 impl PartialEq<String> for ConstComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &String) -> bool {
         self.0 == other.as_str()
     }
 }
 
 impl PartialEq<ConstComponentKey> for String {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ConstComponentKey) -> bool {
         self.as_str() == other.0
     }
 }
 
 impl PartialEq<ShareableString> for ConstComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ShareableString) -> bool {
         self.0 == other.as_str()
     }
 }
 
 impl PartialEq<ConstComponentKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ConstComponentKey) -> bool {
         self.as_str() == other.0
     }
 }
 
 impl PartialEq<ComponentKey> for ConstComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ComponentKey) -> bool {
         self.0 == other.as_str()
     }
 }
 
 impl PartialEq<ConstComponentKey> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ConstComponentKey) -> bool {
         self.as_str() == other.0
     }
 }
 
 impl PartialOrd<&str> for ConstComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &&str) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(*other)
     }
 }
 
 impl PartialOrd<ConstComponentKey> for &str {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ConstComponentKey) -> Option<std::cmp::Ordering> {
         (*self).partial_cmp(other.0)
     }
 }
 
 impl PartialOrd<String> for ConstComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &String) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<ConstComponentKey> for String {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ConstComponentKey) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.0)
     }
 }
 
 impl PartialOrd<ShareableString> for ConstComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ShareableString) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<ConstComponentKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ConstComponentKey) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.0)
     }
 }
 
 impl PartialOrd<ComponentKey> for ConstComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ComponentKey) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<ConstComponentKey> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ConstComponentKey) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.0)
     }
 }
 
 impl From<ConstComponentKey> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: ConstComponentKey) -> Self {
         ComponentKey {
             key: ShareableString::from(value.0),
@@ -218,7 +200,6 @@ impl From<ConstComponentKey> for ComponentKey {
 }
 
 impl From<&ConstComponentKey> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: &ConstComponentKey) -> Self {
         ComponentKey {
             key: ShareableString::from(value.0),
@@ -227,14 +208,12 @@ impl From<&ConstComponentKey> for ComponentKey {
 }
 
 impl From<ConstComponentKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: ConstComponentKey) -> Self {
         ShareableString::from(value.0)
     }
 }
 
 impl From<&ConstComponentKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: &ConstComponentKey) -> Self {
         ShareableString::from(value.0)
     }
@@ -255,7 +234,6 @@ impl ComponentKey {
     /// # Errors
     ///
     /// Returns an error message if the key is invalid.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(key: ShareableString) -> Result<Self, Message> {
         validate_key(&key)?;
         Ok(Self { key })
@@ -275,7 +253,6 @@ impl ComponentKey {
 
     /// Returns the string slice.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn as_str(&self) -> &str {
         self.key.as_str()
     }
@@ -288,7 +265,6 @@ impl ComponentKey {
 
     /// Returns a new `ComponentKey` with its string interned through the given `SharedStringStore`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         let laundered_key = store.launder(self.key.clone());
 
@@ -306,133 +282,114 @@ impl ComponentKey {
 
     /// Returns true if the key starts with the given prefix.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn starts_with(&self, prefix: &str) -> bool {
         self.key.as_str().starts_with(prefix)
     }
 }
 
 impl PartialEq<ShareableString> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ShareableString) -> bool {
         self.key.as_ref() == other.as_ref()
     }
 }
 
 impl PartialEq<ComponentKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ComponentKey) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
 impl PartialEq<&str> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&str) -> bool {
         self.as_str() == *other
     }
 }
 
 impl PartialEq<ComponentKey> for &str {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ComponentKey) -> bool {
         *self == other.as_str()
     }
 }
 
 impl PartialEq<String> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &String) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
 impl PartialEq<ComponentKey> for String {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ComponentKey) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
 impl AsRef<str> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
 impl PartialOrd<&str> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &&str) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(*other)
     }
 }
 
 impl PartialOrd<ShareableString> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ShareableString) -> Option<std::cmp::Ordering> {
         self.key.partial_cmp(other)
     }
 }
 
 impl PartialOrd<ComponentKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ComponentKey) -> Option<std::cmp::Ordering> {
         self.partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<ComponentKey> for &str {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ComponentKey) -> Option<std::cmp::Ordering> {
         (*self).partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<String> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &String) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<ComponentKey> for String {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ComponentKey) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.as_str())
     }
 }
 
 impl Display for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.key)
     }
 }
 
 impl From<ComponentKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: ComponentKey) -> Self {
         value.key
     }
 }
 
 impl From<&ComponentKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: &ComponentKey) -> Self {
         value.key.clone()
     }
 }
 
 impl std::borrow::Borrow<str> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn borrow(&self) -> &str {
         self.key.as_str()
     }
 }
 
 impl std::borrow::Borrow<ShareableString> for ComponentKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn borrow(&self) -> &ShareableString {
         &self.key
     }

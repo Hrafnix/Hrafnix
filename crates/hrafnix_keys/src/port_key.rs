@@ -90,126 +90,108 @@ impl ConstPortKey {
 }
 
 impl Display for ConstPortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
 impl PartialEq<&str> for ConstPortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&str) -> bool {
         self.0 == *other
     }
 }
 
 impl PartialEq<ConstPortKey> for &str {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ConstPortKey) -> bool {
         *self == other.0
     }
 }
 
 impl PartialEq<String> for ConstPortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &String) -> bool {
         self.0 == other.as_str()
     }
 }
 
 impl PartialEq<ConstPortKey> for String {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ConstPortKey) -> bool {
         self.as_str() == other.0
     }
 }
 
 impl PartialEq<ShareableString> for ConstPortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ShareableString) -> bool {
         self.0 == other.as_str()
     }
 }
 
 impl PartialEq<ConstPortKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ConstPortKey) -> bool {
         self.as_str() == other.0
     }
 }
 
 impl PartialEq<PortKey> for ConstPortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &PortKey) -> bool {
         self.0 == other.as_str()
     }
 }
 
 impl PartialEq<ConstPortKey> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ConstPortKey) -> bool {
         self.as_str() == other.0
     }
 }
 
 impl PartialOrd<&str> for ConstPortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &&str) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(*other)
     }
 }
 
 impl PartialOrd<ConstPortKey> for &str {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ConstPortKey) -> Option<std::cmp::Ordering> {
         (*self).partial_cmp(other.0)
     }
 }
 
 impl PartialOrd<String> for ConstPortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &String) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<ConstPortKey> for String {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ConstPortKey) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.0)
     }
 }
 
 impl PartialOrd<ShareableString> for ConstPortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ShareableString) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<ConstPortKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ConstPortKey) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.0)
     }
 }
 
 impl PartialOrd<PortKey> for ConstPortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &PortKey) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<ConstPortKey> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ConstPortKey) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.0)
     }
 }
 
 impl From<ConstPortKey> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: ConstPortKey) -> Self {
         PortKey {
             key: ShareableString::from(value.0),
@@ -218,7 +200,6 @@ impl From<ConstPortKey> for PortKey {
 }
 
 impl From<&ConstPortKey> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: &ConstPortKey) -> Self {
         PortKey {
             key: ShareableString::from(value.0),
@@ -227,14 +208,12 @@ impl From<&ConstPortKey> for PortKey {
 }
 
 impl From<ConstPortKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: ConstPortKey) -> Self {
         ShareableString::from(value.0)
     }
 }
 
 impl From<&ConstPortKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: &ConstPortKey) -> Self {
         ShareableString::from(value.0)
     }
@@ -255,7 +234,6 @@ impl PortKey {
     /// # Errors
     ///
     /// Returns an error message if the key is invalid.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(key: ShareableString) -> Result<Self, Message> {
         validate_port_key(&key)?;
         Ok(Self { key })
@@ -275,7 +253,6 @@ impl PortKey {
 
     /// Returns the string slice.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn as_str(&self) -> &str {
         self.key.as_str()
     }
@@ -288,7 +265,6 @@ impl PortKey {
 
     /// Returns a new `PortKey` with its string interned through the given `SharedStringStore`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         let laundered_key = store.launder(self.key.clone());
 
@@ -306,133 +282,114 @@ impl PortKey {
 
     /// Returns true if the key starts with the given prefix.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn starts_with(&self, prefix: &str) -> bool {
         self.key.as_str().starts_with(prefix)
     }
 }
 
 impl PartialEq<ShareableString> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ShareableString) -> bool {
         self.key.as_ref() == other.as_ref()
     }
 }
 
 impl PartialEq<PortKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &PortKey) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
 impl PartialEq<&str> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&str) -> bool {
         self.as_str() == *other
     }
 }
 
 impl PartialEq<PortKey> for &str {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &PortKey) -> bool {
         *self == other.as_str()
     }
 }
 
 impl PartialEq<String> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &String) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
 impl PartialEq<PortKey> for String {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &PortKey) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
 impl AsRef<str> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
 impl PartialOrd<&str> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &&str) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(*other)
     }
 }
 
 impl PartialOrd<ShareableString> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ShareableString) -> Option<std::cmp::Ordering> {
         self.key.partial_cmp(other)
     }
 }
 
 impl PartialOrd<PortKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &PortKey) -> Option<std::cmp::Ordering> {
         self.partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<PortKey> for &str {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &PortKey) -> Option<std::cmp::Ordering> {
         (*self).partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<String> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &String) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<PortKey> for String {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &PortKey) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.as_str())
     }
 }
 
 impl Display for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.key)
     }
 }
 
 impl From<PortKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: PortKey) -> Self {
         value.key
     }
 }
 
 impl From<&PortKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: &PortKey) -> Self {
         value.key.clone()
     }
 }
 
 impl std::borrow::Borrow<str> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn borrow(&self) -> &str {
         self.key.as_str()
     }
 }
 
 impl std::borrow::Borrow<ShareableString> for PortKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn borrow(&self) -> &ShareableString {
         &self.key
     }

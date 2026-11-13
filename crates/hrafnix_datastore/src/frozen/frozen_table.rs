@@ -68,7 +68,6 @@ impl TableFrozen {
 
     /// Converts the current `TableFrozen` instance into a `TableEditable` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn thaw(&self) -> TableEditable {
         TableEditable::new(self)
     }
@@ -119,13 +118,11 @@ impl TableFrozen {
 
     /// Returns the value of a cell by row and column index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn cell_by_index(&self, row: usize, column: usize) -> Option<&ShareableString> {
         self.rows.get(row)?.get(column)
     }
 
     /// Returns the value of a cell by row index and column name.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn cell_by_name<S: Into<ShareableString>>(
         &self,
         row: usize,
@@ -139,7 +136,6 @@ impl TableFrozen {
 
     /// Returns the row at the specified index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn row(&self, row: usize) -> Option<&Vec<ShareableString>> {
         self.rows.get(row)
     }
@@ -170,7 +166,6 @@ impl TableFrozen {
 
     /// Returns the number of columns in the table.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn column_count(&self) -> usize {
         self.definition.count()
     }
@@ -184,7 +179,6 @@ impl TableFrozen {
     /// Copies the value from `other` into `self` if their definitions are merge compatible.
     ///
     /// `self` keeps its own definition. Returns true if `self` was modified.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub(crate) fn update_value_from(&mut self, other: &Self) -> bool {
         if !self.definition.is_merge_compatible(&other.definition) || self.rows == other.rows {
             return false;
@@ -196,7 +190,6 @@ impl TableFrozen {
 }
 
 impl PartialEq for TableFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &Self) -> bool {
         self.rows.len() == other.rows.len()
             && self.hash == other.hash
@@ -207,21 +200,18 @@ impl PartialEq for TableFrozen {
 }
 
 impl PartialEq<&TableFrozen> for TableFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&TableFrozen) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<TableFrozen> for &TableFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &TableFrozen) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for TableFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

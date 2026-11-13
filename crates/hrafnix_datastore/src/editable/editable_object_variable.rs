@@ -31,25 +31,21 @@ impl VariableObjectEditable {
 
     /// Creates a new `VariableObjectFrozen` from this `VariableObjectEditable`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn freeze(&self) -> VariableObjectFrozen {
         VariableObjectFrozen::new_from_editable(self)
     }
 
     /// Returns a reference to the parameter with the specified key if it exists.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&ItemEditable> {
         self.items.get(&key.into())
     }
 
     /// Returns a mutable reference to the parameter with the specified key if it exists.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_mut<S: AsRef<str>>(&mut self, key: S) -> Option<&mut ItemEditable> {
         self.items.get_mut(key.as_ref())
     }
 
     /// Returns an iterator over the key-parameter pairs in the object.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn iter(&self) -> impl Iterator<Item = (&VariableKey, &ItemEditable)> {
         self.items.iter()
     }
@@ -63,34 +59,29 @@ impl VariableObjectEditable {
 
 impl ObjectEditable for VariableObjectEditable {
     /// Returns a reference to the parameter with the specified key if it exists.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&ItemEditable> {
         self.get(key)
     }
 
     /// Returns a mutable reference to the parameter with the specified key if it exists.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn get_mut<S: AsRef<str>>(&mut self, key: S) -> Option<&mut ItemEditable> {
         self.get_mut(key)
     }
 }
 
 impl PartialEq<&VariableObjectEditable> for VariableObjectEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&VariableObjectEditable) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<VariableObjectEditable> for &VariableObjectEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &VariableObjectEditable) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for VariableObjectEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,
@@ -118,7 +109,6 @@ impl TreePrint for VariableObjectEditable {
 }
 
 impl std::fmt::Display for VariableObjectEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.tree_print(f, "", "", true)
     }

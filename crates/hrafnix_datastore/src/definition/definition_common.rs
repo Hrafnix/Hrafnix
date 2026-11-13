@@ -124,7 +124,6 @@ impl NumberConstraint {
     /// If `value_1` or `value_2` are not finite (i.e., they are NaN or infinite), the constraint
     /// for that value will be treated as `None`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn range(
         value_1: f64,
         value_2: f64,

@@ -24,7 +24,6 @@ pub struct ExpressionEngine {
 }
 
 impl Default for ExpressionEngine {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn default() -> Self {
         Self::new()
     }
@@ -33,7 +32,6 @@ impl Default for ExpressionEngine {
 impl ExpressionEngine {
     /// Creates a new instance of the `Engine`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new() -> Self {
         Self {
             globals: default_globals(),
@@ -50,7 +48,6 @@ impl ExpressionEngine {
     /// # Errors
     ///
     /// Returns an error if `func`'s name is empty or only whitespace.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn register_function(&mut self, func: FunctionDefinition) -> Result<(), Message> {
         if func.name().as_str().trim().is_empty() {
             return Err(create_error_message(

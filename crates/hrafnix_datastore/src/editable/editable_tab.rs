@@ -12,7 +12,6 @@ pub struct TabEditable {
 impl TabEditable {
     /// Creates a new `TabEditable` instance from a given `TabFrozen` value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(frozen_tab: &TabFrozen) -> Self {
         Self {
             definition: frozen_tab.definition().clone(),
@@ -21,7 +20,6 @@ impl TabEditable {
 
     /// Converts the current `TabEditable` instance into a `TabFrozen` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn freeze(&self) -> TabFrozen {
         TabFrozen::new_from_editable(self)
     }
@@ -34,21 +32,18 @@ impl TabEditable {
 }
 
 impl PartialEq<&TabEditable> for TabEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&TabEditable) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<TabEditable> for &TabEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &TabEditable) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for TabEditable {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

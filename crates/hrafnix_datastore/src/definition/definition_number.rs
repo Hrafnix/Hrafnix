@@ -15,7 +15,6 @@ pub struct NumberDefinition {
 
 impl NumberDefinition {
     /// Creates a new number-based `NumberDefinition`.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new<S1: Into<ShareableString>>(description: S1) -> Self {
         Self {
             description: description.into(),
@@ -25,7 +24,6 @@ impl NumberDefinition {
     }
 
     /// Creates a new number-based `NumberDefinition` with a default value.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_default<S1: Into<ShareableString>, S2: Into<ShareableString>>(
         description: S1,
         default_value: S2,
@@ -38,7 +36,6 @@ impl NumberDefinition {
     }
 
     /// Creates a new number-based `NumberDefinition`.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_constraint<S: Into<ShareableString>>(
         description: S,
         constraint: NumberConstraint,
@@ -51,7 +48,6 @@ impl NumberDefinition {
     }
 
     /// Creates a new number-based `NumberDefinition` with a default value.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_constraint_and_default<S1: Into<ShareableString>, S2: Into<ShareableString>>(
         description: S1,
         constraint: NumberConstraint,
@@ -66,7 +62,6 @@ impl NumberDefinition {
 
     /// Returns the constraint.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn constraint(&self) -> NumberConstraintEnum {
         self.constraint.constraint_enum.clone()
     }
@@ -79,7 +74,6 @@ impl NumberDefinition {
 
     /// Returns a new `NumberDefinition` with strings laundered through the provided store.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         Self {
             description: store.launder(&self.description),
@@ -90,7 +84,6 @@ impl NumberDefinition {
 
     /// Returns the description of the parameter.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn description(&self) -> ShareableString {
         self.description.clone()
     }
@@ -103,7 +96,6 @@ impl NumberDefinition {
 
     /// Returns the default value of the parameter.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn default_value(&self) -> ShareableString {
         self.default_value.clone()
     }
@@ -116,14 +108,12 @@ impl NumberDefinition {
 }
 
 impl PartialEq<&NumberDefinition> for NumberDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&NumberDefinition) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<NumberDefinition> for &NumberDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &NumberDefinition) -> bool {
         *self == other
     }
@@ -131,7 +121,6 @@ impl PartialEq<NumberDefinition> for &NumberDefinition {
 
 /// Formats an `f64` for display, appending `.0` when the value has no
 /// fractional part and is not in scientific notation.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn format_number_value(value: f64) -> String {
     if !value.is_finite() {
         return value.to_string();
@@ -146,7 +135,6 @@ fn format_number_value(value: f64) -> String {
 }
 
 impl TreePrint for NumberDefinition {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

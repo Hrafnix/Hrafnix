@@ -49,7 +49,6 @@ impl BasicInputWithUnitsData {
 
     /// Returns a new `BasicInputWithUnitsData` with strings laundered through the provided store.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         Self {
             definition: self.definition.launder(store),

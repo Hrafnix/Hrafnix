@@ -38,7 +38,6 @@ impl ComputedTable {
 
     /// Returns the value of a cell by row and column index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_cell(&self, row_index: usize, column_index: usize) -> Option<f64> {
         if let Some(row) = self.rows.get(row_index)
             && let Some(&value) = row.get(column_index)
@@ -50,7 +49,6 @@ impl ComputedTable {
     }
 
     /// Returns the value of a cell by row index and column name.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_cell_by_name<S: Into<ShareableString>>(
         &self,
         row_index: usize,
@@ -88,7 +86,6 @@ pub struct ComputedTableWithUnits {
 
 impl ComputedTableWithUnits {
     /// Creates a computed table with units for at least one column.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub(crate) fn new(keys: Vec<ShareableString>, units: Vec<UnitId>, rows: Vec<Vec<f64>>) -> Self {
         debug_assert_eq!(keys.len(), units.len());
         debug_assert!(units.iter().any(|unit| *unit != UnitId::None));
@@ -107,14 +104,12 @@ impl ComputedTableWithUnits {
 
     /// Splits this table into its numeric data and column units.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub(crate) fn into_table_and_units(self) -> (ComputedTable, Vec<UnitId>) {
         (self.table, self.units)
     }
 
     /// Discards column units and returns this table's numeric data.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub(crate) fn into_table(self) -> ComputedTable {
         self.table
     }
@@ -133,14 +128,12 @@ impl ComputedTableWithUnits {
 
     /// Returns the unit associated with a column index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_unit(&self, column_index: usize) -> Option<UnitId> {
         self.units.get(column_index).copied()
     }
 
     /// Returns the unit associated with a column name.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_unit_by_name<S: Into<ShareableString>>(&self, column_name: S) -> Option<UnitId> {
         let column_name = column_name.into();
         self.table
@@ -158,13 +151,11 @@ impl ComputedTableWithUnits {
 
     /// Returns the value of a cell by row and column index.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_cell(&self, row_index: usize, column_index: usize) -> Option<f64> {
         self.table.get_cell(row_index, column_index)
     }
 
     /// Returns the value of a cell by row index and column name.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_cell_by_name<S: Into<ShareableString>>(
         &self,
         row_index: usize,
@@ -263,7 +254,6 @@ impl ComputedItem {
 }
 
 impl fmt::Display for ComputedItem {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ComputedItem::Boolean(value) => write!(f, "{value}"),

@@ -17,7 +17,6 @@ pub struct ChoiceFrozen {
 impl ChoiceFrozen {
     /// Creates a new `ChoiceFrozen` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(definition: ChoiceDefinition) -> Self {
         let value = definition.default_value();
 
@@ -32,7 +31,6 @@ impl ChoiceFrozen {
 
     /// Creates a new `ChoiceFrozen` instance with a specified value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_with_value(definition: ChoiceDefinition, value: ShareableString) -> Self {
         let mut s = Self {
             definition,
@@ -45,7 +43,6 @@ impl ChoiceFrozen {
 
     /// Creates a new `ChoiceFrozen` instance from a given `ChoiceEditable` value.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_from_editable(basic: &ChoiceEditable) -> Self {
         let definition = basic.definition().clone();
         let value = basic.value();
@@ -60,7 +57,6 @@ impl ChoiceFrozen {
 
     /// Converts the current `ChoiceFrozen` instance into a `ChoiceEditable` instance.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn thaw(&self) -> ChoiceEditable {
         ChoiceEditable::new(self)
     }
@@ -72,7 +68,6 @@ impl ChoiceFrozen {
     }
 
     /// Recomputes and stores the BLAKE3 hash of the current value.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn update_hash(&mut self) {
         let mut h = blake3::Hasher::new();
 
@@ -88,7 +83,6 @@ impl ChoiceFrozen {
 
     /// Returns the unevaluated value as a `ShareableString`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn value(&self) -> ShareableString {
         self.value.clone()
     }
@@ -108,7 +102,6 @@ impl ChoiceFrozen {
     /// Copies the value from `other` into `self` if their definitions are merge compatible.
     ///
     /// `self` keeps its own definition. Returns true if `self` was modified.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub(crate) fn update_value_from(&mut self, other: &Self) -> bool {
         if !self.definition.is_merge_compatible(&other.definition) || self.value == other.value {
             return false;
@@ -120,21 +113,18 @@ impl ChoiceFrozen {
 }
 
 impl PartialEq<&ChoiceFrozen> for ChoiceFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&ChoiceFrozen) -> bool {
         self == *other
     }
 }
 
 impl PartialEq<ChoiceFrozen> for &ChoiceFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ChoiceFrozen) -> bool {
         *self == other
     }
 }
 
 impl TreePrint for ChoiceFrozen {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn tree_print(
         &self,
         f: &mut std::fmt::Formatter<'_>,

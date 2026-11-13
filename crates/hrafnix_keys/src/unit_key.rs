@@ -17,7 +17,6 @@ pub const fn is_valid_unit_key(s: &str) -> bool {
 }
 
 /// Validates that a unit key starts with `u_` and has valid remaining characters.
-#[cfg_attr(feature = "hotpath", hotpath::measure)]
 fn validate_unit_key(key: &ShareableString) -> Result<(), Message> {
     let s = key.as_str();
 
@@ -71,14 +70,12 @@ impl ConstUnitKey {
 }
 
 impl Display for ConstUnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
 impl From<ConstUnitKey> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: ConstUnitKey) -> Self {
         Self {
             key: ShareableString::from(value.0),
@@ -87,7 +84,6 @@ impl From<ConstUnitKey> for UnitKey {
 }
 
 impl From<&ConstUnitKey> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: &ConstUnitKey) -> Self {
         Self {
             key: ShareableString::from(value.0),
@@ -96,14 +92,12 @@ impl From<&ConstUnitKey> for UnitKey {
 }
 
 impl From<ConstUnitKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: ConstUnitKey) -> Self {
         ShareableString::from(value.0)
     }
 }
 
 impl From<&ConstUnitKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: &ConstUnitKey) -> Self {
         ShareableString::from(value.0)
     }
@@ -123,7 +117,6 @@ impl UnitKey {
     /// # Errors
     ///
     /// Returns an error message if the key is invalid.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new(key: ShareableString) -> Result<Self, Message> {
         validate_unit_key(&key)?;
         Ok(Self { key })
@@ -142,7 +135,6 @@ impl UnitKey {
 
     /// Returns the string slice.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn as_str(&self) -> &str {
         self.key.as_str()
     }
@@ -155,7 +147,6 @@ impl UnitKey {
 
     /// Returns a new `UnitKey` with its string interned through the given `SharedStringStore`.
     #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         let laundered_key = store.launder(self.key.clone());
 
@@ -173,168 +164,144 @@ impl UnitKey {
 }
 
 impl AsRef<str> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
 impl PartialEq<&str> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &&str) -> bool {
         self.as_str() == *other
     }
 }
 
 impl PartialEq<UnitKey> for &str {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &UnitKey) -> bool {
         *self == other.as_str()
     }
 }
 
 impl PartialEq<String> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &String) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
 impl PartialEq<UnitKey> for String {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &UnitKey) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
 impl PartialEq<ShareableString> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ShareableString) -> bool {
         self.key.as_ref() == other.as_ref()
     }
 }
 
 impl PartialEq<UnitKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &UnitKey) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
 impl PartialOrd<&str> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &&str) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(*other)
     }
 }
 
 impl PartialOrd<UnitKey> for &str {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &UnitKey) -> Option<std::cmp::Ordering> {
         (*self).partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<String> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &String) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<UnitKey> for String {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &UnitKey) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.as_str())
     }
 }
 
 impl PartialOrd<ShareableString> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ShareableString) -> Option<std::cmp::Ordering> {
         self.key.partial_cmp(other)
     }
 }
 
 impl PartialOrd<UnitKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &UnitKey) -> Option<std::cmp::Ordering> {
         self.partial_cmp(other.as_str())
     }
 }
 
 impl PartialEq<ConstUnitKey> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &ConstUnitKey) -> bool {
         self.as_str() == other.0
     }
 }
 
 impl PartialEq<UnitKey> for ConstUnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &UnitKey) -> bool {
         self.0 == other.as_str()
     }
 }
 
 impl PartialOrd<ConstUnitKey> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &ConstUnitKey) -> Option<std::cmp::Ordering> {
         self.as_str().partial_cmp(other.0)
     }
 }
 
 impl PartialOrd<UnitKey> for ConstUnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn partial_cmp(&self, other: &UnitKey) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(other.as_str())
     }
 }
 
 impl Display for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.key)
     }
 }
 
 impl From<UnitKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: UnitKey) -> Self {
         value.key
     }
 }
 
 impl From<&UnitKey> for ShareableString {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn from(value: &UnitKey) -> Self {
         value.key.clone()
     }
 }
 
 impl PartialEq<crate::store_key::StoreKey> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &crate::store_key::StoreKey) -> bool {
         self.as_str() == other.as_str()
     }
 }
 
 impl PartialEq<crate::store_key::StoreKey> for ConstUnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn eq(&self, other: &crate::store_key::StoreKey) -> bool {
         self.0 == other.as_str()
     }
 }
 
 impl std::borrow::Borrow<str> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn borrow(&self) -> &str {
         self.key.as_str()
     }
 }
 
 impl std::borrow::Borrow<ShareableString> for UnitKey {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn borrow(&self) -> &ShareableString {
         &self.key
     }

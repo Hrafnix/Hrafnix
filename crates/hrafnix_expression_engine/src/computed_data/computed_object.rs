@@ -28,13 +28,11 @@ impl GlobalObjectComputedData {
     }
 
     /// Returns a reference to the computed item associated with the given key, if it exists.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&ComputedItem> {
         self.data.get(&key.into())
     }
 
     /// Merges entries from `other` into `self`, skipping any keys that already exist.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub(crate) fn extend(&mut self, other: GlobalObjectComputedData) {
         for (key, item) in other.data {
             if self.data.contains_key(&key) {
@@ -46,7 +44,6 @@ impl GlobalObjectComputedData {
     }
 
     /// Returns an iterator over the key-value pairs in the global object computed data.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &ComputedItem)> {
         self.data.iter()
     }
@@ -78,13 +75,11 @@ impl ParameterObjectComputedData {
     }
 
     /// Returns a reference to the computed item associated with the given key, if it exists.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&ComputedItem> {
         self.data.get(&key.into())
     }
 
     /// Returns an iterator over the key-value pairs in the parameter object computed data.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &ComputedItem)> {
         self.data.iter()
     }
@@ -116,13 +111,11 @@ impl VariableObjectComputedData {
     }
 
     /// Returns a reference to the computed item associated with the given key, if it exists.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&ComputedItem> {
         self.data.get(&key.into())
     }
 
     /// Returns an iterator over the key-value pairs in the variable object computed data.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &ComputedItem)> {
         self.data.iter()
     }

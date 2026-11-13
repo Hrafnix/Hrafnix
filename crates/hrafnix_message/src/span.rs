@@ -15,7 +15,6 @@ impl Span {
     /// Creates a new `Span` starting at `start` with the given `size`.
     ///
     /// The size is clamped to a minimum of 1 so that every span covers at least one character.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     #[must_use]
     pub fn new(start: usize, size: usize) -> Self {
         Self {
@@ -37,7 +36,6 @@ impl Span {
     }
 
     /// Returns the smallest span that covers both `self` and `other`.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     #[must_use]
     pub fn join(&self, other: &Span) -> Span {
         let new_start = self.start.min(other.start);
@@ -54,7 +52,6 @@ impl Span {
 }
 
 impl fmt::Display for Span {
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}:{}", self.start, self.end())
     }
@@ -78,7 +75,6 @@ impl SpanSet {
     }
 
     /// Creates a `SpanSet` containing a single span.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     #[must_use]
     pub fn from_span(index: Span) -> Self {
         Self {
@@ -88,7 +84,6 @@ impl SpanSet {
 
     #[allow(dead_code)]
     /// Creates a `SpanSet` from an unsorted slice of spans, merging any overlapping spans.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     #[must_use]
     pub fn new_with_indices(indices: Vec<Span>) -> Self {
         let mut index_set = Self { indices };
@@ -97,7 +92,6 @@ impl SpanSet {
     }
 
     /// Sorts the spans by start position and merges any that overlap.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn sort_and_merge(&mut self) {
         self.indices.sort_by_key(Span::start);
         let mut merged_indices: Vec<Span> = Vec::new();
@@ -116,7 +110,6 @@ impl SpanSet {
     }
 
     /// Returns an iterator over the spans in this set, in sorted order.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn iter(&self) -> impl Iterator<Item = &Span> {
         self.indices.iter()
     }
@@ -129,7 +122,6 @@ impl SpanSet {
 
     #[allow(dead_code)]
     /// Adds a span to the set, re-sorting and merging as needed.
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn add(&mut self, index: Span) {
         self.indices.push(index);
         self.sort_and_merge();
