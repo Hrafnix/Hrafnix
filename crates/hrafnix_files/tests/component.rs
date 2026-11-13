@@ -1,21 +1,28 @@
 //! Integration tests for component file conversion, reading, writing, and diagnostics.
 
 // Panicking helpers are idiomatic in tests.
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::indexing_slicing, clippy::unwrap_used)]
 
 mod common;
 
 use camino::Utf8PathBuf;
-use common::{METADATA, TestDirectory};
+use common::TestDirectory;
 use hrafnix_files::component::{data::ComponentFile, read_component_file, write_component_file};
+use hrafnix_files::graphics::data::Dimension;
+use hrafnix_files::gui_metadata::data::GuiMetadata;
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;
+use serde_json::{Value, json};
 use std::fs;
 
 /// Returns the component stored in `tests/data/minimal.hxc`.
 fn minimal_component() -> ComponentFile {
     ComponentFile {
         metadata: common::metadata("component"),
+        gui_metadata: GuiMetadata {
+            dimensions: Dimension::new(100, 50),
+            icon: "../icons/component.svg".into(),
+        },
         foreground_decorations: Vec::new(),
         background_decorations: Vec::new(),
     }
@@ -102,11 +109,9 @@ fn oversized_component_file_is_rejected() {
 fn unknown_content_is_rejected_instead_of_being_dropped() {
     let directory = TestDirectory::new();
     let path = directory.path.join("unknown.hxc");
-    fs::write(
-        &path,
-        format!("{{\"file-version\": \"1\", \"component\": {{\"metadata\": {METADATA}, \"foreground_decorations\": [], \"background_decorations\": [], \"unknown\": {{}}}}}}"),
-    )
-    .unwrap();
+    let mut document: Value = serde_json::from_str(&minimal_text()).unwrap();
+    document["component"]["unknown"] = json!({});
+    fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
 
     let error = read_component_file(&path).unwrap_err();
 
@@ -126,6 +131,71 @@ fn component_round_trips_through_the_writer_and_disk() {
 
     assert_eq!(fs::read_to_string(&destination).unwrap(), minimal_text());
     assert_eq!(read_component_file(&destination).unwrap(), component);
+}
+
+#[test]
+fn gui_metadata_is_required_and_validated() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("gui-metadata.hxc");
+    let document: Value = serde_json::from_str(&minimal_text()).unwrap();
+    let mut missing = document.clone();
+    missing["component"]
+        .as_object_mut()
+        .unwrap()
+        .remove("gui_metadata");
+    let mut invalid_documents = vec![missing];
+    for invalid in [
+        Value::Null,
+        json!([]),
+        json!([{"width": 100, "height": 50}, "icon.svg"]),
+        json!({}),
+        json!({"dimensions": [100, 50], "icon": "icon.svg"}),
+        json!({"dimensions": {"width": 100, "height": 50}}),
+        json!({"dimensions": {"width": 100, "height": 50}, "icon": false}),
+        json!({"dimensions": {"width": 100, "height": 50}, "icon": "", "extra": 1}),
+    ] {
+        let mut invalid_document = document.clone();
+        invalid_document["component"]["gui_metadata"] = invalid;
+        invalid_documents.push(invalid_document);
+    }
+    for invalid_document in invalid_documents {
+        fs::write(&path, serde_json::to_string(&invalid_document).unwrap()).unwrap();
+        let error = read_component_file(&path).unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "files_json_data",
+            "{invalid_document}",
+        );
+        assert!(error.extra_detail().is_some());
+    }
+}
+
+#[test]
+fn component_gui_metadata_round_trips_through_disk() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("gui-metadata.hxc");
+    for icon in [
+        "",
+        "../icons/missing \u{3b1}.svg",
+        " leading and trailing spaces ",
+        r"C:\icons\missing.png",
+    ] {
+        let mut component = minimal_component();
+        component.gui_metadata = GuiMetadata {
+            dimensions: Dimension::new(0, u16::MAX),
+            icon: icon.into(),
+        };
+        write_component_file(component.clone(), &path).unwrap();
+        assert_eq!(read_component_file(&path).unwrap(), component);
+        let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(
+            document["component"]["gui_metadata"],
+            json!({
+                "dimensions": {"width": 0, "height": u16::MAX},
+                "icon": icon,
+            }),
+        );
+    }
 }
 
 #[test]
