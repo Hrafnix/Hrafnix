@@ -4,7 +4,7 @@ pub(crate) const KEY_WORDS: [&str; 2] = ["true", "false"];
 /// Returns `true` if `s` is a non-empty key that starts with `prefix` and whose
 /// remaining characters satisfy the standard key rules (first char `a-z`, rest
 /// `a-z | 0-9 | _`). When `prefix` is empty, the key must also not match any
-/// reserved keyword in [`KEY_WORDS`].
+/// reserved keyword in [`KEY_WORDS`] or start with `a_` through `z_`.
 #[allow(
     clippy::indexing_slicing,
     reason = "All indexed access is guarded by explicit length and loop-bound checks."
@@ -31,7 +31,7 @@ pub(crate) const fn is_valid_key_with_prefix(s: &str, prefix: &str) -> bool {
     }
 
     let first_after_prefix = s_bytes[prefix_bytes.len()];
-    if prefix_bytes.is_empty() && first_after_prefix == b'_' {
+    if prefix_bytes.is_empty() && s_bytes.len() > 1 && s_bytes[1] == b'_' {
         return false;
     }
     if !first_after_prefix.is_ascii_lowercase() {
@@ -70,4 +70,29 @@ pub(crate) const fn is_valid_key_with_prefix(s: &str, prefix: &str) -> bool {
         i = i.saturating_add(1);
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_valid_key_with_prefix;
+
+    #[test]
+    fn bare_keys_reject_all_single_letter_prefixes() {
+        for letter in 'a'..='z' {
+            for suffix in ["", "key", "_", "1"] {
+                let key = format!("{letter}_{suffix}");
+                assert!(!is_valid_key_with_prefix(&key, ""), "{key}");
+            }
+        }
+    }
+
+    #[test]
+    fn explicit_prefixes_allow_single_letter_prefixes() {
+        for prefix in ["g_", "p_", "u_", "v_"] {
+            for letter in 'a'..='z' {
+                let key = format!("{prefix}{letter}_key");
+                assert!(is_valid_key_with_prefix(&key, prefix), "{key}");
+            }
+        }
+    }
 }

@@ -13,6 +13,7 @@ macro_rules! const_assert {
 /// Returns true if the key is not empty and only contains valid characters.
 /// The first character must be lowercase a-z.
 /// The remaining characters may be lowercase a-z, digits 0-9, and underscores.
+/// Reserved keywords and prefixes `a_` through `z_` are rejected.
 #[must_use]
 pub const fn is_valid_key(s: &str) -> bool {
     is_valid_key_with_prefix(s, "")
@@ -518,9 +519,12 @@ mod tests {
         assert!(is_valid_key("a"));
         assert!(is_valid_key("abc"));
         assert!(is_valid_key("a123"));
-        assert!(is_valid_key("a_b_c"));
-        assert!(is_valid_key("a_1_b_2"));
+        assert!(is_valid_key("ab_c"));
+        assert!(is_valid_key("a1_b_2"));
 
+        assert!(!is_valid_key("a_b_c"));
+        assert!(!is_valid_key("a_1_b_2"));
+        assert!(!is_valid_key("z_key"));
         assert!(!is_valid_key(""));
         assert!(!is_valid_key("1abc"));
         assert!(!is_valid_key("_abc"));
@@ -553,6 +557,13 @@ mod tests {
     fn test_const_store_key_invalid() {
         #[allow(clippy::disallowed_methods)]
         let _ = ConstStoreKey::__new("Invalid");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid StoreKey literal")]
+    fn test_const_store_key_invalid_prefix() {
+        #[allow(clippy::disallowed_methods)]
+        let _ = ConstStoreKey::__new("a_key");
     }
 
     #[test]
