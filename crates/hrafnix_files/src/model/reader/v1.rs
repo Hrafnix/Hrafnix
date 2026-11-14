@@ -1,5 +1,6 @@
 use crate::background_decoration::reader::v1::BackgroundDecorationReaderV1;
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
+use crate::connection::reader::v1::ConnectionReaderV1;
 use crate::foreground_decoration::reader::v1::ForegroundDecorationReaderV1;
 use crate::metadata::reader::v1::MetadataReaderV1;
 use crate::model::data::ModelFile;
@@ -23,6 +24,9 @@ pub(crate) struct ModelReaderV1 {
     /// Decorations drawn behind model contents.
     #[serde(deserialize_with = "deserialize_objects")]
     background_decorations: Vec<BackgroundDecorationReaderV1>,
+    /// Connections between component ports within the model.
+    #[serde(deserialize_with = "deserialize_objects")]
+    connections: Vec<ConnectionReaderV1>,
     /// Source language and translated text used by the model.
     #[serde(deserialize_with = "deserialize_object")]
     translations: TranslationsReaderV1,
@@ -43,6 +47,7 @@ impl From<ModelReaderV1> for ModelFile {
                 .map(Into::into)
                 .collect(),
             translations: model.translations.into(),
+            connections: model.connections.into_iter().map(Into::into).collect(),
         }
     }
 }

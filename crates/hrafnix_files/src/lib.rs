@@ -7,6 +7,13 @@
 //! are rejected.
 //! Model and component contents require `foreground_decorations` and
 //! `background_decorations` arrays, including when those arrays are empty.
+//! Model and component contents also require a `connections` array, including
+//! when empty. Each connection has plain-string `from_component`, `from_port`,
+//! `to_component`, and `to_port` identifiers validated as component and port
+//! keys, and a `line` object with a required `midpoints` array. Midpoints use
+//! signed 32-bit integer `x` and `y` drawing coordinates and retain their order.
+//! Connections have no style field. Endpoint references are stored without
+//! resolving the referenced components or ports.
 //! Component contents also require a `gui_metadata` object with `dimensions`
 //! (`width` and `height` as unsigned 16-bit integers) and an `icon` path string.
 //! Icon paths are stored unchanged, without opening or resolving them.
@@ -60,6 +67,8 @@ pub mod background_decoration;
 mod common;
 /// Component definitions and behavior.
 pub mod component;
+/// Connections between component ports and their drawing paths.
+pub mod connection;
 /// Text and images drawn in front of model and component contents.
 pub mod foreground_decoration;
 /// Geometry and styling values shared by graphical elements.

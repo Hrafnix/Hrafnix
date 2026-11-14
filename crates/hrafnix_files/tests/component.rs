@@ -29,6 +29,7 @@ fn minimal_component() -> ComponentFile {
         },
         foreground_decorations: Vec::new(),
         background_decorations: Vec::new(),
+        connections: Vec::new(),
     }
 }
 
@@ -54,6 +55,11 @@ fn decorations_reject_positional_arrays_and_unknown_fields() {
 #[test]
 fn translations_are_required_and_validated() {
     common::assert_translation_structure("component", |path| read_component_file(path).map(|_| ()));
+}
+
+#[test]
+fn connections_are_required_and_validated() {
+    common::assert_connection_structure("component", |path| read_component_file(path).map(|_| ()));
 }
 
 #[test]
@@ -320,6 +326,23 @@ fn component_decorations_round_trip_through_disk() {
     write_component_file(component.clone(), &path).unwrap();
 
     assert_eq!(read_component_file(&path).unwrap(), component);
+}
+
+#[test]
+fn component_connections_round_trip_through_disk_without_style() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("connections.hxc");
+    let mut component = minimal_component();
+    component.connections = common::connections();
+
+    write_component_file(component.clone(), &path).unwrap();
+
+    assert_eq!(read_component_file(&path).unwrap(), component);
+    let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(
+        document["component"]["connections"],
+        common::connections_json(),
+    );
 }
 
 #[test]

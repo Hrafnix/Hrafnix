@@ -1,5 +1,6 @@
 use crate::background_decoration::writer::BackgroundDecorationWriter;
 use crate::component::data::ComponentFile;
+use crate::connection::writer::ConnectionWriter;
 use crate::foreground_decoration::writer::ForegroundDecorationWriter;
 use crate::gui_metadata::writer::GuiMetadataWriter;
 use crate::metadata::writer::MetadataWriter;
@@ -27,6 +28,8 @@ struct ComponentDataWriter {
     foreground_decorations: Vec<ForegroundDecorationWriter>,
     /// Decorations drawn behind component contents.
     background_decorations: Vec<BackgroundDecorationWriter>,
+    /// Connections between component ports within the component.
+    connections: Vec<ConnectionWriter>,
     /// Source language and translated text used by the component.
     translations: TranslationsWriter,
 }
@@ -49,6 +52,7 @@ impl From<ComponentFile> for ComponentWriter {
                     .map(Into::into)
                     .collect(),
                 translations: TranslationsWriter::from(&component.translations),
+                connections: component.connections.iter().map(Into::into).collect(),
             },
         }
     }
