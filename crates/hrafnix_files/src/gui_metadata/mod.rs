@@ -1,4 +1,4 @@
-/// GUI metadata data structures for components.
+/// Drawing dimensions, icons, and port locations for components.
 pub mod data;
 /// Version-specific GUI metadata readers.
 pub(crate) mod reader;

@@ -46,7 +46,7 @@ fn validate_parameter_key(key: &ShareableString) -> Result<(), Message> {
 
 /// A validated parameter key that is known at compile-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ConstParameterKey(pub &'static str);
+pub struct ConstParameterKey(&'static str);
 
 impl ConstParameterKey {
     /// Creates a new `ConstParameterKey` from a validated literal.
@@ -108,7 +108,7 @@ impl From<&ConstParameterKey> for ShareableString {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ParameterKey {
     /// The underlying validated parameter key string (must start with `p_`).
-    pub key: ShareableString,
+    key: ShareableString,
 }
 
 impl ParameterKey {

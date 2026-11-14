@@ -46,7 +46,7 @@ fn validate_unit_key(key: &ShareableString) -> Result<(), Message> {
 
 /// A validated unit key that is known at compile-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ConstUnitKey(pub &'static str);
+pub struct ConstUnitKey(&'static str);
 
 impl ConstUnitKey {
     /// Creates a new `ConstUnitKey` from a validated literal.
@@ -108,7 +108,7 @@ impl From<&ConstUnitKey> for ShareableString {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct UnitKey {
     /// The underlying validated unit key string (must start with `u_`).
-    pub key: ShareableString,
+    key: ShareableString,
 }
 
 impl UnitKey {

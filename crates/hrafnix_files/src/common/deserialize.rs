@@ -1,3 +1,4 @@
+use hrafnix_keys::PortKey;
 use serde::de::value::{MapAccessDeserializer, StrDeserializer};
 use serde::de::{Error, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -49,6 +50,19 @@ pub(crate) fn deserialize_unit_variant<'de, T: Deserialize<'de>, D: Deserializer
 ) -> Result<T, D::Error> {
     deserializer.deserialize_str(UnitVariantVisitor {
         variant: PhantomData,
+    })
+}
+
+/// Deserializes a plain string through the shared port-key validator.
+pub(crate) fn deserialize_port_key<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<PortKey, D::Error> {
+    let key = String::deserialize(deserializer)?;
+    PortKey::new(key.as_str().into()).map_err(|error| {
+        serde::de::Error::custom(format!(
+            "invalid port key `{key}`: {}",
+            error.translate_data().message_key().as_str(),
+        ))
     })
 }
 

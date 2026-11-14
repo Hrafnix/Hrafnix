@@ -13,7 +13,8 @@
         "width": 100,
         "height": 50
       },
-      "icon": "../icons/component.svg"
+      "icon": "../icons/component.svg",
+      "ports": []
     },
     "foreground_decorations": [],
     "background_decorations": [],

@@ -45,7 +45,7 @@ fn validate_global_key(key: &ShareableString) -> Result<(), Message> {
 
 /// A validated global key that is known at compile-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ConstGlobalKey(pub &'static str);
+pub struct ConstGlobalKey(&'static str);
 
 impl ConstGlobalKey {
     /// Creates a new `ConstGlobalKey` from a validated literal.
@@ -107,7 +107,7 @@ impl From<&ConstGlobalKey> for ShareableString {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct GlobalKey {
     /// The underlying validated global key string (must start with `g_`).
-    pub key: ShareableString,
+    key: ShareableString,
 }
 
 impl GlobalKey {

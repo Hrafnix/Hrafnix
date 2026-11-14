@@ -13,6 +13,7 @@ macro_rules! const_assert {
 /// Returns true if the key is not empty and only contains valid characters.
 /// The first character must be lowercase a-z.
 /// The remaining characters may be lowercase a-z, digits 0-9, and underscores.
+/// Reserved keywords and prefixes `a_` through `z_` are rejected.
 #[must_use]
 pub const fn is_valid_component_key(s: &str) -> bool {
     is_valid_key_with_prefix(s, "")
@@ -66,7 +67,7 @@ fn validate_key(key: &ShareableString) -> Result<(), Message> {
 
 /// A validated key that is known at compile-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ConstComponentKey(pub &'static str);
+pub struct ConstComponentKey(&'static str);
 
 impl ConstComponentKey {
     /// Creates a new `ConstComponentKey` from a validated literal.
@@ -225,7 +226,7 @@ impl From<&ConstComponentKey> for ShareableString {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ComponentKey {
     /// The underlying validated key string.
-    pub key: ShareableString,
+    key: ShareableString,
 }
 
 impl ComponentKey {
@@ -467,9 +468,12 @@ mod tests {
         assert!(is_valid_component_key("a"));
         assert!(is_valid_component_key("abc"));
         assert!(is_valid_component_key("a123"));
-        assert!(is_valid_component_key("a_b_c"));
-        assert!(is_valid_component_key("a_1_b_2"));
+        assert!(is_valid_component_key("ab_c"));
+        assert!(is_valid_component_key("a1_b_2"));
 
+        assert!(!is_valid_component_key("a_b_c"));
+        assert!(!is_valid_component_key("a_1_b_2"));
+        assert!(!is_valid_component_key("z_key"));
         assert!(!is_valid_component_key(""));
         assert!(!is_valid_component_key("1abc"));
         assert!(!is_valid_component_key("_abc"));
@@ -502,6 +506,13 @@ mod tests {
     fn test_const_component_key_invalid() {
         #[allow(clippy::disallowed_methods)]
         let _ = ConstComponentKey::__new("Invalid");
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid ComponentKey literal")]
+    fn test_const_component_key_invalid_prefix() {
+        #[allow(clippy::disallowed_methods)]
+        let _ = ConstComponentKey::__new("a_key");
     }
 
     #[test]

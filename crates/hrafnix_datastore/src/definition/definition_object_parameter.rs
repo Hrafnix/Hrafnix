@@ -64,7 +64,7 @@ impl ParameterObjectDefinitionBuilder {
                     MessageCategory::Datastore,
                     "datastore_key_conflict",
                     "key",
-                    key.key.to_string(),
+                    key.as_str().to_string(),
                 ));
             }
         }
@@ -116,7 +116,7 @@ impl ParameterObjectDefinitionBuilder {
                     MessageCategory::Datastore,
                     "datastore_key_conflict",
                     "key",
-                    key.key.to_string(),
+                    key.as_str().to_string(),
                 ));
             }
         }

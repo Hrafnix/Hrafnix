@@ -19,6 +19,8 @@ hotpath = { workspace = true, optional = true }
 camino.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+hrafnix_common.workspace = true
+hrafnix_keys.workspace = true
 hrafnix_message.workspace = true
 hrafnix_shareable_string.workspace = true
 
