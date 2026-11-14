@@ -6,16 +6,18 @@
 mod common;
 
 use camino::Utf8PathBuf;
-use common::{METADATA, TestDirectory};
+use common::{METADATA, TRANSLATIONS, TestDirectory};
 use hrafnix_files::model::{data::ModelFile, read_model_file, write_model_file};
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;
+use serde_json::{Value, json};
 use std::fs;
 
 /// Returns the model stored in `tests/data/minimal.hxm`.
 fn minimal_model() -> ModelFile {
     ModelFile {
         metadata: common::metadata("model"),
+        translations: common::translations(),
         foreground_decorations: Vec::new(),
         background_decorations: Vec::new(),
     }
@@ -38,6 +40,11 @@ fn root_accepts_named_fields_and_rejects_positional_arrays() {
 #[test]
 fn decorations_reject_positional_arrays_and_unknown_fields() {
     common::assert_decoration_structure("model", |path| read_model_file(path).map(|_| ()));
+}
+
+#[test]
+fn translations_are_required_and_validated() {
+    common::assert_translation_structure("model", |path| read_model_file(path).map(|_| ()));
 }
 
 #[test]
@@ -103,7 +110,7 @@ fn unknown_content_is_rejected_instead_of_being_dropped() {
     fs::write(
         &path,
         format!(
-            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"foreground_decorations\": [], \"background_decorations\": [], \"unknown\": {{}}}}}}"
+            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}, \"foreground_decorations\": [], \"background_decorations\": [], \"unknown\": {{}}}}}}"
         ),
     )
     .unwrap();
@@ -143,6 +150,34 @@ fn model_decorations_round_trip_through_disk() {
     write_model_file(model.clone(), &path).unwrap();
 
     assert_eq!(read_model_file(&path).unwrap(), model);
+}
+
+#[test]
+fn model_translations_round_trip_through_disk() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("translations.hxm");
+    let mut model = minimal_model();
+    model.translations = common::populated_translations();
+
+    write_model_file(model.clone(), &path).unwrap();
+
+    assert_eq!(read_model_file(&path).unwrap(), model);
+    let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(
+        document.get("model").unwrap().get("translations").unwrap(),
+        &json!({
+            "language": "en",
+            "translations": {
+                "Target temperature": {
+                    "es": "Temperatura objetivo",
+                    "fr": "Temp\u{e9}rature cible",
+                    "de": "Zieltemperatur",
+                },
+                "empty": {},
+                "quoted \"key\"\n": {"": ""},
+            },
+        }),
+    );
 }
 
 #[test]

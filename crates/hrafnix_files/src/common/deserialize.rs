@@ -1,6 +1,7 @@
 use serde::de::value::{MapAccessDeserializer, StrDeserializer};
 use serde::de::{Error, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
+use std::collections::{BTreeMap, btree_map::Entry};
 use std::fmt;
 use std::marker::PhantomData;
 
@@ -32,6 +33,13 @@ pub(crate) fn deserialize_objects<'de, T: Deserialize<'de>, D: Deserializer<'de>
 ) -> Result<Vec<T>, D::Error> {
     Vec::<RootObject<T>>::deserialize(deserializer)
         .map(|objects| objects.into_iter().map(|object| object.document).collect())
+}
+
+/// Deserializes an object without silently overwriting duplicate entries.
+pub(crate) fn deserialize_entries<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<BTreeMap<String, T>, D::Error> {
+    deserializer.deserialize_map(EntriesVisitor { value: PhantomData })
 }
 
 /// Deserializes a unit-only enum from a plain string, rejecting the object form
@@ -77,5 +85,34 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for ObjectVisitor<T> {
 
     fn visit_map<A: MapAccess<'de>>(self, map: A) -> Result<Self::Value, A::Error> {
         T::deserialize(MapAccessDeserializer::new(map))
+    }
+}
+
+/// Accepts only objects whose keys occur once.
+struct EntriesVisitor<T> {
+    /// The type of each entry's value.
+    value: PhantomData<T>,
+}
+
+impl<'de, T: Deserialize<'de>> Visitor<'de> for EntriesVisitor<T> {
+    type Value = BTreeMap<String, T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a JSON object with unique keys")
+    }
+
+    fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+        let mut entries = BTreeMap::new();
+        while let Some(key) = map.next_key::<String>()? {
+            match entries.entry(key) {
+                Entry::Vacant(entry) => {
+                    entry.insert(map.next_value()?);
+                }
+                Entry::Occupied(entry) => {
+                    return Err(A::Error::custom(format!("duplicate key `{}`", entry.key())));
+                }
+            }
+        }
+        Ok(entries)
     }
 }

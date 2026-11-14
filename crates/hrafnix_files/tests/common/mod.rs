@@ -7,8 +7,10 @@ use hrafnix_files::foreground_decoration::data::{
 };
 use hrafnix_files::graphics::data::{Dimension, FontSize, Position};
 use hrafnix_files::metadata::data::MetadataFile;
+use hrafnix_files::translations::data::TranslationsFile;
 use hrafnix_message::message::Message;
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 use std::fs;
 use std::io::ErrorKind;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -18,6 +20,9 @@ const MAX_FILE_SIZE: u64 = 256 * 1024 * 1024;
 
 /// Valid version 1 metadata entry.
 pub(super) const METADATA: &str = "{\"display-name\": \"\", \"description\": \"\", \"author\": \"\", \"minimum-version-major\": 0, \"minimum-version-minor\": 0}";
+
+/// Valid version 1 translations entry with an explicit empty table.
+pub(super) const TRANSLATIONS: &str = "{\"language\": \"en\", \"translations\": {}}";
 
 /// The required GUI metadata entry for components; models do not have one.
 fn gui_metadata_entry(root: &str) -> &'static str {
@@ -32,8 +37,37 @@ fn gui_metadata_entry(root: &str) -> &'static str {
 pub(super) fn contents(root: &str) -> String {
     let gui_metadata = gui_metadata_entry(root);
     format!(
-        "{{\"metadata\": {METADATA}{gui_metadata}, \"foreground_decorations\": [], \"background_decorations\": []}}"
+        "{{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}{gui_metadata}, \"foreground_decorations\": [], \"background_decorations\": []}}"
     )
+}
+
+/// Returns the translations stored in the `minimal` test data files.
+pub(super) fn translations() -> TranslationsFile {
+    TranslationsFile {
+        language: "en".into(),
+        translations: BTreeMap::new(),
+    }
+}
+
+/// Returns translated text for document-level round trips.
+pub(super) fn populated_translations() -> TranslationsFile {
+    TranslationsFile {
+        language: "en".into(),
+        translations: [
+            (
+                "Target temperature".into(),
+                [
+                    ("es".into(), "Temperatura objetivo".into()),
+                    ("fr".into(), "Temp\u{e9}rature cible".into()),
+                    ("de".into(), "Zieltemperatur".into()),
+                ]
+                .into(),
+            ),
+            ("empty".into(), BTreeMap::new()),
+            ("quoted \"key\"\n".into(), [("".into(), "".into())].into()),
+        ]
+        .into(),
+    }
 }
 
 /// Returns a text decoration for document-level round trips.
@@ -163,7 +197,7 @@ pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<()
     let invalid_bodies = [
         format!("[{METADATA}]"),
         format!(
-            "{{\"metadata\":[\"\", \"\", \"\", 0, 0]{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}"
+            "{{\"metadata\":[\"\", \"\", \"\", 0, 0],\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}"
         ),
         "[[\"\", \"\", \"\", 0, 0]]".to_owned(),
         "[]".to_owned(),
@@ -195,6 +229,114 @@ pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<()
                 .map(hrafnix_shareable_string::ShareableString::as_str),
             Some(path.as_str()),
             "{document}"
+        );
+        assert!(error.extra_detail().is_some(), "{document}");
+    }
+}
+
+/// Checks required translation fields, object-only maps, and duplicate entries.
+#[allow(
+    clippy::indexing_slicing,
+    reason = "Tests deliberately mutate known-valid JSON fixtures."
+)]
+pub(super) fn assert_translation_structure(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let contents = contents(root);
+    let directory = TestDirectory::new();
+    let path = directory.path.join("translations.json");
+    let mut document: Value =
+        serde_json::from_str(&format!("{{\"file-version\":\"1\",\"{root}\":{contents}}}")).unwrap();
+    document[root]["translations"] = json!({
+        "language": "en",
+        "translations": {
+            "Target temperature": {
+                "es": "Temperatura objetivo",
+                "fr": "Temp\u{e9}rature cible",
+                "de": "Zieltemperatur",
+            },
+            "empty": {},
+        },
+    });
+    fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+    read(&path).unwrap();
+
+    let mut missing = document.clone();
+    missing[root]
+        .as_object_mut()
+        .unwrap()
+        .remove("translations");
+    let mut invalid_documents = vec![missing];
+    for field in ["language", "translations"] {
+        let mut invalid = document.clone();
+        invalid[root]["translations"]
+            .as_object_mut()
+            .unwrap()
+            .remove(field);
+        invalid_documents.push(invalid);
+    }
+    let mut invalid = document.clone();
+    invalid[root]["translations"]["unknown"] = json!(true);
+    invalid_documents.push(invalid);
+    for value in [
+        Value::Null,
+        json!(true),
+        json!(1),
+        json!("text"),
+        json!([]),
+        json!(["en", {}]),
+    ] {
+        for pointer in [
+            format!("/{root}/translations"),
+            format!("/{root}/translations/translations"),
+            format!("/{root}/translations/translations/Target temperature"),
+        ] {
+            let mut invalid = document.clone();
+            *invalid.pointer_mut(&pointer).unwrap() = value.clone();
+            invalid_documents.push(invalid);
+        }
+    }
+    for value in [Value::Null, json!(true), json!(1), json!([]), json!({})] {
+        for is_language in [true, false] {
+            let mut invalid = document.clone();
+            if is_language {
+                invalid[root]["translations"]["language"] = value.clone();
+            } else {
+                invalid[root]["translations"]["translations"]["Target temperature"]["es"] =
+                    value.clone();
+            }
+            invalid_documents.push(invalid);
+        }
+    }
+    let mut documents: Vec<String> = invalid_documents
+        .iter()
+        .map(|document| serde_json::to_string(document).unwrap())
+        .collect();
+    for translations in [
+        r#"{"language":"en","language":"es","translations":{}}"#,
+        r#"{"language":"en","translations":{},"translations":{}}"#,
+        r#"{"language":"en","translations":{"key":{},"key":{}}}"#,
+        r#"{"language":"en","translations":{"key":{},"\u006bey":{}}}"#,
+        r#"{"language":"en","translations":{"key":{"es":"a","es":"b"}}}"#,
+        r#"{"language":"en","translations":{"key":{"es":"a","\u0065s":"b"}}}"#,
+    ] {
+        documents.push(format!(
+            "{{\"file-version\":\"1\",\"{root}\":{}}}",
+            contents.replace(TRANSLATIONS, translations),
+        ));
+    }
+    documents.push(format!(
+        "{{\"file-version\":\"1\",\"{root}\":{}}}",
+        contents.replace(
+            &format!("\"translations\": {TRANSLATIONS}"),
+            &format!("\"translations\": {TRANSLATIONS}, \"translations\": {TRANSLATIONS}"),
+        ),
+    ));
+    for document in documents {
+        fs::write(&path, &document).unwrap();
+        let error = read(&path).unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "files_json_data",
+            "{document}",
         );
         assert!(error.extra_detail().is_some(), "{document}");
     }
@@ -341,7 +483,7 @@ pub(super) fn assert_document_variants(root: &str, read: fn(&Utf8Path) -> Result
     let directory = TestDirectory::new();
     let path = directory.path.join("variants.json");
     let contents = format!(
-        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}"
+        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}"
     );
     let escaped_root = root.replace('o', "\\u006f");
     for document in [
@@ -489,10 +631,10 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         format!("{{\"file-version\":\"1\",\"{root}\":{contents},\"{root}\":{contents}}}"),
         format!("{{\"file-version\":\"1\",\"{root}\":{{}}}}"),
         format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
         ),
         format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[],\"file-version\":\"1\"}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[],\"file-version\":\"1\"}}}}"
         ),
     ];
     for version in [
@@ -574,7 +716,7 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         METADATA.replace('}', ", \"unknown\": true}"),
     ] {
         invalid_documents.push(format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
         ));
     }
     for document in invalid_documents {

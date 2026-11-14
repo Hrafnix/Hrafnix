@@ -19,6 +19,7 @@ use std::fs;
 fn minimal_component() -> ComponentFile {
     ComponentFile {
         metadata: common::metadata("component"),
+        translations: common::translations(),
         gui_metadata: GuiMetadata {
             dimensions: Dimension::new(100, 50),
             icon: "../icons/component.svg".into(),
@@ -45,6 +46,11 @@ fn root_accepts_named_fields_and_rejects_positional_arrays() {
 #[test]
 fn decorations_reject_positional_arrays_and_unknown_fields() {
     common::assert_decoration_structure("component", |path| read_component_file(path).map(|_| ()));
+}
+
+#[test]
+fn translations_are_required_and_validated() {
+    common::assert_translation_structure("component", |path| read_component_file(path).map(|_| ()));
 }
 
 #[test]
@@ -213,6 +219,34 @@ fn component_decorations_round_trip_through_disk() {
     write_component_file(component.clone(), &path).unwrap();
 
     assert_eq!(read_component_file(&path).unwrap(), component);
+}
+
+#[test]
+fn component_translations_round_trip_through_disk() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("translations.hxc");
+    let mut component = minimal_component();
+    component.translations = common::populated_translations();
+
+    write_component_file(component.clone(), &path).unwrap();
+
+    assert_eq!(read_component_file(&path).unwrap(), component);
+    let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(
+        document["component"]["translations"],
+        json!({
+            "language": "en",
+            "translations": {
+                "Target temperature": {
+                    "es": "Temperatura objetivo",
+                    "fr": "Temp\u{e9}rature cible",
+                    "de": "Zieltemperatur",
+                },
+                "empty": {},
+                "quoted \"key\"\n": {"": ""},
+            },
+        }),
+    );
 }
 
 #[test]

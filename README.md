@@ -35,6 +35,33 @@ Don't expect much. This may not be stable anytime soon.
 cargo test --workspace
 ```
 
+## File translations
+
+Version 1 model and component files require a `translations` entry inside their
+`model` or `component` object, alongside `metadata`:
+
+```json
+{
+  "translations": {
+    "language": "en",
+    "translations": {
+      "Target temperature": {
+        "es": "Temperatura objetivo",
+        "fr": "Temp\u00e9rature cible",
+        "de": "Zieltemperatur"
+      }
+    }
+  }
+}
+```
+
+`language` is the source language of the original text keys. Both fields are
+required; use `"translations": {}` inside the entry when there is no translated
+text. Language codes and text are stored unchanged. Readers reject unknown
+entry fields, duplicate keys or language codes, and non-string translation
+values. Writers retain empty maps and sort translation keys and language codes.
+Existing files without the required entry must add it before they can be read.
+
 ## License
 
 Dual-licensed under MIT or Apache-2.0, whichever you prefer.

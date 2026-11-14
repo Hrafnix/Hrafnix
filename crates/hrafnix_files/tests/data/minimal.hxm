@@ -9,6 +9,10 @@
       "minimum-version-minor": 2
     },
     "foreground_decorations": [],
-    "background_decorations": []
+    "background_decorations": [],
+    "translations": {
+      "language": "en",
+      "translations": {}
+    }
   }
 }

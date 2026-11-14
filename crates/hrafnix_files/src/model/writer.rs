@@ -2,6 +2,7 @@ use crate::background_decoration::writer::BackgroundDecorationWriter;
 use crate::foreground_decoration::writer::ForegroundDecorationWriter;
 use crate::metadata::writer::MetadataWriter;
 use crate::model::data::ModelFile;
+use crate::translations::writer::TranslationsWriter;
 use serde::Serialize;
 
 /// The current model file envelope.
@@ -23,6 +24,8 @@ struct ModelDataWriter {
     foreground_decorations: Vec<ForegroundDecorationWriter>,
     /// Decorations drawn behind model contents.
     background_decorations: Vec<BackgroundDecorationWriter>,
+    /// Source language and translated text used by the model.
+    translations: TranslationsWriter,
 }
 
 impl From<ModelFile> for ModelWriter {
@@ -41,6 +44,7 @@ impl From<ModelFile> for ModelWriter {
                     .iter()
                     .map(Into::into)
                     .collect(),
+                translations: TranslationsWriter::from(&model.translations),
             },
         }
     }
