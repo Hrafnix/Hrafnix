@@ -3,6 +3,7 @@ use crate::common::deserialize::{deserialize_object, deserialize_objects};
 use crate::foreground_decoration::reader::v1::ForegroundDecorationReaderV1;
 use crate::metadata::reader::v1::MetadataReaderV1;
 use crate::model::data::ModelFile;
+use crate::translations::reader::v1::TranslationsReaderV1;
 use serde::Deserialize;
 
 /// The version 1 JSON representation of a model, separate from the
@@ -22,6 +23,9 @@ pub(crate) struct ModelReaderV1 {
     /// Decorations drawn behind model contents.
     #[serde(deserialize_with = "deserialize_objects")]
     background_decorations: Vec<BackgroundDecorationReaderV1>,
+    /// Source language and translated text used by the model.
+    #[serde(deserialize_with = "deserialize_object")]
+    translations: TranslationsReaderV1,
 }
 
 impl From<ModelReaderV1> for ModelFile {
@@ -38,6 +42,7 @@ impl From<ModelReaderV1> for ModelFile {
                 .into_iter()
                 .map(Into::into)
                 .collect(),
+            translations: model.translations.into(),
         }
     }
 }

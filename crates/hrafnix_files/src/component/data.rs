@@ -2,6 +2,7 @@ use crate::background_decoration::data::BackgroundDecoration;
 use crate::foreground_decoration::data::ForegroundDecoration;
 use crate::gui_metadata::data::GuiMetadata;
 use crate::metadata::data::MetadataFile;
+use crate::translations::data::TranslationsFile;
 
 /// Represents User component data from a Hrafnix component file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -14,4 +15,6 @@ pub struct ComponentFile {
     pub foreground_decorations: Vec<ForegroundDecoration>,
     /// Shapes drawn behind the component's contents.
     pub background_decorations: Vec<BackgroundDecoration>,
+    /// Source language and translated text used by the component.
+    pub translations: TranslationsFile,
 }

@@ -10,6 +10,10 @@
 //! Component contents also require a `gui_metadata` object with `dimensions`
 //! (`width` and `height` as unsigned 16-bit integers) and an `icon` path string.
 //! Icon paths are stored unchanged, without opening or resolving them.
+//! Model and component contents require a `translations` object with a source
+//! `language` string and a `translations` object mapping original text to target
+//! language codes and translated strings. Both fields are required, even for an
+//! empty translation table. Duplicate keys and language codes are rejected.
 //! Every text decoration property is required and sits directly inside its
 //! text object. Background decoration kinds are plain strings such as
 //! `"Frame"`. Font sizes are plain integers in hundredths of a drawing unit
@@ -61,3 +65,5 @@ pub mod gui_metadata;
 pub mod metadata;
 /// Simulation model definitions.
 pub mod model;
+/// Source languages and translated text shared by model and component files.
+pub mod translations;

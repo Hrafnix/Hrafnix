@@ -16,6 +16,10 @@
       "icon": "../icons/component.svg"
     },
     "foreground_decorations": [],
-    "background_decorations": []
+    "background_decorations": [],
+    "translations": {
+      "language": "en",
+      "translations": {}
+    }
   }
 }
