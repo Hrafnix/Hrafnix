@@ -29,6 +29,20 @@ fn test_definition_boolean_with_default() {
 }
 
 #[test]
+fn test_definition_boolean_with_descriptions_and_default_expression() {
+    let definition =
+        BooleanDefinition::new_with_descriptions_and_default("Enabled", "On", "Off", "p_enabled");
+    assert_eq!(definition.description_ref(), "Enabled");
+    assert_eq!(definition.default_value_ref(), "p_enabled");
+    assert_eq!(definition.true_description_ref(), "On");
+    assert_eq!(definition.false_description_ref(), "Off");
+    assert_eq!(definition.descriptions(), vec!["On", "Off"]);
+    assert_eq!(definition.ids(), vec!["true", "false"]);
+    let store = hrafnix_shareable_string::SharedStringStore::new();
+    assert_eq!(definition.launder(&store), definition);
+}
+
+#[test]
 fn test_definition_boolean_equality() {
     // Why: Test boolean definition equality.
     let def_1 = BooleanDefinition::new_with_default("A Default Boolean parameter", true);
