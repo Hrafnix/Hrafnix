@@ -1,4 +1,4 @@
-use hrafnix_keys::PortKey;
+use hrafnix_keys::{ComponentKey, PortKey};
 use serde::de::value::{MapAccessDeserializer, StrDeserializer};
 use serde::de::{Error, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -50,6 +50,19 @@ pub(crate) fn deserialize_unit_variant<'de, T: Deserialize<'de>, D: Deserializer
 ) -> Result<T, D::Error> {
     deserializer.deserialize_str(UnitVariantVisitor {
         variant: PhantomData,
+    })
+}
+
+/// Deserializes a plain string through the shared component-key validator.
+pub(crate) fn deserialize_component_key<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<ComponentKey, D::Error> {
+    let key = String::deserialize(deserializer)?;
+    ComponentKey::new(key.as_str().into()).map_err(|error| {
+        serde::de::Error::custom(format!(
+            "invalid component key `{key}`: {}",
+            error.translate_data().message_key().as_str(),
+        ))
     })
 }
 

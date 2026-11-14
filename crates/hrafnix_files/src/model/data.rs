@@ -1,4 +1,5 @@
 use crate::background_decoration::data::BackgroundDecoration;
+use crate::connection::data::Connection;
 use crate::foreground_decoration::data::ForegroundDecoration;
 use crate::metadata::data::MetadataFile;
 use crate::translations::data::TranslationsFile;
@@ -12,6 +13,8 @@ pub struct ModelFile {
     pub foreground_decorations: Vec<ForegroundDecoration>,
     /// Shapes drawn behind the model's contents.
     pub background_decorations: Vec<BackgroundDecoration>,
+    /// Connections between component ports within the model.
+    pub connections: Vec<Connection>,
     /// Source language and translated text used by the model.
     pub translations: TranslationsFile,
 }

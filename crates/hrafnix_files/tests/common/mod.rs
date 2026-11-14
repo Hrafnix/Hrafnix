@@ -2,12 +2,14 @@
 
 use camino::{Utf8Path, Utf8PathBuf};
 use hrafnix_files::background_decoration::data::{BackgroundDecoration, BackgroundDecorationKind};
+use hrafnix_files::connection::data::{Connection, ConnectionLine};
 use hrafnix_files::foreground_decoration::data::{
     ForegroundDecoration, ForegroundDecorationKind, TextDecoration,
 };
 use hrafnix_files::graphics::data::{Dimension, FontSize, Position};
 use hrafnix_files::metadata::data::MetadataFile;
 use hrafnix_files::translations::data::TranslationsFile;
+use hrafnix_keys::{component_key, port_key};
 use hrafnix_message::message::Message;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
@@ -37,7 +39,7 @@ fn gui_metadata_entry(root: &str) -> &'static str {
 pub(super) fn contents(root: &str) -> String {
     let gui_metadata = gui_metadata_entry(root);
     format!(
-        "{{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}{gui_metadata}, \"foreground_decorations\": [], \"background_decorations\": []}}"
+        "{{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}{gui_metadata}, \"foreground_decorations\": [], \"background_decorations\": [], \"connections\": []}}"
     )
 }
 
@@ -68,6 +70,50 @@ pub(super) fn populated_translations() -> TranslationsFile {
         ]
         .into(),
     }
+}
+
+/// Returns connections from the simulation clock and sensor to the heater.
+pub(super) fn connections() -> Vec<Connection> {
+    vec![
+        Connection {
+            from_component: component_key!("simulation_clock").into(),
+            from_port: port_key!("time").into(),
+            to_component: component_key!("heater").into(),
+            to_port: port_key!("temperature_input").into(),
+            line: ConnectionLine {
+                midpoints: vec![Position::new(210, 25)],
+            },
+        },
+        Connection {
+            from_component: component_key!("temperature_sensor").into(),
+            from_port: port_key!("temperature").into(),
+            to_component: component_key!("heater").into(),
+            to_port: port_key!("temperature_input").into(),
+            line: ConnectionLine {
+                midpoints: vec![Position::new(295, 30)],
+            },
+        },
+    ]
+}
+
+/// Returns the expected JSON representation of the example connections.
+pub(super) fn connections_json() -> Value {
+    json!([
+        {
+            "from_component": "simulation_clock",
+            "from_port": "time",
+            "to_component": "heater",
+            "to_port": "temperature_input",
+            "line": {"midpoints": [{"x": 210, "y": 25}]},
+        },
+        {
+            "from_component": "temperature_sensor",
+            "from_port": "temperature",
+            "to_component": "heater",
+            "to_port": "temperature_input",
+            "line": {"midpoints": [{"x": 295, "y": 30}]},
+        },
+    ])
 }
 
 /// Returns a text decoration for document-level round trips.
@@ -197,7 +243,7 @@ pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<()
     let invalid_bodies = [
         format!("[{METADATA}]"),
         format!(
-            "{{\"metadata\":[\"\", \"\", \"\", 0, 0],\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}"
+            "{{\"metadata\":[\"\", \"\", \"\", 0, 0],\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[],\"connections\":[]}}"
         ),
         "[[\"\", \"\", \"\", 0, 0]]".to_owned(),
         "[]".to_owned(),
@@ -231,6 +277,90 @@ pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<()
             "{document}"
         );
         assert!(error.extra_detail().is_some(), "{document}");
+    }
+}
+
+/// Checks connection arrays, nested object validation, and duplicate entries.
+#[allow(
+    clippy::indexing_slicing,
+    reason = "Tests deliberately mutate known-valid JSON fixtures."
+)]
+pub(super) fn assert_connection_structure(root: &str, read: fn(&Utf8Path) -> Result<(), Message>) {
+    let contents = contents(root);
+    let directory = TestDirectory::new();
+    let path = directory.path.join("connections.json");
+    let mut document: Value =
+        serde_json::from_str(&format!("{{\"file-version\":\"1\",\"{root}\":{contents}}}")).unwrap();
+    document[root]["connections"] = connections_json();
+    fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+    read(&path).unwrap();
+
+    let mut missing = document.clone();
+    missing[root].as_object_mut().unwrap().remove("connections");
+    let mut invalid_documents = vec![missing];
+    for invalid in [
+        Value::Null,
+        json!(true),
+        json!(1),
+        json!("connections"),
+        json!({}),
+        connections_json()[0].clone(),
+        json!([null]),
+        json!([[
+            "simulation_clock",
+            "time",
+            "heater",
+            "temperature_input",
+            []
+        ]]),
+    ] {
+        let mut value = document.clone();
+        value[root]["connections"] = invalid;
+        invalid_documents.push(value);
+    }
+    for pointer in [
+        "/connections/0",
+        "/connections/0/line",
+        "/connections/0/line/midpoints/0",
+    ] {
+        let value = document[root].pointer(pointer).unwrap();
+        for field in value.as_object().unwrap().keys() {
+            let mut invalid = document.clone();
+            invalid[root]
+                .pointer_mut(pointer)
+                .unwrap()
+                .as_object_mut()
+                .unwrap()
+                .remove(field);
+            invalid_documents.push(invalid);
+        }
+        let mut invalid = document.clone();
+        invalid[root].pointer_mut(pointer).unwrap()["style"] = json!("solid");
+        invalid_documents.push(invalid);
+        let mut invalid = document.clone();
+        *invalid[root].pointer_mut(pointer).unwrap() = json!([]);
+        invalid_documents.push(invalid);
+    }
+    let mut documents: Vec<_> = invalid_documents
+        .iter()
+        .map(|value| serde_json::to_string(value).unwrap())
+        .collect();
+    documents.push(format!(
+        "{{\"file-version\":\"1\",\"{root}\":{}}}",
+        contents.replace(
+            "\"connections\": []",
+            "\"connections\": [], \"connections\": []"
+        ),
+    ));
+    for value in documents {
+        fs::write(&path, &value).unwrap();
+        let error = read(&path).unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "files_json_data",
+            "{value}",
+        );
+        assert!(error.extra_detail().is_some(), "{value}");
     }
 }
 
@@ -483,7 +613,7 @@ pub(super) fn assert_document_variants(root: &str, read: fn(&Utf8Path) -> Result
     let directory = TestDirectory::new();
     let path = directory.path.join("variants.json");
     let contents = format!(
-        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}"
+        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[],\"connections\":[]}}"
     );
     let escaped_root = root.replace('o', "\\u006f");
     for document in [
@@ -631,10 +761,10 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         format!("{{\"file-version\":\"1\",\"{root}\":{contents},\"{root}\":{contents}}}"),
         format!("{{\"file-version\":\"1\",\"{root}\":{{}}}}"),
         format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[],\"connections\":[]}}}}"
         ),
         format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[],\"file-version\":\"1\"}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[],\"connections\":[],\"file-version\":\"1\"}}}}"
         ),
     ];
     for version in [
@@ -659,7 +789,11 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
             "{{\"file-version\":{version},\"{root}\":{contents}}}"
         ));
     }
-    for field in ["foreground_decorations", "background_decorations"] {
+    for field in [
+        "foreground_decorations",
+        "background_decorations",
+        "connections",
+    ] {
         let missing_field = contents.replace(&format!(", \"{field}\": []"), "");
         assert_ne!(missing_field, contents);
         invalid_documents.push(format!(
@@ -716,7 +850,7 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         METADATA.replace('}', ", \"unknown\": true}"),
     ] {
         invalid_documents.push(format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[]}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata},\"translations\":{TRANSLATIONS}{gui_metadata},\"foreground_decorations\":[],\"background_decorations\":[],\"connections\":[]}}}}"
         ));
     }
     for document in invalid_documents {

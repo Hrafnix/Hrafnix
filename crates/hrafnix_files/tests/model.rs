@@ -20,6 +20,7 @@ fn minimal_model() -> ModelFile {
         translations: common::translations(),
         foreground_decorations: Vec::new(),
         background_decorations: Vec::new(),
+        connections: Vec::new(),
     }
 }
 
@@ -45,6 +46,11 @@ fn decorations_reject_positional_arrays_and_unknown_fields() {
 #[test]
 fn translations_are_required_and_validated() {
     common::assert_translation_structure("model", |path| read_model_file(path).map(|_| ()));
+}
+
+#[test]
+fn connections_are_required_and_validated() {
+    common::assert_connection_structure("model", |path| read_model_file(path).map(|_| ()));
 }
 
 #[test]
@@ -110,7 +116,7 @@ fn unknown_content_is_rejected_instead_of_being_dropped() {
     fs::write(
         &path,
         format!(
-            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}, \"foreground_decorations\": [], \"background_decorations\": [], \"unknown\": {{}}}}}}"
+            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}, \"foreground_decorations\": [], \"background_decorations\": [], \"connections\": [], \"unknown\": {{}}}}}}"
         ),
     )
     .unwrap();
@@ -150,6 +156,23 @@ fn model_decorations_round_trip_through_disk() {
     write_model_file(model.clone(), &path).unwrap();
 
     assert_eq!(read_model_file(&path).unwrap(), model);
+}
+
+#[test]
+fn model_connections_round_trip_through_disk_without_style() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("connections.hxm");
+    let mut model = minimal_model();
+    model.connections = common::connections();
+
+    write_model_file(model.clone(), &path).unwrap();
+
+    assert_eq!(read_model_file(&path).unwrap(), model);
+    let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(
+        document.get("model").unwrap().get("connections").unwrap(),
+        &common::connections_json(),
+    );
 }
 
 #[test]

@@ -10,6 +10,7 @@
     },
     "foreground_decorations": [],
     "background_decorations": [],
+    "connections": [],
     "translations": {
       "language": "en",
       "translations": {}
