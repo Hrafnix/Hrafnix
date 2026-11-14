@@ -77,6 +77,13 @@ mod tests {
     use super::is_valid_key_with_prefix;
 
     #[test]
+    fn empty_keys_are_rejected() {
+        for prefix in ["", "g_", "p_", "u_", "v_"] {
+            assert!(!is_valid_key_with_prefix("", prefix), "{prefix}");
+        }
+    }
+
+    #[test]
     fn bare_keys_reject_all_single_letter_prefixes() {
         for letter in 'a'..='z' {
             for suffix in ["", "key", "_", "1"] {

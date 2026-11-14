@@ -1,4 +1,6 @@
 //! Keys and associated traits.
+//!
+//! Runtime key strings are private; use their accessors or conversions to read them.
 
 // Test code favors clarity and brevity over the strictness we require of library code:
 // panicking helpers (`unwrap`/`expect`/indexing/`panic!`) and approximate float comparisons

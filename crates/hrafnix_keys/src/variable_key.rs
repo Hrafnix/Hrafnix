@@ -45,7 +45,7 @@ fn validate_variable_key(key: &ShareableString) -> Result<(), Message> {
 
 /// A validated variable key that is known at compile-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ConstVariableKey(pub &'static str);
+pub struct ConstVariableKey(&'static str);
 
 impl ConstVariableKey {
     /// Creates a new `ConstVariableKey` from a validated literal.
@@ -107,7 +107,7 @@ impl From<&ConstVariableKey> for ShareableString {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VariableKey {
     /// The underlying validated variable key string (must start with `v_`).
-    pub key: ShareableString,
+    key: ShareableString,
 }
 
 impl VariableKey {

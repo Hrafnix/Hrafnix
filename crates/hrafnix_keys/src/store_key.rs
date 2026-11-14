@@ -67,7 +67,7 @@ fn validate_key(key: &ShareableString) -> Result<(), Message> {
 
 /// A validated key that is known at compile-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ConstStoreKey(pub &'static str);
+pub struct ConstStoreKey(&'static str);
 
 impl ConstStoreKey {
     /// Creates a new `ConstStoreKey` from a validated literal.
@@ -226,7 +226,7 @@ impl From<&ConstStoreKey> for ShareableString {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct StoreKey {
     /// The underlying validated key string.
-    pub key: ShareableString,
+    key: ShareableString,
 }
 
 impl StoreKey {

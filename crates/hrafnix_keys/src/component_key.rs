@@ -67,7 +67,7 @@ fn validate_key(key: &ShareableString) -> Result<(), Message> {
 
 /// A validated key that is known at compile-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ConstComponentKey(pub &'static str);
+pub struct ConstComponentKey(&'static str);
 
 impl ConstComponentKey {
     /// Creates a new `ConstComponentKey` from a validated literal.
@@ -226,7 +226,7 @@ impl From<&ConstComponentKey> for ShareableString {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ComponentKey {
     /// The underlying validated key string.
-    pub key: ShareableString,
+    key: ShareableString,
 }
 
 impl ComponentKey {

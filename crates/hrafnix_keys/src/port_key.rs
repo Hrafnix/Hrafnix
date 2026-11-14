@@ -67,7 +67,7 @@ fn validate_port_key(key: &ShareableString) -> Result<(), Message> {
 
 /// A validated port key that is known at compile-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ConstPortKey(pub &'static str);
+pub struct ConstPortKey(&'static str);
 
 impl ConstPortKey {
     /// Creates a new `ConstPortKey` from a validated literal.
@@ -226,7 +226,7 @@ impl From<&ConstPortKey> for ShareableString {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PortKey {
     /// The underlying validated port key string.
-    pub key: ShareableString,
+    key: ShareableString,
 }
 
 impl PortKey {
