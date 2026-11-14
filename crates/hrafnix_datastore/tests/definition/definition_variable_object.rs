@@ -5,14 +5,13 @@ use hrafnix_units::UnitFamilyId;
 #[test]
 fn test_variable_object_definition_basic() {
     // Why: Test variable object definition creation and items.
-    let mut builder = VariableObjectDefinition::builder("Test Object");
+    let mut builder = VariableObjectDefinition::builder();
     builder.insert(
         VariableKey::new("v_v1".into()).unwrap(),
         StringDefinition::new("D1"),
     );
     let obj_def = builder.finish();
 
-    assert_eq!(obj_def.description().as_ref(), "Test Object");
     assert_eq!(obj_def.count(), 1);
     assert!(obj_def.contains("v_v1"));
     assert!(obj_def.contains_str("v_v1"));
@@ -21,19 +20,19 @@ fn test_variable_object_definition_basic() {
 #[test]
 fn test_variable_object_definition_equality() {
     // Why: Test that two variable object definitions with the same items are considered equal.
-    let def_1 = VariableObjectDefinition::builder("Test Object")
+    let def_1 = VariableObjectDefinition::builder()
         .with(
             VariableKey::new("v_v1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
-    let def_2 = VariableObjectDefinition::builder("Test Object")
+    let def_2 = VariableObjectDefinition::builder()
         .with(
             VariableKey::new("v_v1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
-    let def_3 = VariableObjectDefinition::builder("Test Object")
+    let def_3 = VariableObjectDefinition::builder()
         .with(
             VariableKey::new("v_v1".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -49,7 +48,7 @@ fn test_variable_object_definition_equality() {
 #[test]
 fn test_variable_object_definition_print() {
     // Why: Test variable object definition print.
-    let def_1 = VariableObjectDefinitionBuilder::new("Test")
+    let def_1 = VariableObjectDefinitionBuilder::new()
         .with(
             VariableKey::new("v_p1".into()).unwrap(),
             StringDefinition::new("D1"),
@@ -236,7 +235,7 @@ fn test_variable_object_definition_print() {
     assert_eq!(
         format!("{def_1}"),
         concat!(
-            "Variable Object Definition (Test)\n",
+            "Variable Object Definition\n",
             "    ├── v_p1 (D1) String - default: \"\"\n",
             "    ├── v_p2 (D2) Boolean - default: \"\" [true (True), false (False)]\n",
             "    ├── v_p3 (D3) File - default: \"\" [ext]\n",

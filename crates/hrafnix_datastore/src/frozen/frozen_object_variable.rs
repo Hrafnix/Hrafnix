@@ -118,13 +118,11 @@ impl VariableObjectFrozen {
         s
     }
 
-    /// Creates a new `VariableObjectFrozen` with a description and items.
+    /// Creates a new `VariableObjectFrozen` with items.
+    #[must_use]
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
-    pub fn new_from_items<S: Into<ShareableString>>(
-        description: S,
-        items: BTreeMap<VariableKey, ItemFrozen>,
-    ) -> Self {
-        let mut builder = VariableObjectDefinition::builder(description);
+    pub fn new_from_items(items: BTreeMap<VariableKey, ItemFrozen>) -> Self {
+        let mut builder = VariableObjectDefinition::builder();
         for (k, v) in &items {
             builder.insert(k.clone(), v.definition());
         }
@@ -280,11 +278,7 @@ impl TreePrint for VariableObjectFrozen {
         prefix: &str,
         last: bool,
     ) -> std::fmt::Result {
-        writeln!(
-            f,
-            "Variable Object Frozen ({})",
-            self.definition.description()
-        )?;
+        writeln!(f, "Variable Object Frozen")?;
 
         let child_prefix = Self::child_prefix(prefix, last);
 

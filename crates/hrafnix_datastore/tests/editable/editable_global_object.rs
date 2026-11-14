@@ -5,7 +5,7 @@ fn test_editable_global_object_round_trip() {
     // Why: Editable global objects should thaw from frozen, allow item edits, and freeze back to an
     // equivalent frozen object reflecting those edits.
     let frozen = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Object")
+        GlobalObjectDefinition::builder()
             .with(
                 GlobalKey::new("g_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -14,7 +14,6 @@ fn test_editable_global_object_round_trip() {
     );
 
     let mut editable = frozen.thaw();
-    assert_eq!(editable.definition().description().as_ref(), "Test Object");
 
     let item = editable.get("g_p1").expect("g_p1 item");
     assert_eq!(item.get_string().unwrap().value(), "");
@@ -40,7 +39,7 @@ fn test_editable_global_object_round_trip() {
 fn test_editable_global_object_equality() {
     // Why: Two editable global objects thawed from the same frozen object should be equal.
     let frozen = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Object")
+        GlobalObjectDefinition::builder()
             .with(
                 GlobalKey::new("g_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -58,7 +57,7 @@ fn test_editable_global_object_equality() {
 fn test_editable_global_object_print() {
     // Why: Test global object editable print.
     let frozen_1 = GlobalObjectFrozen::new(
-        GlobalObjectDefinitionBuilder::new("Test")
+        GlobalObjectDefinitionBuilder::new()
             .with(
                 GlobalKey::new("g_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -230,7 +229,7 @@ fn test_editable_global_object_print() {
 
     assert_eq!(
         format!("{editable_1}"),
-        "Global Object Editable (Test)\n    ├── g_p1 (D1) String - \"\"\n    ├── g_p2 (D2) Boolean - \"\"\n    ├── g_p3 (D3) File - \"\"\n    ├── g_p4_v1 (D4) Integer - \"\"\n    ├── g_p4_v2 (D4) Integer - \"\"\n    ├── g_p4_v3 (D4) Integer - \"\"\n    ├── g_p4_v4 (D4) Integer - \"\"\n    ├── g_p4_v5 (D4) Integer - \"\"\n    ├── g_p4_v6 (D4) Integer - \"\"\n    ├── g_p4_v7 (D4) Integer - \"\"\n    ├── g_p4_v8 (D4) Integer - \"\"\n    ├── g_p5_v1 (D5) Number - \"\"\n    ├── g_p5_v2 (D5) Number - \"\"\n    ├── g_p5_v3 (D5) Number - \"\"\n    ├── g_p5_v4 (D5) Number - \"\"\n    ├── g_p5_v5 (D5) Number - \"\"\n    ├── g_p5_v6 (D5) Number - \"\"\n    ├── g_p5_v7 (D5) Number - \"\"\n    ├── g_p5_v8 (D5) Number - \"\"\n    ├── g_p5_v9 (D5) Number - \"\"\n    ├── g_p6 (D6) Choice - \"\"\n    ├── g_p7 (D7) Table 0 rows\n    │   ├── data\n    │   └── Parameter \"\"\n    └── g_p8 (D8) Map\n"
+        "Global Object Editable\n    ├── g_p1 (D1) String - \"\"\n    ├── g_p2 (D2) Boolean - \"\"\n    ├── g_p3 (D3) File - \"\"\n    ├── g_p4_v1 (D4) Integer - \"\"\n    ├── g_p4_v2 (D4) Integer - \"\"\n    ├── g_p4_v3 (D4) Integer - \"\"\n    ├── g_p4_v4 (D4) Integer - \"\"\n    ├── g_p4_v5 (D4) Integer - \"\"\n    ├── g_p4_v6 (D4) Integer - \"\"\n    ├── g_p4_v7 (D4) Integer - \"\"\n    ├── g_p4_v8 (D4) Integer - \"\"\n    ├── g_p5_v1 (D5) Number - \"\"\n    ├── g_p5_v2 (D5) Number - \"\"\n    ├── g_p5_v3 (D5) Number - \"\"\n    ├── g_p5_v4 (D5) Number - \"\"\n    ├── g_p5_v5 (D5) Number - \"\"\n    ├── g_p5_v6 (D5) Number - \"\"\n    ├── g_p5_v7 (D5) Number - \"\"\n    ├── g_p5_v8 (D5) Number - \"\"\n    ├── g_p5_v9 (D5) Number - \"\"\n    ├── g_p6 (D6) Choice - \"\"\n    ├── g_p7 (D7) Table 0 rows\n    │   ├── data\n    │   └── Parameter \"\"\n    └── g_p8 (D8) Map\n"
     );
 
     editable_set_value(&mut editable_1, "g_p1", "edited").unwrap();
@@ -274,6 +273,6 @@ fn test_editable_global_object_print() {
 
     assert_eq!(
         format!("{editable_1}"),
-        "Global Object Editable (Test)\n    ├── g_p1 (D1) String - \"edited\"\n    ├── g_p2 (D2) Boolean - \"true\"\n    ├── g_p3 (D3) File - \"test.ext\"\n    ├── g_p4_v1 (D4) Integer - \"1\"\n    ├── g_p4_v2 (D4) Integer - \"2\"\n    ├── g_p4_v3 (D4) Integer - \"3\"\n    ├── g_p4_v4 (D4) Integer - \"4\"\n    ├── g_p4_v5 (D4) Integer - \"5\"\n    ├── g_p4_v6 (D4) Integer - \"6\"\n    ├── g_p4_v7 (D4) Integer - \"7\"\n    ├── g_p4_v8 (D4) Integer - \"8\"\n    ├── g_p5_v1 (D5) Number - \"1.0\"\n    ├── g_p5_v2 (D5) Number - \"2.0\"\n    ├── g_p5_v3 (D5) Number - \"3.0\"\n    ├── g_p5_v4 (D5) Number - \"4.0\"\n    ├── g_p5_v5 (D5) Number - \"5.0\"\n    ├── g_p5_v6 (D5) Number - \"6.0\"\n    ├── g_p5_v7 (D5) Number - \"7.0\"\n    ├── g_p5_v8 (D5) Number - \"8.0\"\n    ├── g_p5_v9 (D5) Number - \"9.0\"\n    ├── g_p6 (D6) Choice - \"test\"\n    ├── g_p7 (D7) Table 1 rows\n    │   ├── data\n    │   │   └── Row 0\n    │   │       ├── col1 \"100.0\"\n    │   │       └── col2 \"200.0\"\n    │   └── Parameter \"\"\n    └── g_p8 (D8) Map\n        └── key1\n            ├── col1 (C1) String - \"test 1\"\n            ├── col2 (C2) Number - \"55.0\"\n            └── col3 (C3) Table 1 rows\n                ├── data\n                │   └── Row 0\n                │       ├── col3_1 \"150.0\"\n                │       └── col3_2 \"250.0\"\n                └── Parameter \"\"\n"
+        "Global Object Editable\n    ├── g_p1 (D1) String - \"edited\"\n    ├── g_p2 (D2) Boolean - \"true\"\n    ├── g_p3 (D3) File - \"test.ext\"\n    ├── g_p4_v1 (D4) Integer - \"1\"\n    ├── g_p4_v2 (D4) Integer - \"2\"\n    ├── g_p4_v3 (D4) Integer - \"3\"\n    ├── g_p4_v4 (D4) Integer - \"4\"\n    ├── g_p4_v5 (D4) Integer - \"5\"\n    ├── g_p4_v6 (D4) Integer - \"6\"\n    ├── g_p4_v7 (D4) Integer - \"7\"\n    ├── g_p4_v8 (D4) Integer - \"8\"\n    ├── g_p5_v1 (D5) Number - \"1.0\"\n    ├── g_p5_v2 (D5) Number - \"2.0\"\n    ├── g_p5_v3 (D5) Number - \"3.0\"\n    ├── g_p5_v4 (D5) Number - \"4.0\"\n    ├── g_p5_v5 (D5) Number - \"5.0\"\n    ├── g_p5_v6 (D5) Number - \"6.0\"\n    ├── g_p5_v7 (D5) Number - \"7.0\"\n    ├── g_p5_v8 (D5) Number - \"8.0\"\n    ├── g_p5_v9 (D5) Number - \"9.0\"\n    ├── g_p6 (D6) Choice - \"test\"\n    ├── g_p7 (D7) Table 1 rows\n    │   ├── data\n    │   │   └── Row 0\n    │   │       ├── col1 \"100.0\"\n    │   │       └── col2 \"200.0\"\n    │   └── Parameter \"\"\n    └── g_p8 (D8) Map\n        └── key1\n            ├── col1 (C1) String - \"test 1\"\n            ├── col2 (C2) Number - \"55.0\"\n            └── col3 (C3) Table 1 rows\n                ├── data\n                │   └── Row 0\n                │       ├── col3_1 \"150.0\"\n                │       └── col3_2 \"250.0\"\n                └── Parameter \"\"\n"
     );
 }

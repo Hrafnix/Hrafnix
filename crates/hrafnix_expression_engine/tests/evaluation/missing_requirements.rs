@@ -18,10 +18,10 @@ fn map_item() -> ItemFrozen {
 }
 
 fn map_parameters() -> ParameterObjectInputData {
-    let frozen = ParameterObjectFrozen::new_from_items(
-        "Test Parameters",
-        BTreeMap::from([(parameter_key!("p_map").into(), map_item())]),
-    );
+    let frozen = ParameterObjectFrozen::new_from_items(BTreeMap::from([(
+        parameter_key!("p_map").into(),
+        map_item(),
+    )]));
     ParameterObjectInputData::new(&frozen)
 }
 
@@ -52,7 +52,7 @@ fn has_message_parameter(messages: &[Message], key: &str, parameter: &str, value
 fn no_missing_requirements_when_everything_is_present() {
     // Why: Test that no missing requirements are reported when all referenced globals, parameters, and functions are provided.
     let global_frozen = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Globals")
+        GlobalObjectDefinition::builder()
             .with(
                 global_key!("g_a"),
                 IntegerDefinition::new_with_default("a global operand", "10"),
@@ -62,7 +62,7 @@ fn no_missing_requirements_when_everything_is_present() {
     let global_data = GlobalObjectInputData::new(&global_frozen);
 
     let parameter_frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Parameters")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_b"),
                 IntegerDefinition::new_with_default("a parameter operand", "5"),
@@ -203,7 +203,7 @@ fn provided_parameters_variables_and_globals_satisfy_requirements() {
     let engine = ExpressionEngine::new();
 
     let global_frozen = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Globals")
+        GlobalObjectDefinition::builder()
             .with(
                 global_key!("g_a"),
                 IntegerDefinition::new_with_default("a global operand", "1"),
@@ -211,7 +211,7 @@ fn provided_parameters_variables_and_globals_satisfy_requirements() {
             .finish(),
     );
     let parameter_frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Parameters")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_b"),
                 IntegerDefinition::new_with_default("a parameter operand", "2"),
@@ -219,7 +219,7 @@ fn provided_parameters_variables_and_globals_satisfy_requirements() {
             .finish(),
     );
     let variable_frozen = VariableObjectFrozen::new(
-        VariableObjectDefinition::builder("Test Variables")
+        VariableObjectDefinition::builder()
             .with(
                 variable_key!("v_c"),
                 IntegerDefinition::new_with_default("a variable operand", "3"),
@@ -277,7 +277,7 @@ fn bare_map_reference_is_satisfied_by_the_parent_name() {
 fn missing_indexed_reference_is_reported() {
     let engine = ExpressionEngine::new();
     let frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Parameters")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_other"),
                 IntegerDefinition::new_with_default("Another parameter", "1"),
@@ -385,28 +385,25 @@ fn bare_index_identifiers_are_checked_and_deduplicated() {
 fn supplied_bare_index_dependencies_are_not_evaluated() {
     let engine = ExpressionEngine::new();
     let globals = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Index dependencies")
+        GlobalObjectDefinition::builder()
             .with(
                 global_key!("g_index"),
                 IntegerDefinition::new_with_default("Index", "1 / 0"),
             )
             .finish(),
     );
-    let parameters = ParameterObjectFrozen::new_from_items(
-        "Index dependencies",
-        BTreeMap::from([
-            (parameter_key!("p_map").into(), map_item()),
-            (
-                parameter_key!("p_index").into(),
-                ItemFrozen::Integer(IntegerFrozen::new(IntegerDefinition::new_with_default(
-                    "Index",
-                    "unknown_function()",
-                ))),
-            ),
-        ]),
-    );
+    let parameters = ParameterObjectFrozen::new_from_items(BTreeMap::from([
+        (parameter_key!("p_map").into(), map_item()),
+        (
+            parameter_key!("p_index").into(),
+            ItemFrozen::Integer(IntegerFrozen::new(IntegerDefinition::new_with_default(
+                "Index",
+                "unknown_function()",
+            ))),
+        ),
+    ]));
     let variables = VariableObjectFrozen::new(
-        VariableObjectDefinition::builder("Index dependencies")
+        VariableObjectDefinition::builder()
             .with(
                 variable_key!("v_index"),
                 IntegerDefinition::new_with_default("Index", "g_missing"),
@@ -451,14 +448,14 @@ fn unprefixed_and_quoted_index_names_are_literals() {
 #[test]
 fn parent_name_checks_apply_to_globals_and_variables() {
     let engine = ExpressionEngine::new();
-    let globals = GlobalObjectFrozen::new_from_items(
-        "Maps",
-        BTreeMap::from([(global_key!("g_map").into(), map_item())]),
-    );
-    let variables = VariableObjectFrozen::new_from_items(
-        "Maps",
-        BTreeMap::from([(variable_key!("v_map").into(), map_item())]),
-    );
+    let globals = GlobalObjectFrozen::new_from_items(BTreeMap::from([(
+        global_key!("g_map").into(),
+        map_item(),
+    )]));
+    let variables = VariableObjectFrozen::new_from_items(BTreeMap::from([(
+        variable_key!("v_map").into(),
+        map_item(),
+    )]));
     let globals = Some(GlobalObjectInputData::new(&globals));
     let variables = Some(VariableObjectInputData::new(&variables));
     assert!(
@@ -512,26 +509,23 @@ fn nested_index_operands_and_base_tables_are_supported() {
         )]),
     )
     .unwrap();
-    let globals = GlobalObjectFrozen::new_from_items(
-        "Index operands",
-        BTreeMap::from([(global_key!("g_selector").into(), ItemFrozen::Map(selector))]),
-    );
-    let parameters = ParameterObjectFrozen::new_from_items(
-        "Targets",
-        BTreeMap::from([
-            (parameter_key!("p_map").into(), map_item()),
-            (
-                parameter_key!("p_table").into(),
-                ItemFrozen::Table(TableFrozen::new_from_rows(
-                    TableDefinition::new(
-                        "Table",
-                        vec![(store_key!("field"), NumberDefinition::new("Field"))],
-                    ),
-                    vec![vec!["1.0".into()]],
-                )),
-            ),
-        ]),
-    );
+    let globals = GlobalObjectFrozen::new_from_items(BTreeMap::from([(
+        global_key!("g_selector").into(),
+        ItemFrozen::Map(selector),
+    )]));
+    let parameters = ParameterObjectFrozen::new_from_items(BTreeMap::from([
+        (parameter_key!("p_map").into(), map_item()),
+        (
+            parameter_key!("p_table").into(),
+            ItemFrozen::Table(TableFrozen::new_from_rows(
+                TableDefinition::new(
+                    "Table",
+                    vec![(store_key!("field"), NumberDefinition::new("Field"))],
+                ),
+                vec![vec!["1.0".into()]],
+            )),
+        ),
+    ]));
     for expression in [
         "p_map[g_selector[entry][field]][field]",
         "p_table[0][field]",
@@ -571,18 +565,15 @@ fn checking_requirements_does_not_invoke_index_functions() {
             },
         ))
         .unwrap();
-    let parameters = ParameterObjectFrozen::new_from_items(
-        "Index operands",
-        BTreeMap::from([
-            (parameter_key!("p_map").into(), map_item()),
-            (
-                parameter_key!("p_choice").into(),
-                ItemFrozen::Integer(IntegerFrozen::new(IntegerDefinition::new_with_default(
-                    "Index", "0",
-                ))),
-            ),
-        ]),
-    );
+    let parameters = ParameterObjectFrozen::new_from_items(BTreeMap::from([
+        (parameter_key!("p_map").into(), map_item()),
+        (
+            parameter_key!("p_choice").into(),
+            ItemFrozen::Integer(IntegerFrozen::new(IntegerDefinition::new_with_default(
+                "Index", "0",
+            ))),
+        ),
+    ]));
     let parameters = Some(ParameterObjectInputData::new(&parameters));
     assert!(
         engine

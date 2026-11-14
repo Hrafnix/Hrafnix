@@ -5,14 +5,13 @@ use hrafnix_units::UnitFamilyId;
 #[test]
 fn test_object_definition_basic() {
     // Why: Test object definition creation and items.
-    let mut builder = GlobalObjectDefinition::builder("Test Object");
+    let mut builder = GlobalObjectDefinition::builder();
     builder.insert(
         GlobalKey::new("g_p1".into()).unwrap(),
         StringDefinition::new("D1"),
     );
     let obj_def = builder.finish();
 
-    assert_eq!(obj_def.description().as_ref(), "Test Object");
     assert_eq!(obj_def.count(), 1);
     assert!(obj_def.contains("g_p1"));
     assert!(obj_def.contains_str("g_p1"));
@@ -21,19 +20,19 @@ fn test_object_definition_basic() {
 #[test]
 fn test_object_definition_equality() {
     // Why: Test that two object definitions with the same items are considered equal.
-    let def_1 = GlobalObjectDefinition::builder("Test Object")
+    let def_1 = GlobalObjectDefinition::builder()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
-    let def_2 = GlobalObjectDefinition::builder("Test Object")
+    let def_2 = GlobalObjectDefinition::builder()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
-    let def_3 = GlobalObjectDefinition::builder("Test Object")
+    let def_3 = GlobalObjectDefinition::builder()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -49,7 +48,7 @@ fn test_object_definition_equality() {
 #[test]
 fn test_object_definition_print() {
     // Why: Test object definition print.
-    let def_1 = GlobalObjectDefinitionBuilder::new("Test")
+    let def_1 = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D1"),
@@ -236,7 +235,7 @@ fn test_object_definition_print() {
     assert_eq!(
         format!("{def_1}"),
         concat!(
-            "Global Object Definition (Test)\n",
+            "Global Object Definition\n",
             "    ├── g_p1 (D1) String - default: \"\"\n",
             "    ├── g_p2 (D2) Boolean - default: \"\" [true (True), false (False)]\n",
             "    ├── g_p3 (D3) File - default: \"\" [ext]\n",

@@ -1,12 +1,32 @@
 use hrafnix_datastore::definition::{FolderDefinition, SeparatorDefinition, TabDefinition};
 use hrafnix_datastore::prelude::*;
 use hrafnix_units::{UnitFamilyId, UnitId};
+use std::collections::BTreeMap;
+
+#[test]
+fn global_object_from_items_preserves_values_and_item_descriptions() {
+    let item = StringFrozen::new_with_value(StringDefinition::new("Name"), "Example".into());
+    let frozen = GlobalObjectFrozen::new_from_items(BTreeMap::from([(
+        global_key!("g_name").into(),
+        ItemFrozen::String(item.clone()),
+    )]));
+
+    assert_eq!(frozen.get("g_name"), Some(&ItemFrozen::String(item)));
+    assert_eq!(
+        frozen.definition(),
+        &GlobalObjectDefinition::builder()
+            .with(global_key!("g_name"), StringDefinition::new("Name"))
+            .finish()
+    );
+    assert_eq!(frozen.thaw().freeze(), frozen);
+    assert_eq!(frozen.launder(&SharedStringStore::new()), frozen);
+}
 
 #[test]
 fn test_object_frozen_basic() {
     // Why: Test frozen object creation and items.
     let frozen_1 = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Object")
+        GlobalObjectDefinition::builder()
             .with(
                 GlobalKey::new("g_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -14,7 +34,6 @@ fn test_object_frozen_basic() {
             .finish(),
     );
 
-    assert_eq!(frozen_1.definition().description().as_ref(), "Test Object");
     assert_eq!(frozen_1.definition().count(), 1);
     assert!(frozen_1.definition().contains("g_p1"));
     assert!(frozen_1.definition().contains_str("g_p1"));
@@ -24,7 +43,7 @@ fn test_object_frozen_basic() {
 #[test]
 fn test_object_frozen_ordered_iter_and_print() {
     let frozen = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Ordered")
+        GlobalObjectDefinition::builder()
             .with(
                 GlobalKey::new("g_z".into()).unwrap(),
                 StringDefinition::new("First"),
@@ -46,7 +65,7 @@ fn test_object_frozen_ordered_iter_and_print() {
     assert_eq!(
         format!("{frozen}"),
         concat!(
-            "Global Object Frozen (Ordered)\n",
+            "Global Object Frozen\n",
             "    ├── g_z (First) String - \"\"\n",
             "    └── g_a (Second) String - \"\"\n",
         )
@@ -57,7 +76,7 @@ fn test_object_frozen_ordered_iter_and_print() {
 fn test_object_frozen_equality() {
     // Why: Test that two frozen objects with the same items are considered equal.
     let frozen_1 = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Object")
+        GlobalObjectDefinition::builder()
             .with(
                 GlobalKey::new("g_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -65,7 +84,7 @@ fn test_object_frozen_equality() {
             .finish(),
     );
     let frozen_2 = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Object")
+        GlobalObjectDefinition::builder()
             .with(
                 GlobalKey::new("g_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -73,7 +92,7 @@ fn test_object_frozen_equality() {
             .finish(),
     );
     let frozen_3 = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Object")
+        GlobalObjectDefinition::builder()
             .with(
                 GlobalKey::new("g_p1".into()).unwrap(),
                 StringDefinition::new("D2"),
@@ -91,7 +110,7 @@ fn test_object_frozen_equality() {
 fn test_editable_global_object_print() {
     // Why: Test global object editable print.
     let frozen_1 = GlobalObjectFrozen::new(
-        GlobalObjectDefinitionBuilder::new("Test")
+        GlobalObjectDefinitionBuilder::new()
             .with(
                 GlobalKey::new("g_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -283,7 +302,7 @@ fn test_editable_global_object_print() {
     assert_eq!(
         format!("{frozen_1}"),
         concat!(
-            "Global Object Frozen (Test)\n",
+            "Global Object Frozen\n",
             "    ├── g_p1 (D1) String - \"\"\n",
             "    ├── g_p2 (D2) Boolean - \"\"\n",
             "    ├── g_p3 (D3) File - \"\"\n",
@@ -379,7 +398,7 @@ fn test_editable_global_object_print() {
     assert_eq!(
         format!("{frozen_1}"),
         concat!(
-            "Global Object Frozen (Test)\n",
+            "Global Object Frozen\n",
             "    ├── g_p1 (D1) String - \"edited\"\n",
             "    ├── g_p2 (D2) Boolean - \"true\"\n",
             "    ├── g_p3 (D3) File - \"test.ext\"\n",

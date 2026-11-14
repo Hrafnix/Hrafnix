@@ -192,7 +192,7 @@ impl Model {
 }
 
 fn input_parameters(key: ConstParameterKey, expression: &str) -> ParameterObjectInputData {
-    let definition = ParameterObjectDefinition::builder("Component parameters")
+    let definition = ParameterObjectDefinition::builder()
         .with(
             key,
             NumberDefinition::new_with_default("Component input", expression),
@@ -203,7 +203,7 @@ fn input_parameters(key: ConstParameterKey, expression: &str) -> ParameterObject
 }
 
 fn input_variables(key: ConstVariableKey, expression: &str) -> VariableObjectInputData {
-    let definition = VariableObjectDefinition::builder("Component variables")
+    let definition = VariableObjectDefinition::builder()
         .with(
             key,
             NumberDefinition::new_with_default("Calculated result", expression),
@@ -215,7 +215,7 @@ fn input_variables(key: ConstVariableKey, expression: &str) -> VariableObjectInp
 
 fn create_extended_globals() -> GlobalObjectInputData {
     GlobalObjectInputData::new(&GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Gantry crane design assumptions")
+        GlobalObjectDefinition::builder()
             .with(
                 global_key!("g_allowable_utilization"),
                 NumberDefinition::new_with_default("Allowable yield utilization", "0.90"),
@@ -254,7 +254,7 @@ fn create_extended_globals() -> GlobalObjectInputData {
 
 fn create_settings() -> GlobalObjectInputData {
     GlobalObjectInputData::new(&GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Gantry crane calculated settings")
+        GlobalObjectDefinition::builder()
             .with(
                 global_key!("g_design_load_n"),
                 NumberDefinition::new_with_default(

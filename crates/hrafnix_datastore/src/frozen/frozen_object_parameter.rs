@@ -118,13 +118,11 @@ impl ParameterObjectFrozen {
         s
     }
 
-    /// Creates a new `ParameterObjectFrozen` with a description and items.
+    /// Creates a new `ParameterObjectFrozen` with items.
+    #[must_use]
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
-    pub fn new_from_items<S: Into<ShareableString>>(
-        description: S,
-        items: BTreeMap<ParameterKey, ItemFrozen>,
-    ) -> Self {
-        let mut builder = ParameterObjectDefinition::builder(description);
+    pub fn new_from_items(items: BTreeMap<ParameterKey, ItemFrozen>) -> Self {
+        let mut builder = ParameterObjectDefinition::builder();
         for (k, v) in &items {
             builder.insert(k.clone(), v.definition());
         }
@@ -283,11 +281,7 @@ impl TreePrint for ParameterObjectFrozen {
         prefix: &str,
         last: bool,
     ) -> std::fmt::Result {
-        writeln!(
-            f,
-            "Parameter Object Frozen ({})",
-            self.definition.description()
-        )?;
+        writeln!(f, "Parameter Object Frozen")?;
 
         let child_prefix = Self::child_prefix(prefix, last);
 

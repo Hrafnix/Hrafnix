@@ -89,11 +89,7 @@ impl TreePrint for ParameterObjectEditable {
         prefix: &str,
         last: bool,
     ) -> std::fmt::Result {
-        writeln!(
-            f,
-            "Parameter Object Editable ({})",
-            self.definition.description()
-        )?;
+        writeln!(f, "Parameter Object Editable")?;
 
         let child_prefix = Self::child_prefix(prefix, last);
 

@@ -6,32 +6,21 @@ use hrafnix_keys::variable_key::ConstVariableKey;
 /// Compile-time representation of a variable object.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct VariableObjectCompileTime {
-    /// Human-readable description for this compile-time value.
-    description: &'static str,
     /// Keyed items contained in this compile-time container.
     items: &'static [(ConstVariableKey, ItemCompileTime)],
 }
 
 impl VariableObjectCompileTime {
-    /// Hidden backing constructor for `const_variable_object!(description, items)`.
+    /// Hidden backing constructor for `const_variable_object!(items)`.
     ///
     /// This is an implementation detail; call `const_variable_object!` instead.
-    /// `description` names the top-level object and `items` is the ordered slice of
+    /// `items` is the ordered slice of
     /// `(ConstVariableKey, ItemCompileTime)` key/item pairs.
     #[doc(hidden)]
     #[must_use]
-    pub const fn __new(
-        description: &'static str,
-        items: &'static [(ConstVariableKey, ItemCompileTime)],
-    ) -> Self {
+    pub const fn __new(items: &'static [(ConstVariableKey, ItemCompileTime)]) -> Self {
         assert_unique_keys!(items, "VariableObjectCompileTime item keys must be unique");
-        Self { description, items }
-    }
-
-    /// Returns the description.
-    #[must_use]
-    pub const fn description(&self) -> &'static str {
-        self.description
+        Self { items }
     }
 
     /// Returns the keyed items.
@@ -76,7 +65,7 @@ impl VariableObjectCompileTime {
         self.items
             .iter()
             .fold(
-                VariableObjectDefinition::builder(self.description),
+                VariableObjectDefinition::builder(),
                 |builder, (key, item)| builder.with(*key, item.into_definition()),
             )
             .finish()
@@ -96,12 +85,11 @@ impl VariableObjectCompileTime {
 ///
 /// # Syntax
 /// ```text
-/// const_variable_object!(description, items)
-/// const_variable_object!(description, [("key", item), ...])
+/// const_variable_object!(items)
+/// const_variable_object!([("key", item), ...])
 /// ```
 ///
 /// # Arguments
-/// - `description`: `&'static str` human-readable description of the object.
 /// - `items`: `&'static [(ConstVariableKey, ItemCompileTime)]` ordered slice of key/item
 ///   pairs, typically built with `variable_key!` and `const_item!`.
 ///
@@ -110,7 +98,6 @@ impl VariableObjectCompileTime {
 /// use hrafnix_datastore::prelude::*;
 ///
 /// const RESULTS: VariableObjectCompileTime = const_variable_object!(
-///     "Results",
 ///     [(
 ///         "v_result",
 ///         const_item!(number = const_number!("Result")),
@@ -126,7 +113,6 @@ impl VariableObjectCompileTime {
 /// use hrafnix_datastore::prelude::*;
 ///
 /// const SETTINGS: VariableObjectCompileTime = const_variable_object!(
-///     "Settings",
 ///     [
 ///         (
 ///             "v_project_name",
@@ -141,21 +127,20 @@ impl VariableObjectCompileTime {
 /// ```
 #[macro_export]
 macro_rules! const_variable_object {
-    ($description:expr, [$(($key:literal, $item:expr $(,)?)),* $(,)?] $(,)?) => {
+    ([$(($key:literal, $item:expr $(,)?)),* $(,)?] $(,)?) => {
         const {
             #[allow(clippy::disallowed_methods)]
             $crate::compile_time::VariableObjectCompileTime::__new(
-                $description,
                 &[
                     $(($crate::prelude::variable_key!($key), $item)),*
                 ],
             )
         }
     };
-    ($description:expr, $items:expr) => {
+    ($items:expr $(,)?) => {
         const {
             #[allow(clippy::disallowed_methods)]
-            $crate::compile_time::VariableObjectCompileTime::__new($description, $items)
+            $crate::compile_time::VariableObjectCompileTime::__new($items)
         }
     };
 }
@@ -172,9 +157,8 @@ mod tests {
             variable_key!("v_name"),
             const_item!(string = const_string!("Name")),
         )];
-        let object = VariableObjectCompileTime::__new(std::hint::black_box("Variables"), ITEMS);
+        let object = VariableObjectCompileTime::__new(std::hint::black_box(ITEMS));
 
-        assert_eq!(object.description(), "Variables");
         assert_eq!(object.items(), ITEMS);
     }
 
@@ -192,6 +176,6 @@ mod tests {
             ),
         ];
         #[allow(clippy::disallowed_methods)]
-        let _ = VariableObjectCompileTime::__new(std::hint::black_box("Duplicates"), DUPLICATES);
+        let _ = VariableObjectCompileTime::__new(std::hint::black_box(DUPLICATES));
     }
 }

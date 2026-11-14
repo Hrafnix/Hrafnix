@@ -36,14 +36,14 @@ fn tree_print_includes_column_requirements_and_numeric_bounds() {
                 ),
             ],
         );
-        let definition = ParameterObjectDefinition::builder("Test")
+        let definition = ParameterObjectDefinition::builder()
             .with(ParameterKey::new("p_table".into()).unwrap(), table)
             .finish();
         assert_eq!(
             format!("{definition}"),
             format!(
                 concat!(
-                    "Parameter Object Definition (Test)\n",
+                    "Parameter Object Definition\n",
                     "    └── p_table (table) Table with units\n",
                     "        ├── a{} (bounded) Number - unit: {} - default: \"\" [Max(10.0, inclusive)]\n",
                     "        └── b (plain) Number - unit: {} - default: \"\"\n",

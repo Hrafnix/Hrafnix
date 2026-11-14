@@ -9,7 +9,7 @@ use std::process::ExitCode;
 fn main() -> ExitCode {
     let store = SharedStringStore::new();
     let translations = hrafnix_translation::generate_translation_map(&store);
-    let definition = ParameterObjectDefinition::builder("Example Parameters")
+    let definition = ParameterObjectDefinition::builder()
         .with(
             parameter_key!("p_answer"),
             IntegerDefinition::new_with_default("The expression to evaluate", "6 * 7"),

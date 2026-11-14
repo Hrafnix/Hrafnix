@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 fn basic_data_for(item: ItemFrozen) -> BasicInputData {
     let mut items = BTreeMap::new();
     items.insert(GlobalKey::new("g_field".into()).unwrap(), item);
-    let frozen = GlobalObjectFrozen::new_from_items("Test object", items);
+    let frozen = GlobalObjectFrozen::new_from_items(items);
     let input = GlobalObjectInputData::new(&frozen);
 
     match input.data().get("g_field").unwrap() {

@@ -45,7 +45,7 @@ fn build_parameter(definition: ParameterObjectDefinition) -> ParameterObjectInpu
 
 fn evaluate_number_expression(expression: &str) -> ComputedItem {
     let data = build_parameter(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_result"),
                 NumberDefinition::new_with_default("A number parameter", expression),
@@ -63,7 +63,7 @@ fn evaluate_number_expression(expression: &str) -> ComputedItem {
 
 fn evaluate_integer_expression(expression: &str) -> ComputedItem {
     let data = build_parameter(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_result"),
                 IntegerDefinition::new_with_default("An integer parameter", expression),
@@ -235,7 +235,7 @@ fn decimal_angle_conversion_expression_matches_golden_value() {
 #[test]
 fn registered_function_is_invoked_during_evaluation() {
     // Why: Test that a registered custom function is invoked and its result used during evaluation.
-    let frozen = ParameterObjectDefinition::builder("Test Object")
+    let frozen = ParameterObjectDefinition::builder()
         .with(
             parameter_key!("p_result"),
             IntegerDefinition::new_with_default("A number parameter", "add(2, 3)"),
@@ -272,7 +272,7 @@ fn registered_function_can_reference_variables() {
     // Parameters are evaluated against the engine's globals, so set up a global
     // variable that the function can reference alongside a literal argument.
     let global_frozen = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Globals")
+        GlobalObjectDefinition::builder()
             .with(
                 global_key!("g_a"),
                 IntegerDefinition::new_with_default("a global operand", "10"),
@@ -280,7 +280,7 @@ fn registered_function_can_reference_variables() {
             .finish(),
     );
 
-    let frozen = ParameterObjectDefinition::builder("Test Object")
+    let frozen = ParameterObjectDefinition::builder()
         .with(
             parameter_key!("p_sum"),
             IntegerDefinition::new_with_default("sum of operands", "add(g_a, 32)"),
@@ -316,7 +316,7 @@ fn registered_function_can_reference_variables() {
 #[test]
 fn registered_function_combines_with_other_operators() {
     // Why: Test that a function call result can be combined with arithmetic operators in the same expression.
-    let frozen = ParameterObjectDefinition::builder("Test Object")
+    let frozen = ParameterObjectDefinition::builder()
         .with(
             parameter_key!("p_result"),
             IntegerDefinition::new_with_default("a number parameter", "add(2, 3) * 4 - 1"),
@@ -348,7 +348,7 @@ fn registered_function_combines_with_other_operators() {
 #[test]
 fn nested_registered_function_calls_evaluate_correctly() {
     // Why: Test that nested calls to a registered function are evaluated correctly.
-    let frozen = ParameterObjectDefinition::builder("Test Object")
+    let frozen = ParameterObjectDefinition::builder()
         .with(
             parameter_key!("p_result"),
             IntegerDefinition::new_with_default("a number parameter", "add(add(1, 2), add(3, 4))"),
@@ -380,7 +380,7 @@ fn nested_registered_function_calls_evaluate_correctly() {
 #[test]
 fn float_returning_function_works_with_number_definition() {
     // Why: Test that a registered function returning a float value is compatible with a NumberDefinition parameter.
-    let frozen = ParameterObjectDefinition::builder("Test Object")
+    let frozen = ParameterObjectDefinition::builder()
         .with(
             parameter_key!("p_result"),
             NumberDefinition::new_with_default("a number parameter", "multiply(2.5, 4.0)"),
@@ -418,7 +418,7 @@ fn float_returning_function_works_with_number_definition() {
 #[test]
 fn calling_an_unregistered_function_returns_an_error() {
     // Why: Test that calling a function that has not been registered produces a clear evaluation error.
-    let frozen = ParameterObjectDefinition::builder("Test Object")
+    let frozen = ParameterObjectDefinition::builder()
         .with(
             parameter_key!("p_result"),
             IntegerDefinition::new_with_default("a number parameter", "missing(1, 2)"),
@@ -451,7 +451,7 @@ fn calling_an_unregistered_function_returns_an_error() {
 
 #[test]
 fn calling_an_expression_as_a_function_returns_a_translatable_error() {
-    let frozen = ParameterObjectDefinition::builder("Test Object")
+    let frozen = ParameterObjectDefinition::builder()
         .with(
             parameter_key!("p_result"),
             IntegerDefinition::new_with_default("a number parameter", "(1 + 2)(3)"),

@@ -1,12 +1,32 @@
 use hrafnix_datastore::definition::{FolderDefinition, SeparatorDefinition, TabDefinition};
 use hrafnix_datastore::prelude::*;
 use hrafnix_units::{UnitFamilyId, UnitId};
+use std::collections::BTreeMap;
+
+#[test]
+fn variable_object_from_items_preserves_values_and_item_descriptions() {
+    let item = StringFrozen::new_with_value(StringDefinition::new("Name"), "Example".into());
+    let frozen = VariableObjectFrozen::new_from_items(BTreeMap::from([(
+        variable_key!("v_name").into(),
+        ItemFrozen::String(item.clone()),
+    )]));
+
+    assert_eq!(frozen.get("v_name"), Some(&ItemFrozen::String(item)));
+    assert_eq!(
+        frozen.definition(),
+        &VariableObjectDefinition::builder()
+            .with(variable_key!("v_name"), StringDefinition::new("Name"))
+            .finish()
+    );
+    assert_eq!(frozen.thaw().freeze(), frozen);
+    assert_eq!(frozen.launder(&SharedStringStore::new()), frozen);
+}
 
 #[test]
 fn test_variable_object_definition_basic() {
     // Why: Test frozen variable object creation and items.
     let frozen_1 = VariableObjectFrozen::new(
-        VariableObjectDefinition::builder("Test Object")
+        VariableObjectDefinition::builder()
             .with(
                 VariableKey::new("v_v1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -14,7 +34,6 @@ fn test_variable_object_definition_basic() {
             .finish(),
     );
 
-    assert_eq!(frozen_1.definition().description().as_ref(), "Test Object");
     assert_eq!(frozen_1.definition().count(), 1);
     assert!(frozen_1.definition().contains("v_v1"));
     assert!(frozen_1.definition().contains_str("v_v1"));
@@ -24,7 +43,7 @@ fn test_variable_object_definition_basic() {
 #[test]
 fn test_variable_object_frozen_ordered_iter_and_print() {
     let frozen = VariableObjectFrozen::new(
-        VariableObjectDefinition::builder("Ordered")
+        VariableObjectDefinition::builder()
             .with(
                 VariableKey::new("v_z".into()).unwrap(),
                 StringDefinition::new("First"),
@@ -46,7 +65,7 @@ fn test_variable_object_frozen_ordered_iter_and_print() {
     assert_eq!(
         format!("{frozen}"),
         concat!(
-            "Variable Object Frozen (Ordered)\n",
+            "Variable Object Frozen\n",
             "    ├── v_z (First) String - \"\"\n",
             "    └── v_a (Second) String - \"\"\n",
         )
@@ -57,7 +76,7 @@ fn test_variable_object_frozen_ordered_iter_and_print() {
 fn test_variable_object_definition_equality() {
     // Why: Test that two frozen variable objects with the same items are considered equal.
     let frozen_1 = VariableObjectFrozen::new(
-        VariableObjectDefinition::builder("Test Object")
+        VariableObjectDefinition::builder()
             .with(
                 VariableKey::new("v_v1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -65,7 +84,7 @@ fn test_variable_object_definition_equality() {
             .finish(),
     );
     let frozen_2 = VariableObjectFrozen::new(
-        VariableObjectDefinition::builder("Test Object")
+        VariableObjectDefinition::builder()
             .with(
                 VariableKey::new("v_v1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -73,7 +92,7 @@ fn test_variable_object_definition_equality() {
             .finish(),
     );
     let frozen_3 = VariableObjectFrozen::new(
-        VariableObjectDefinition::builder("Test Object")
+        VariableObjectDefinition::builder()
             .with(
                 VariableKey::new("v_v1".into()).unwrap(),
                 StringDefinition::new("D2"),
@@ -91,7 +110,7 @@ fn test_variable_object_definition_equality() {
 fn test_editable_variable_object_print() {
     // Why: Test variable object editable print.
     let frozen_1 = VariableObjectFrozen::new(
-        VariableObjectDefinitionBuilder::new("Test")
+        VariableObjectDefinitionBuilder::new()
             .with(
                 VariableKey::new("v_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -283,7 +302,7 @@ fn test_editable_variable_object_print() {
     assert_eq!(
         format!("{frozen_1}"),
         concat!(
-            "Variable Object Frozen (Test)\n",
+            "Variable Object Frozen\n",
             "    ├── v_p1 (D1) String - \"\"\n",
             "    ├── v_p2 (D2) Boolean - \"\"\n",
             "    ├── v_p3 (D3) File - \"\"\n",
@@ -378,7 +397,7 @@ fn test_editable_variable_object_print() {
     assert_eq!(
         format!("{frozen_1}"),
         concat!(
-            "Variable Object Frozen (Test)\n",
+            "Variable Object Frozen\n",
             "    ├── v_p1 (D1) String - \"edited\"\n",
             "    ├── v_p2 (D2) Boolean - \"true\"\n",
             "    ├── v_p3 (D3) File - \"test.ext\"\n",
