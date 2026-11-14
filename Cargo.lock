@@ -359,6 +359,8 @@ version = "0.1.0"
 dependencies = [
  "camino",
  "hotpath",
+ "hrafnix_common",
+ "hrafnix_keys",
  "hrafnix_message",
  "hrafnix_shareable_string",
  "hrafnix_translation",

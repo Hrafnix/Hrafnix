@@ -10,6 +10,11 @@
 //! Component contents also require a `gui_metadata` object with `dimensions`
 //! (`width` and `height` as unsigned 16-bit integers) and an `icon` path string.
 //! Icon paths are stored unchanged, without opening or resolving them.
+//! GUI metadata also requires a `ports` array, including when empty. Each port
+//! has a plain-string `id` validated as a [`hrafnix_keys::PortKey`], a plain-string
+//! `type`, and a `location` object with unsigned
+//! 16-bit `x` and `y` drawing coordinates. Readers and writers cap `x` to the
+//! declared icon width and `y` to its height.
 //! Model and component contents require a `translations` object with a source
 //! `language` string and a `translations` object mapping original text to target
 //! language codes and translated strings. Both fields are required, even for an
@@ -59,7 +64,7 @@ pub mod component;
 pub mod foreground_decoration;
 /// Geometry and styling values shared by graphical elements.
 pub mod graphics;
-/// Drawing dimensions and icons associated with components.
+/// Drawing dimensions, icons, and port locations associated with components.
 pub mod gui_metadata;
 /// Metadata shared by model and component files.
 pub mod metadata;

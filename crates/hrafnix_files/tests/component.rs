@@ -7,9 +7,11 @@ mod common;
 
 use camino::Utf8PathBuf;
 use common::TestDirectory;
+use hrafnix_common::port::PortType;
 use hrafnix_files::component::{data::ComponentFile, read_component_file, write_component_file};
 use hrafnix_files::graphics::data::Dimension;
-use hrafnix_files::gui_metadata::data::GuiMetadata;
+use hrafnix_files::gui_metadata::data::{GuiMetadata, Port, PortLocation};
+use hrafnix_keys::port_key;
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;
 use serde_json::{Value, json};
@@ -23,6 +25,7 @@ fn minimal_component() -> ComponentFile {
         gui_metadata: GuiMetadata {
             dimensions: Dimension::new(100, 50),
             icon: "../icons/component.svg".into(),
+            ports: Vec::new(),
         },
         foreground_decorations: Vec::new(),
         background_decorations: Vec::new(),
@@ -153,12 +156,14 @@ fn gui_metadata_is_required_and_validated() {
     for invalid in [
         Value::Null,
         json!([]),
-        json!([{"width": 100, "height": 50}, "icon.svg"]),
+        json!([{"width": 100, "height": 50}, "icon.svg", []]),
         json!({}),
-        json!({"dimensions": [100, 50], "icon": "icon.svg"}),
-        json!({"dimensions": {"width": 100, "height": 50}}),
-        json!({"dimensions": {"width": 100, "height": 50}, "icon": false}),
-        json!({"dimensions": {"width": 100, "height": 50}, "icon": "", "extra": 1}),
+        json!({"dimensions": [100, 50], "icon": "icon.svg", "ports": []}),
+        json!({"dimensions": {"width": 100, "height": 50}, "ports": []}),
+        json!({"dimensions": {"width": 100, "height": 50}, "icon": false, "ports": []}),
+        json!({"dimensions": {"width": 100, "height": 50}, "icon": "", "ports": [], "extra": 1}),
+        json!({"dimensions": {"width": 100, "height": 50}, "icon": ""}),
+        json!({"dimensions": {"width": 100, "height": 50}, "icon": "", "ports": null}),
     ] {
         let mut invalid_document = document.clone();
         invalid_document["component"]["gui_metadata"] = invalid;
@@ -190,6 +195,7 @@ fn component_gui_metadata_round_trips_through_disk() {
         component.gui_metadata = GuiMetadata {
             dimensions: Dimension::new(0, u16::MAX),
             icon: icon.into(),
+            ports: Vec::new(),
         };
         write_component_file(component.clone(), &path).unwrap();
         assert_eq!(read_component_file(&path).unwrap(), component);
@@ -199,8 +205,103 @@ fn component_gui_metadata_round_trips_through_disk() {
             json!({
                 "dimensions": {"width": 0, "height": u16::MAX},
                 "icon": icon,
+                "ports": [],
             }),
         );
+    }
+}
+
+#[test]
+fn component_ports_round_trip_inside_gui_metadata() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("ports.hxc");
+    let mut component = minimal_component();
+    component.gui_metadata.ports = vec![
+        Port {
+            id: port_key!("temperature").into(),
+            port_type: PortType::Output,
+            location: PortLocation { x: 100, y: 25 },
+        },
+        Port {
+            id: port_key!("power").into(),
+            port_type: PortType::Power,
+            location: PortLocation { x: 0, y: 50 },
+        },
+    ];
+    write_component_file(component.clone(), &path).unwrap();
+    assert_eq!(read_component_file(&path).unwrap(), component);
+    let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(
+        document["component"]["gui_metadata"]["ports"],
+        json!([
+            {"id": "temperature", "type": "output", "location": {"x": 100, "y": 25}},
+            {"id": "power", "type": "power", "location": {"x": 0, "y": 50}},
+        ]),
+    );
+    assert!(document["component"].get("ports").is_none());
+}
+
+#[test]
+fn reading_caps_ports_to_the_icon_bounds() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("ports.hxc");
+    for (x, y) in [(101, 25), (100, 51), (u16::MAX, u16::MAX)] {
+        let mut document: Value = serde_json::from_str(&minimal_text()).unwrap();
+        document["component"]["gui_metadata"]["ports"] = json!([{
+            "id": "temperature",
+            "type": "output",
+            "location": {"x": x, "y": y},
+        }]);
+        fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+        let component = read_component_file(&path).unwrap();
+        assert_eq!(
+            component.gui_metadata.ports,
+            vec![Port {
+                id: port_key!("temperature").into(),
+                port_type: PortType::Output,
+                location: PortLocation {
+                    x: x.min(100),
+                    y: y.min(50),
+                },
+            }],
+        );
+        write_component_file(component.clone(), &path).unwrap();
+        assert_eq!(read_component_file(&path).unwrap(), component);
+        let written: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(
+            written["component"]["gui_metadata"]["ports"][0]["location"],
+            json!({"x": x.min(100), "y": y.min(50)}),
+        );
+    }
+}
+
+#[test]
+fn writing_caps_port_locations_when_replacing_existing_files() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("ports.hxc");
+    let original = minimal_text();
+    fs::write(&path, &original).unwrap();
+    for (x, y) in [(101, 25), (100, 51), (u16::MAX, u16::MAX)] {
+        let mut component = minimal_component();
+        component.gui_metadata.ports.push(Port {
+            id: port_key!("temperature").into(),
+            port_type: PortType::Output,
+            location: PortLocation { x, y },
+        });
+        let mut expected = component.clone();
+        expected.gui_metadata.ports[0].location = PortLocation {
+            x: x.min(100),
+            y: y.min(50),
+        };
+        write_component_file(component, &path).unwrap();
+        assert_eq!(read_component_file(&path).unwrap(), expected);
+        let written: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(
+            written["component"]["gui_metadata"]["ports"][0]["location"],
+            json!({"x": x.min(100), "y": y.min(50)}),
+        );
+        assert_eq!(directory.entries(), ["ports.hxc"]);
+        assert_eq!(directory.sibling_temporary_files(), Vec::<String>::new());
     }
 }
 

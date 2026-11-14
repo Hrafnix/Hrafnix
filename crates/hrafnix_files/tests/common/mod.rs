@@ -27,7 +27,7 @@ pub(super) const TRANSLATIONS: &str = "{\"language\": \"en\", \"translations\": 
 /// The required GUI metadata entry for components; models do not have one.
 fn gui_metadata_entry(root: &str) -> &'static str {
     if root == "component" {
-        ", \"gui_metadata\": {\"dimensions\": {\"width\": 100, \"height\": 50}, \"icon\": \"../icons/component.svg\"}"
+        ", \"gui_metadata\": {\"dimensions\": {\"width\": 100, \"height\": 50}, \"icon\": \"../icons/component.svg\", \"ports\": []}"
     } else {
         ""
     }
