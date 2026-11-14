@@ -6,33 +6,22 @@ use hrafnix_keys::global_key::ConstGlobalKey;
 /// Compile-time representation of a global object.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GlobalObjectCompileTime {
-    /// Human-readable description for this compile-time value.
-    description: &'static str,
     /// Keyed items contained in this compile-time container.
     items: &'static [(ConstGlobalKey, ItemCompileTime)],
 }
 
 impl GlobalObjectCompileTime {
-    /// Hidden backing constructor for `const_global_object!(description, items)`.
+    /// Hidden backing constructor for `const_global_object!(items)`.
     ///
     /// This is an implementation detail; call `const_global_object!` instead.
-    /// `description` names the top-level object and `items` is the ordered slice of
+    /// `items` is the ordered slice of
     /// `(ConstGlobalKey, ItemCompileTime)` key/item pairs, typically built with the
     /// `global_key!` macro and `const_item!`.
     #[doc(hidden)]
     #[must_use]
-    pub const fn __new(
-        description: &'static str,
-        items: &'static [(ConstGlobalKey, ItemCompileTime)],
-    ) -> Self {
+    pub const fn __new(items: &'static [(ConstGlobalKey, ItemCompileTime)]) -> Self {
         assert_unique_keys!(items, "GlobalObjectCompileTime item keys must be unique");
-        Self { description, items }
-    }
-
-    /// Returns the description.
-    #[must_use]
-    pub const fn description(&self) -> &'static str {
-        self.description
+        Self { items }
     }
 
     /// Returns the keyed items.
@@ -76,10 +65,9 @@ impl GlobalObjectCompileTime {
     pub fn into_definition(self) -> GlobalObjectDefinition {
         self.items
             .iter()
-            .fold(
-                GlobalObjectDefinition::builder(self.description),
-                |builder, (key, item)| builder.with(*key, item.into_definition()),
-            )
+            .fold(GlobalObjectDefinition::builder(), |builder, (key, item)| {
+                builder.with(*key, item.into_definition())
+            })
             .finish()
     }
 }
@@ -96,12 +84,11 @@ impl GlobalObjectCompileTime {
 ///
 /// # Syntax
 /// ```text
-/// const_global_object!(description, items)
-/// const_global_object!(description, [("key", item), ...])
+/// const_global_object!(items)
+/// const_global_object!([("key", item), ...])
 /// ```
 ///
 /// # Arguments
-/// - `description`: `&'static str` human-readable description of the object.
 /// - `items`: `&'static [(ConstGlobalKey, ItemCompileTime)]` ordered slice of key/item
 ///   pairs, typically built with `global_key!` and `const_item!`.
 ///
@@ -110,7 +97,6 @@ impl GlobalObjectCompileTime {
 /// use hrafnix_datastore::prelude::*;
 ///
 /// const SETTINGS: GlobalObjectCompileTime = const_global_object!(
-///     "Settings",
 ///     [(
 ///         "g_project_name",
 ///         const_item!(string = const_string!("Project name")),
@@ -126,7 +112,6 @@ impl GlobalObjectCompileTime {
 /// use hrafnix_datastore::prelude::*;
 ///
 /// const SETTINGS: GlobalObjectCompileTime = const_global_object!(
-///     "Settings",
 ///     [
 ///         (
 ///             "g_project_name",
@@ -141,21 +126,20 @@ impl GlobalObjectCompileTime {
 /// ```
 #[macro_export]
 macro_rules! const_global_object {
-    ($description:expr, [$(($key:literal, $item:expr $(,)?)),* $(,)?] $(,)?) => {
+    ([$(($key:literal, $item:expr $(,)?)),* $(,)?] $(,)?) => {
         const {
             #[allow(clippy::disallowed_methods)]
             $crate::compile_time::GlobalObjectCompileTime::__new(
-                $description,
                 &[
                     $(($crate::prelude::global_key!($key), $item)),*
                 ],
             )
         }
     };
-    ($description:expr, $items:expr) => {
+    ($items:expr $(,)?) => {
         const {
             #[allow(clippy::disallowed_methods)]
-            $crate::compile_time::GlobalObjectCompileTime::__new($description, $items)
+            $crate::compile_time::GlobalObjectCompileTime::__new($items)
         }
     };
 }
@@ -172,9 +156,8 @@ mod tests {
             global_key!("g_name"),
             const_item!(string = const_string!("Name")),
         )];
-        let object = GlobalObjectCompileTime::__new(std::hint::black_box("Globals"), ITEMS);
+        let object = GlobalObjectCompileTime::__new(std::hint::black_box(ITEMS));
 
-        assert_eq!(object.description(), "Globals");
         assert_eq!(object.items(), ITEMS);
     }
 
@@ -192,6 +175,6 @@ mod tests {
             ),
         ];
         #[allow(clippy::disallowed_methods)]
-        let _ = GlobalObjectCompileTime::__new(std::hint::black_box("Duplicates"), DUPLICATES);
+        let _ = GlobalObjectCompileTime::__new(std::hint::black_box(DUPLICATES));
     }
 }

@@ -16,17 +16,14 @@ const MAP_ITEMS: &[(ConstStoreKey, MapItemCompileTime)] = &[
     (store_key!("dimensions"), const_map_item!(table = TABLE)),
 ];
 const MAP: MapCompileTime = const_map!("Shapes", MAP_ITEMS);
-const OBJECT: GlobalObjectCompileTime = const_global_object!(
-    "Settings",
-    [
-        ("g_heading", const_item!(tab = const_tab!("General")),),
-        ("g_shapes", const_item!(map = MAP)),
-        (
-            "g_divider",
-            const_item!(separator = const_separator!("Advanced")),
-        ),
-    ],
-);
+const OBJECT: GlobalObjectCompileTime = const_global_object!([
+    ("g_heading", const_item!(tab = const_tab!("General")),),
+    ("g_shapes", const_item!(map = MAP)),
+    (
+        "g_divider",
+        const_item!(separator = const_separator!("Advanced")),
+    ),
+],);
 
 #[test]
 fn nested_compile_time_definitions_convert_in_declaration_order() {

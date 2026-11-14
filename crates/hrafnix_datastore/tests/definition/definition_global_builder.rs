@@ -3,7 +3,7 @@ use hrafnix_datastore::prelude::*;
 #[test]
 fn test_object_builder_pattern() {
     // Why: Test object creation with the builder pattern using with_inserted parameter.
-    let obj_def = GlobalObjectDefinition::builder("Test Object")
+    let obj_def = GlobalObjectDefinition::builder()
         .with(
             GlobalKey::new("g_prop1".into()).unwrap(),
             StringDefinition::new("String prop"),
@@ -21,17 +21,17 @@ fn test_object_builder_pattern() {
 #[test]
 fn test_object_inheritance() {
     // Why: Test that an object definition can inherit from another.
-    let parent_def = GlobalObjectDefinition::builder("Parent")
+    let parent_def = GlobalObjectDefinition::builder()
         .with(
             GlobalKey::new("g_prop1".into()).unwrap(),
             StringDefinition::new_with_default("D1", "V1"),
         )
         .finish();
 
-    let builder = parent_def.inherit("Child");
+    let builder = parent_def.inherit();
     assert_eq!(builder.finish().count(), 1);
 
-    let mut builder = parent_def.inherit("Child");
+    let mut builder = parent_def.inherit();
     builder.insert(
         GlobalKey::new("g_prop2".into()).unwrap(),
         StringDefinition::new_with_default("D2", "V2"),
@@ -42,7 +42,7 @@ fn test_object_inheritance() {
     assert!(child_def.contains("g_prop1"));
     assert!(child_def.contains("g_prop2"));
 
-    let mut builder = child_def.inherit("Grandchild");
+    let mut builder = child_def.inherit();
     builder.remove("g_prop1");
     let grandchild_def = builder.finish();
     assert_eq!(grandchild_def.count(), 1);
@@ -76,7 +76,7 @@ fn test_invalid_keys() {
 #[test]
 fn test_object_definition_immutability() {
     // Why: Test that the object definition is immutable once created.
-    let obj_def = GlobalObjectDefinition::builder("Test Object")
+    let obj_def = GlobalObjectDefinition::builder()
         .with(
             GlobalKey::new("g_prop1".into()).unwrap(),
             StringDefinition::new("String prop"),
@@ -92,16 +92,15 @@ fn test_object_definition_immutability() {
 #[test]
 fn test_object_definition_builder_new() {
     // Why: Test that a new builder correctly initializes an empty object definition.
-    let builder = GlobalObjectDefinitionBuilder::new("Test Description");
+    let builder = GlobalObjectDefinitionBuilder::new();
     let def = builder.finish();
-    assert_eq!(def.description().as_str(), "Test Description");
     assert_eq!(def.count(), 0);
 }
 
 #[test]
 fn test_object_definition_builder_insert() {
     // Why: Test that the builder correctly inserts items into the object definition.
-    let mut builder = GlobalObjectDefinitionBuilder::new("Test");
+    let mut builder = GlobalObjectDefinitionBuilder::new();
     let prop = StringDefinition::new("Desc");
     let key = GlobalKey::new("g_key1".into()).unwrap();
 
@@ -118,7 +117,7 @@ fn test_object_definition_builder_with_inserted() {
     let prop = StringDefinition::new("Desc");
     let key = GlobalKey::new("g_key1".into()).unwrap();
 
-    let def = GlobalObjectDefinitionBuilder::new("Test")
+    let def = GlobalObjectDefinitionBuilder::new()
         .with(key, prop)
         .finish();
 
@@ -129,14 +128,14 @@ fn test_object_definition_builder_with_inserted() {
 #[test]
 fn test_object_definition_builder_remove() {
     // Why: Test that the builder correctly removes items.
-    let mut builder = GlobalObjectDefinitionBuilder::new("Test");
+    let mut builder = GlobalObjectDefinitionBuilder::new();
     let prop = StringDefinition::new("Desc");
     let key = GlobalKey::new("g_key1".into()).unwrap();
 
     builder.insert(key, prop);
     assert_eq!(builder.finish().count(), 1);
 
-    let mut builder = GlobalObjectDefinitionBuilder::new("Test");
+    let mut builder = GlobalObjectDefinitionBuilder::new();
     builder.insert(
         GlobalKey::new("g_key1".into()).unwrap(),
         StringDefinition::new("Desc"),
@@ -151,7 +150,7 @@ fn test_object_definition_builder_remove() {
 #[test]
 fn test_object_definition_builder_without() {
     // Why: Test that the builder correctly removes an item using the fluent interface.
-    let def = GlobalObjectDefinitionBuilder::new("Test")
+    let def = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_key1".into()).unwrap(),
             StringDefinition::new("Desc"),
@@ -165,14 +164,14 @@ fn test_object_definition_builder_without() {
 #[test]
 fn test_object_definition_inherit() {
     // Why: Test that the builder correctly inherits from another object definition.
-    let parent_def = GlobalObjectDefinitionBuilder::new("Parent")
+    let parent_def = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
 
-    let child_def = GlobalObjectDefinitionBuilder::new("Child")
+    let child_def = GlobalObjectDefinitionBuilder::new()
         .inherit(&parent_def)
         .with(
             GlobalKey::new("g_c1".into()).unwrap(),
@@ -192,14 +191,14 @@ fn test_object_definition_inherit() {
 #[test]
 fn test_object_definition_inherit_overwrite() {
     // Why: Test that inheriting from another object definition overwrites existing items with the same key.
-    let parent_def = GlobalObjectDefinitionBuilder::new("Parent")
+    let parent_def = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
 
-    let child_def = GlobalObjectDefinitionBuilder::new("Child")
+    let child_def = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -213,14 +212,14 @@ fn test_object_definition_inherit_overwrite() {
 #[test]
 fn test_object_definition_inherit_with_check() {
     // Why: Test that try_inherit successfully inherits when there are no key conflicts.
-    let parent_def = GlobalObjectDefinitionBuilder::new("Parent")
+    let parent_def = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
 
-    let result = GlobalObjectDefinitionBuilder::new("Child")
+    let result = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p2".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -240,14 +239,14 @@ fn test_object_definition_inherit_with_check() {
 #[test]
 fn test_object_definition_inherit_with_check_error() {
     // Why: Test that try_inherit returns an error when there is a key conflict.
-    let parent_def = GlobalObjectDefinitionBuilder::new("Parent")
+    let parent_def = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
 
-    let result = GlobalObjectDefinitionBuilder::new("Child")
+    let result = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -267,12 +266,12 @@ fn test_object_definition_inherit_with_check_error() {
 #[test]
 fn test_object_definition_inherit_from_builder() {
     // Why: Test that the builder correctly inherits from another builder.
-    let b1 = GlobalObjectDefinitionBuilder::new("B1").with(
+    let b1 = GlobalObjectDefinitionBuilder::new().with(
         GlobalKey::new("g_p1".into()).unwrap(),
         StringDefinition::new("D1"),
     );
 
-    let b2 = GlobalObjectDefinitionBuilder::new("B2")
+    let b2 = GlobalObjectDefinitionBuilder::new()
         .inherit_from_builder(b1)
         .finish();
 
@@ -283,12 +282,12 @@ fn test_object_definition_inherit_from_builder() {
 #[test]
 fn test_object_definition_inherit_from_builder_with_check() {
     // Why: Test that try_inherit_from_builder successfully inherits when there are no key conflicts.
-    let b1 = GlobalObjectDefinitionBuilder::new("B1").with(
+    let b1 = GlobalObjectDefinitionBuilder::new().with(
         GlobalKey::new("g_p1".into()).unwrap(),
         StringDefinition::new("D1"),
     );
 
-    let result = GlobalObjectDefinitionBuilder::new("B2")
+    let result = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p2".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -301,12 +300,12 @@ fn test_object_definition_inherit_from_builder_with_check() {
 #[test]
 fn test_object_definition_inherit_from_builder_with_check_error() {
     // Why: Test that try_inherit_from_builder returns an error when there is a key conflict.
-    let b1 = GlobalObjectDefinitionBuilder::new("B1").with(
+    let b1 = GlobalObjectDefinitionBuilder::new().with(
         GlobalKey::new("g_p1".into()).unwrap(),
         StringDefinition::new("D1"),
     );
 
-    let result = GlobalObjectDefinitionBuilder::new("B2")
+    let result = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -326,15 +325,13 @@ fn test_object_definition_inherit_from_builder_with_check_error() {
 #[test]
 fn test_object_definition_getters() {
     // Why: Test that object definition getters correctly return the expected values and iterators.
-    let def = GlobalObjectDefinitionBuilder::new("Test")
+    let def = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
 
-    assert_eq!(def.description().as_str(), "Test");
-    assert_eq!(def.description_ref().as_str(), "Test");
     assert_eq!(def.count(), 1);
     assert!(def.contains("g_p1"));
     assert!(def.contains_str("g_p1"));
@@ -355,7 +352,7 @@ fn test_object_definition_getters() {
 fn test_object_definition_launder() {
     // Why: Test that laundering an object definition correctly transfers strings to a new store.
     let store = SharedStringStore::new();
-    let def = GlobalObjectDefinitionBuilder::new("Test")
+    let def = GlobalObjectDefinitionBuilder::new()
         .with(
             GlobalKey::new("g_p1".into()).unwrap(),
             StringDefinition::new("D1"),
@@ -415,7 +412,6 @@ fn test_object_definition_launder() {
         .finish();
 
     let laundered = def.launder(&store);
-    assert_eq!(laundered.description().as_str(), "Test");
     assert_eq!(laundered.count(), 8);
     assert!(laundered.contains("g_p1"));
     assert!(laundered.contains("g_p2"));

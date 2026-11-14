@@ -11,7 +11,7 @@ fn table_data_for(table: TableFrozen) -> TableInputData {
         GlobalKey::new("g_field".into()).unwrap(),
         ItemFrozen::Table(table),
     );
-    let frozen = GlobalObjectFrozen::new_from_items("Test object", items);
+    let frozen = GlobalObjectFrozen::new_from_items(items);
     let input = GlobalObjectInputData::new(&frozen);
 
     match input.data().get("g_field").unwrap() {

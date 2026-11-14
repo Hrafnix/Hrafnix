@@ -9,7 +9,7 @@ fn test_basic_data_choice_bare_identifier() {
     // Why: A choice value written as a bare identifier (e.g. `option_1`) should be
     // treated as the literal choice value rather than looked up as a variable.
     let frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_choice"),
                 ChoiceDefinition::new_with_default(
@@ -42,7 +42,7 @@ fn test_basic_data_choice_bare_identifier() {
 fn test_basic_data_choice_quoted_string() {
     // Why: A choice value can also be written as a quoted string literal.
     let frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_choice"),
                 ChoiceDefinition::new_with_default(
@@ -75,7 +75,7 @@ fn test_basic_data_choice_quoted_string() {
 fn test_basic_data_choice_invalid_identifier_errors() {
     // Why: A bare identifier that doesn't match any defined choice should error.
     let frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_choice"),
                 ChoiceDefinition::new_with_default(
@@ -100,7 +100,7 @@ fn test_basic_data_choice_invalid_identifier_errors() {
 fn test_basic_data_choice_identifier_comparison() {
     // Why: Choice values evaluated from bare identifiers must remain comparable in later expressions.
     let global_frozen = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Object")
+        GlobalObjectDefinition::builder()
             .with(
                 global_key!("g_choice"),
                 ChoiceDefinition::new_with_default(
@@ -114,25 +114,22 @@ fn test_basic_data_choice_identifier_comparison() {
             )
             .finish(),
     );
-    let frozen = ParameterObjectFrozen::new_from_items(
-        "Test Object",
-        BTreeMap::from([
-            (
-                ParameterKey::new("p_equal".into()).expect("valid parameter key"),
-                ItemFrozen::Boolean(BooleanFrozen::new_with_value(
-                    BooleanDefinition::new("Choice equals itself"),
-                    "g_choice == g_choice".into(),
-                )),
-            ),
-            (
-                ParameterKey::new("p_not_equal".into()).expect("valid parameter key"),
-                ItemFrozen::Boolean(BooleanFrozen::new_with_value(
-                    BooleanDefinition::new("Choice does not differ from itself"),
-                    "g_choice != g_choice".into(),
-                )),
-            ),
-        ]),
-    );
+    let frozen = ParameterObjectFrozen::new_from_items(BTreeMap::from([
+        (
+            ParameterKey::new("p_equal".into()).expect("valid parameter key"),
+            ItemFrozen::Boolean(BooleanFrozen::new_with_value(
+                BooleanDefinition::new("Choice equals itself"),
+                "g_choice == g_choice".into(),
+            )),
+        ),
+        (
+            ParameterKey::new("p_not_equal".into()).expect("valid parameter key"),
+            ItemFrozen::Boolean(BooleanFrozen::new_with_value(
+                BooleanDefinition::new("Choice does not differ from itself"),
+                "g_choice != g_choice".into(),
+            )),
+        ),
+    ]));
 
     let global_data = GlobalObjectInputData::new(&global_frozen);
     let data = ParameterObjectInputData::new(&frozen);
@@ -155,7 +152,7 @@ fn test_basic_data_choice_identifier_comparison() {
 fn test_basic_data_integer() {
     // Why: Test that a plain integer literal is evaluated to its own value.
     let frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_number"),
                 IntegerDefinition::new_with_default("A number parameter", "42"),
@@ -181,7 +178,7 @@ fn test_basic_data_integer() {
 fn test_basic_data_integer_expression() {
     // Why: Test that a simple integer addition expression is evaluated correctly.
     let frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_number"),
                 IntegerDefinition::new_with_default("A number parameter", "42 + 55"),
@@ -207,7 +204,7 @@ fn test_basic_data_integer_expression() {
 fn test_basic_data_implicit_multiplication_before_parenthesis() {
     // Why: Test that a number directly followed by parentheses is treated as implicit multiplication.
     let frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_number"),
                 IntegerDefinition::new_with_default("A number parameter", "5(3 + 2)"),
@@ -233,7 +230,7 @@ fn test_basic_data_implicit_multiplication_before_parenthesis() {
 fn test_basic_data_scientific_notation_expression() {
     // Why: Test that numbers written in scientific notation are parsed and summed correctly.
     let frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_number"),
                 NumberDefinition::new_with_default("A number parameter", "1.5e2 + 2.5e1"),
@@ -280,7 +277,7 @@ fn test_default_math_globals_are_available() {
 #[test]
 fn test_default_math_globals_are_available_when_evaluating_globals() {
     let global_frozen = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Object")
+        GlobalObjectDefinition::builder()
             .with(
                 global_key!("g_circumference"),
                 NumberDefinition::new_with_default("A circumference", "2.0 * g_pi * 3.0"),
@@ -308,7 +305,7 @@ fn test_default_math_globals_are_available_when_evaluating_globals() {
 fn test_basic_global_data_integer_expression() {
     // Why: Test that a parameter expression can reference a global value evaluated beforehand.
     let global_frozen = GlobalObjectFrozen::new(
-        GlobalObjectDefinition::builder("Test Object")
+        GlobalObjectDefinition::builder()
             .with(
                 global_key!("g_number"),
                 IntegerDefinition::new_with_default("A number parameter", "42"),
@@ -317,7 +314,7 @@ fn test_basic_global_data_integer_expression() {
     );
 
     let frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 parameter_key!("p_number"),
                 IntegerDefinition::new_with_default("A number parameter", "g_number + 107"),
@@ -418,18 +415,18 @@ fn tables_reject_padded_missing_cells() {
                     let mut engine = ExpressionEngine::new();
                     let table = table_with_missing_cells(&rows, with_units, requirement);
                     let errors = if global {
-                        let globals = GlobalObjectFrozen::new_from_items(
-                            "",
-                            BTreeMap::from([(global_key!("g_source").into(), table)]),
-                        );
+                        let globals = GlobalObjectFrozen::new_from_items(BTreeMap::from([(
+                            global_key!("g_source").into(),
+                            table,
+                        )]));
                         engine
                             .evaluate_globals(&GlobalObjectInputData::new(&globals))
                             .unwrap_err()
                     } else {
-                        let parameters = ParameterObjectFrozen::new_from_items(
-                            "",
-                            BTreeMap::from([(parameter_key!("p_table").into(), table)]),
-                        );
+                        let parameters = ParameterObjectFrozen::new_from_items(BTreeMap::from([(
+                            parameter_key!("p_table").into(),
+                            table,
+                        )]));
                         engine
                             .evaluate_parameters(&ParameterObjectInputData::new(&parameters))
                             .unwrap_err()

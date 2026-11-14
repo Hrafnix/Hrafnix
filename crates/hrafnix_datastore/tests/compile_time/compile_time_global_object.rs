@@ -2,6 +2,19 @@ use hrafnix_datastore::prelude::*;
 use hrafnix_units::{UnitFamilyId, UnitId};
 
 #[test]
+fn global_object_compile_time_supports_empty_objects() {
+    const FROM_LITERALS: GlobalObjectCompileTime = const_global_object!([]);
+    const FROM_SLICE: GlobalObjectCompileTime = const_global_object!(&[],);
+
+    assert_eq!(FROM_LITERALS, FROM_SLICE);
+    assert_eq!(FROM_SLICE.count(), 0);
+    assert_eq!(
+        FROM_SLICE.into_definition(),
+        GlobalObjectDefinition::default()
+    );
+}
+
+#[test]
 fn item_compile_time_supports_every_variant() {
     const CHOICES: &[ChoiceItemCompileTime] = &[const_choice_item!("one", "One")];
     const CHOICE: ChoiceCompileTime = const_choice!("Choice", CHOICES);
@@ -101,16 +114,12 @@ fn global_object_compile_time_converts_both_macro_forms() {
         global_key!("g_name"),
         const_item!(string = const_string!("Name")),
     )];
-    const FROM_SLICE: GlobalObjectCompileTime = const_global_object!("Global", ITEMS);
-    const FROM_LITERALS: GlobalObjectCompileTime = const_global_object!(
-        "Global",
-        [(
-            "g_enabled",
-            const_item!(boolean = const_boolean!("Enabled")),
-        )],
-    );
+    const FROM_SLICE: GlobalObjectCompileTime = const_global_object!(ITEMS);
+    const FROM_LITERALS: GlobalObjectCompileTime = const_global_object!([(
+        "g_enabled",
+        const_item!(boolean = const_boolean!("Enabled")),
+    )],);
 
-    assert_eq!(FROM_SLICE.description(), "Global");
     assert_eq!(FROM_SLICE.items(), ITEMS);
     assert_eq!(FROM_SLICE.count(), 1);
     assert!(FROM_SLICE.contains("g_name"));

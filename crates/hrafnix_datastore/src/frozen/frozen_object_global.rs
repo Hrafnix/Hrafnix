@@ -121,13 +121,11 @@ impl GlobalObjectFrozen {
         s
     }
 
-    /// Creates a new `GlobalObjectFrozen` with a description and items.
+    /// Creates a new `GlobalObjectFrozen` with items.
+    #[must_use]
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
-    pub fn new_from_items<S: Into<ShareableString>>(
-        description: S,
-        items: BTreeMap<GlobalKey, ItemFrozen>,
-    ) -> Self {
-        let mut builder = GlobalObjectDefinition::builder(description);
+    pub fn new_from_items(items: BTreeMap<GlobalKey, ItemFrozen>) -> Self {
+        let mut builder = GlobalObjectDefinition::builder();
         for (k, v) in &items {
             builder.insert(k.clone(), v.definition());
         }
@@ -284,11 +282,7 @@ impl TreePrint for GlobalObjectFrozen {
         prefix: &str,
         last: bool,
     ) -> std::fmt::Result {
-        writeln!(
-            f,
-            "Global Object Frozen ({})",
-            self.definition.description()
-        )?;
+        writeln!(f, "Global Object Frozen")?;
 
         let child_prefix = Self::child_prefix(prefix, last);
 

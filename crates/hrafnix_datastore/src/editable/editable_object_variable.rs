@@ -89,11 +89,7 @@ impl TreePrint for VariableObjectEditable {
         prefix: &str,
         last: bool,
     ) -> std::fmt::Result {
-        writeln!(
-            f,
-            "Variable Object Editable ({})",
-            self.definition.description()
-        )?;
+        writeln!(f, "Variable Object Editable")?;
 
         let child_prefix = Self::child_prefix(prefix, last);
 

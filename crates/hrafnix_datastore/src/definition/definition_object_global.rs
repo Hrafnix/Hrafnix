@@ -9,8 +9,6 @@ use std::sync::Arc;
 /// Builder for creating a `GlobalObjectDefinition`.
 #[derive(Debug, Clone, Default)]
 pub struct GlobalObjectDefinitionBuilder {
-    /// Human-readable description for the object being built.
-    description: ShareableString,
     /// Keys in insertion order, used to preserve deterministic iteration.
     ordered_keys: Vec<GlobalKey>,
     /// Map of item definitions keyed by their global key.
@@ -18,10 +16,10 @@ pub struct GlobalObjectDefinitionBuilder {
 }
 
 impl GlobalObjectDefinitionBuilder {
-    /// Creates a new `GlobalObjectDefinitionBuilder` with a description.
-    pub fn new<S: Into<ShareableString>>(description: S) -> Self {
+    /// Creates a new `GlobalObjectDefinitionBuilder`.
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
-            description: description.into(),
             ordered_keys: Vec::new(),
             items: BTreeMap::new(),
         }
@@ -297,7 +295,6 @@ impl GlobalObjectDefinitionBuilder {
     #[must_use]
     pub fn finish(self) -> GlobalObjectDefinition {
         GlobalObjectDefinition {
-            description: self.description,
             ordered_keys: self.ordered_keys,
             items: Arc::new(self.items),
         }
@@ -307,8 +304,6 @@ impl GlobalObjectDefinitionBuilder {
 /// Definition for a global object, which is a collection of named items.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct GlobalObjectDefinition {
-    /// Human-readable description of this global object.
-    description: ShareableString,
     /// Keys in insertion order, used to preserve deterministic iteration.
     ordered_keys: Vec<GlobalKey>,
     /// Map of item definitions keyed by their global key.
@@ -316,35 +311,21 @@ pub struct GlobalObjectDefinition {
 }
 
 impl GlobalObjectDefinition {
-    /// Returns a new `GlobalObjectDefinitionBuilder` with the specified description.
-    pub fn builder<S: Into<ShareableString>>(description: S) -> GlobalObjectDefinitionBuilder {
-        GlobalObjectDefinitionBuilder::new(description)
+    /// Returns a new `GlobalObjectDefinitionBuilder`.
+    #[must_use]
+    pub const fn builder() -> GlobalObjectDefinitionBuilder {
+        GlobalObjectDefinitionBuilder::new()
     }
 
     /// Returns a new `GlobalObjectDefinitionBuilder` initialized with the items of this definition.
     ///
-    /// The new builder will have the specified description and a copy of the current items.
-    pub fn inherit<S: Into<ShareableString>>(
-        &self,
-        description: S,
-    ) -> GlobalObjectDefinitionBuilder {
+    /// The new builder will have a copy of the current items.
+    #[must_use]
+    pub fn inherit(&self) -> GlobalObjectDefinitionBuilder {
         GlobalObjectDefinitionBuilder {
-            description: description.into(),
             ordered_keys: self.ordered_keys.clone(),
             items: BTreeMap::clone(&self.items),
         }
-    }
-
-    /// Returns the description of the object.
-    #[must_use]
-    pub fn description(&self) -> ShareableString {
-        self.description.clone()
-    }
-
-    /// Returns a reference to the description.
-    #[must_use]
-    pub const fn description_ref(&self) -> &ShareableString {
-        &self.description
     }
 
     /// Returns the number of items in the object.
@@ -392,7 +373,6 @@ impl GlobalObjectDefinition {
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         Self {
-            description: store.launder(&self.description),
             ordered_keys: self.ordered_keys.iter().map(|k| k.launder(store)).collect(),
             items: Arc::new(
                 self.items
@@ -424,7 +404,7 @@ impl TreePrint for GlobalObjectDefinition {
         prefix: &str,
         last: bool,
     ) -> std::fmt::Result {
-        writeln!(f, "Global Object Definition ({})", self.description())?;
+        writeln!(f, "Global Object Definition")?;
 
         let child_prefix = Self::child_prefix(prefix, last);
 

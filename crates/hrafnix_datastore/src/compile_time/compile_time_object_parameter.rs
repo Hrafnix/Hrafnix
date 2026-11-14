@@ -6,32 +6,21 @@ use hrafnix_keys::parameter_key::ConstParameterKey;
 /// Compile-time representation of a parameter object.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ParameterObjectCompileTime {
-    /// Human-readable description for this compile-time value.
-    description: &'static str,
     /// Keyed items contained in this compile-time container.
     items: &'static [(ConstParameterKey, ItemCompileTime)],
 }
 
 impl ParameterObjectCompileTime {
-    /// Hidden backing constructor for `const_parameter_object!(description, items)`.
+    /// Hidden backing constructor for `const_parameter_object!(items)`.
     ///
     /// This is an implementation detail; call `const_parameter_object!` instead.
-    /// `description` names the top-level object and `items` is the ordered slice of
+    /// `items` is the ordered slice of
     /// `(ConstParameterKey, ItemCompileTime)` key/item pairs.
     #[doc(hidden)]
     #[must_use]
-    pub const fn __new(
-        description: &'static str,
-        items: &'static [(ConstParameterKey, ItemCompileTime)],
-    ) -> Self {
+    pub const fn __new(items: &'static [(ConstParameterKey, ItemCompileTime)]) -> Self {
         assert_unique_keys!(items, "ParameterObjectCompileTime item keys must be unique");
-        Self { description, items }
-    }
-
-    /// Returns the description.
-    #[must_use]
-    pub const fn description(&self) -> &'static str {
-        self.description
+        Self { items }
     }
 
     /// Returns the keyed items.
@@ -76,7 +65,7 @@ impl ParameterObjectCompileTime {
         self.items
             .iter()
             .fold(
-                ParameterObjectDefinition::builder(self.description),
+                ParameterObjectDefinition::builder(),
                 |builder, (key, item)| builder.with(*key, item.into_definition()),
             )
             .finish()
@@ -96,12 +85,11 @@ impl ParameterObjectCompileTime {
 ///
 /// # Syntax
 /// ```text
-/// const_parameter_object!(description, items)
-/// const_parameter_object!(description, [("key", item), ...])
+/// const_parameter_object!(items)
+/// const_parameter_object!([("key", item), ...])
 /// ```
 ///
 /// # Arguments
-/// - `description`: `&'static str` human-readable description of the object.
 /// - `items`: `&'static [(ConstParameterKey, ItemCompileTime)]` ordered slice of key/item
 ///   pairs, typically built with `parameter_key!` and `const_item!`.
 ///
@@ -110,7 +98,6 @@ impl ParameterObjectCompileTime {
 /// use hrafnix_datastore::prelude::*;
 ///
 /// const SETTINGS: ParameterObjectCompileTime = const_parameter_object!(
-///     "Parameters",
 ///     [(
 ///         "p_thickness",
 ///         const_item!(number = const_number!("Thickness", default = "1")),
@@ -126,7 +113,6 @@ impl ParameterObjectCompileTime {
 /// use hrafnix_datastore::prelude::*;
 ///
 /// const SETTINGS: ParameterObjectCompileTime = const_parameter_object!(
-///     "Settings",
 ///     [
 ///         (
 ///             "p_project_name",
@@ -141,21 +127,20 @@ impl ParameterObjectCompileTime {
 /// ```
 #[macro_export]
 macro_rules! const_parameter_object {
-    ($description:expr, [$(($key:literal, $item:expr $(,)?)),* $(,)?] $(,)?) => {
+    ([$(($key:literal, $item:expr $(,)?)),* $(,)?] $(,)?) => {
         const {
             #[allow(clippy::disallowed_methods)]
             $crate::compile_time::ParameterObjectCompileTime::__new(
-                $description,
                 &[
                     $(($crate::prelude::parameter_key!($key), $item)),*
                 ],
             )
         }
     };
-    ($description:expr, $items:expr) => {
+    ($items:expr $(,)?) => {
         const {
             #[allow(clippy::disallowed_methods)]
-            $crate::compile_time::ParameterObjectCompileTime::__new($description, $items)
+            $crate::compile_time::ParameterObjectCompileTime::__new($items)
         }
     };
 }
@@ -172,9 +157,8 @@ mod tests {
             parameter_key!("p_name"),
             const_item!(string = const_string!("Name")),
         )];
-        let object = ParameterObjectCompileTime::__new(std::hint::black_box("Parameters"), ITEMS);
+        let object = ParameterObjectCompileTime::__new(std::hint::black_box(ITEMS));
 
-        assert_eq!(object.description(), "Parameters");
         assert_eq!(object.items(), ITEMS);
     }
 
@@ -192,6 +176,6 @@ mod tests {
             ),
         ];
         #[allow(clippy::disallowed_methods)]
-        let _ = ParameterObjectCompileTime::__new(std::hint::black_box("Duplicates"), DUPLICATES);
+        let _ = ParameterObjectCompileTime::__new(std::hint::black_box(DUPLICATES));
     }
 }

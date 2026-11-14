@@ -9,8 +9,6 @@ use std::sync::Arc;
 /// Builder for creating a `ParameterObjectDefinition`.
 #[derive(Debug, Clone, Default)]
 pub struct ParameterObjectDefinitionBuilder {
-    /// Human-readable description for the object being built.
-    description: ShareableString,
     /// Keys in insertion order, used to preserve deterministic iteration.
     ordered_keys: Vec<ParameterKey>,
     /// Map of item definitions keyed by their parameter key.
@@ -18,10 +16,10 @@ pub struct ParameterObjectDefinitionBuilder {
 }
 
 impl ParameterObjectDefinitionBuilder {
-    /// Creates a new `ParameterObjectDefinitionBuilder` with a description.
-    pub fn new<S: Into<ShareableString>>(description: S) -> Self {
+    /// Creates a new `ParameterObjectDefinitionBuilder`.
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
-            description: description.into(),
             ordered_keys: Vec::new(),
             items: BTreeMap::new(),
         }
@@ -309,7 +307,6 @@ impl ParameterObjectDefinitionBuilder {
     #[must_use]
     pub fn finish(self) -> ParameterObjectDefinition {
         ParameterObjectDefinition {
-            description: self.description,
             ordered_keys: self.ordered_keys,
             items: Arc::new(self.items),
         }
@@ -319,8 +316,6 @@ impl ParameterObjectDefinitionBuilder {
 /// Definition for an object, which is a collection of named parameters.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ParameterObjectDefinition {
-    /// Human-readable description of this parameter object.
-    description: ShareableString,
     /// Keys in insertion order, used to preserve deterministic iteration.
     ordered_keys: Vec<ParameterKey>,
     /// Map of item definitions keyed by their parameter key.
@@ -328,35 +323,21 @@ pub struct ParameterObjectDefinition {
 }
 
 impl ParameterObjectDefinition {
-    /// Returns a new `ParameterObjectDefinitionBuilder` with the specified description.
-    pub fn builder<S: Into<ShareableString>>(description: S) -> ParameterObjectDefinitionBuilder {
-        ParameterObjectDefinitionBuilder::new(description)
+    /// Returns a new `ParameterObjectDefinitionBuilder`.
+    #[must_use]
+    pub const fn builder() -> ParameterObjectDefinitionBuilder {
+        ParameterObjectDefinitionBuilder::new()
     }
 
     /// Returns a new `ParameterObjectDefinitionBuilder` initialized with the items of this definition.
     ///
-    /// The new builder will have the specified description and a copy of the current items.
-    pub fn inherit<S: Into<ShareableString>>(
-        &self,
-        description: S,
-    ) -> ParameterObjectDefinitionBuilder {
+    /// The new builder will have a copy of the current items.
+    #[must_use]
+    pub fn inherit(&self) -> ParameterObjectDefinitionBuilder {
         ParameterObjectDefinitionBuilder {
-            description: description.into(),
             ordered_keys: self.ordered_keys.clone(),
             items: BTreeMap::clone(&self.items),
         }
-    }
-
-    /// Returns the description of the object.
-    #[must_use]
-    pub fn description(&self) -> ShareableString {
-        self.description.clone()
-    }
-
-    /// Returns a reference to the description.
-    #[must_use]
-    pub const fn description_ref(&self) -> &ShareableString {
-        &self.description
     }
 
     /// Returns the number of items in the object.
@@ -404,7 +385,6 @@ impl ParameterObjectDefinition {
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
         Self {
-            description: store.launder(&self.description),
             ordered_keys: self.ordered_keys.iter().map(|k| k.launder(store)).collect(),
             items: Arc::new(
                 self.items
@@ -436,7 +416,7 @@ impl TreePrint for ParameterObjectDefinition {
         prefix: &str,
         last: bool,
     ) -> std::fmt::Result {
-        writeln!(f, "Parameter Object Definition ({})", self.description())?;
+        writeln!(f, "Parameter Object Definition")?;
 
         let child_prefix = Self::child_prefix(prefix, last);
 

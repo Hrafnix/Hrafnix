@@ -5,14 +5,13 @@ use hrafnix_units::UnitFamilyId;
 #[test]
 fn test_parameter_object_definition_basic() {
     // Why: Test parameter object definition creation and items.
-    let mut builder = ParameterObjectDefinition::builder("Test Object");
+    let mut builder = ParameterObjectDefinition::builder();
     builder.insert(
         ParameterKey::new("p_p1".into()).unwrap(),
         StringDefinition::new("D1"),
     );
     let obj_def = builder.finish();
 
-    assert_eq!(obj_def.description().as_ref(), "Test Object");
     assert_eq!(obj_def.count(), 1);
     assert!(obj_def.contains("p_p1"));
     assert!(obj_def.contains_str("p_p1"));
@@ -21,19 +20,19 @@ fn test_parameter_object_definition_basic() {
 #[test]
 fn test_parameter_object_definition_equality() {
     // Why: Test that two-parameter object definitions with the same items are considered equal.
-    let def_1 = ParameterObjectDefinition::builder("Test Object")
+    let def_1 = ParameterObjectDefinition::builder()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
-    let def_2 = ParameterObjectDefinition::builder("Test Object")
+    let def_2 = ParameterObjectDefinition::builder()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
-    let def_3 = ParameterObjectDefinition::builder("Test Object")
+    let def_3 = ParameterObjectDefinition::builder()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -49,7 +48,7 @@ fn test_parameter_object_definition_equality() {
 #[test]
 fn test_parameter_object_definition_print() {
     // Why: Test parameter object definition print.
-    let def_1 = ParameterObjectDefinitionBuilder::new("Test")
+    let def_1 = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D1"),
@@ -236,7 +235,7 @@ fn test_parameter_object_definition_print() {
     assert_eq!(
         format!("{def_1}"),
         concat!(
-            "Parameter Object Definition (Test)\n",
+            "Parameter Object Definition\n",
             "    ├── p_p1 (D1) String - default: \"\"\n",
             "    ├── p_p2 (D2) Boolean - default: \"\" [true (True), false (False)]\n",
             "    ├── p_p3 (D3) File - default: \"\" [ext]\n",

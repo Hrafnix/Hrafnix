@@ -5,7 +5,7 @@ use hrafnix_datastore::prelude::*;
 #[test]
 fn test_parameter_object_builder_pattern() {
     // Why: Test parameter object definition creation with the builder pattern using the with method.
-    let obj_def = ParameterObjectDefinition::builder("Test Object")
+    let obj_def = ParameterObjectDefinition::builder()
         .with(
             ParameterKey::new("p_prop1".into()).unwrap(),
             StringDefinition::new("String prop"),
@@ -22,17 +22,17 @@ fn test_parameter_object_builder_pattern() {
 #[test]
 fn test_parameter_object_inheritance() {
     // Why: Test that a parameter object definition can inherit from another.
-    let parent_def = ParameterObjectDefinition::builder("Parent")
+    let parent_def = ParameterObjectDefinition::builder()
         .with(
             ParameterKey::new("p_prop1".into()).unwrap(),
             StringDefinition::new_with_default("D1", "V1"),
         )
         .finish();
 
-    let builder = parent_def.inherit("Child");
+    let builder = parent_def.inherit();
     assert_eq!(builder.finish().count(), 1);
 
-    let mut builder = parent_def.inherit("Child");
+    let mut builder = parent_def.inherit();
     builder.insert(
         ParameterKey::new("p_prop2".into()).unwrap(),
         StringDefinition::new_with_default("D2", "V2"),
@@ -43,7 +43,7 @@ fn test_parameter_object_inheritance() {
     assert!(child_def.contains("p_prop1"));
     assert!(child_def.contains("p_prop2"));
 
-    let mut builder = child_def.inherit("Grandchild");
+    let mut builder = child_def.inherit();
     builder.remove("p_prop1");
     let grandchild_def = builder.finish();
     assert_eq!(grandchild_def.count(), 1);
@@ -88,7 +88,7 @@ fn test_invalid_parameter_keys() {
 #[test]
 fn test_parameter_object_definition_immutability() {
     // Why: Test that the parameter object definition is immutable once created.
-    let obj_def = ParameterObjectDefinition::builder("Test Object")
+    let obj_def = ParameterObjectDefinition::builder()
         .with(
             ParameterKey::new("p_prop1".into()).unwrap(),
             StringDefinition::new("String prop"),
@@ -104,16 +104,15 @@ fn test_parameter_object_definition_immutability() {
 #[test]
 fn test_parameter_object_definition_builder_new() {
     // Why: Test that a new builder correctly initializes an empty parameter object definition.
-    let builder = ParameterObjectDefinitionBuilder::new("Test Description");
+    let builder = ParameterObjectDefinitionBuilder::new();
     let def = builder.finish();
-    assert_eq!(def.description().as_str(), "Test Description");
     assert_eq!(def.count(), 0);
 }
 
 #[test]
 fn test_parameter_object_definition_builder_insert() {
     // Why: Test that the builder correctly inserts items into the parameter object definition.
-    let mut builder = ParameterObjectDefinitionBuilder::new("Test");
+    let mut builder = ParameterObjectDefinitionBuilder::new();
     let prop = StringDefinition::new("Desc");
     let key = ParameterKey::new("p_key1".into()).unwrap();
 
@@ -130,7 +129,7 @@ fn test_parameter_object_definition_builder_with_inserted() {
     let prop = StringDefinition::new("Desc");
     let key = ParameterKey::new("p_key1".into()).unwrap();
 
-    let def = ParameterObjectDefinitionBuilder::new("Test")
+    let def = ParameterObjectDefinitionBuilder::new()
         .with(key, prop)
         .finish();
 
@@ -141,14 +140,14 @@ fn test_parameter_object_definition_builder_with_inserted() {
 #[test]
 fn test_parameter_object_definition_builder_remove() {
     // Why: Test that the builder correctly removes items.
-    let mut builder = ParameterObjectDefinitionBuilder::new("Test");
+    let mut builder = ParameterObjectDefinitionBuilder::new();
     let prop = StringDefinition::new("Desc");
     let key = ParameterKey::new("p_key1".into()).unwrap();
 
     builder.insert(key, prop);
     assert_eq!(builder.finish().count(), 1);
 
-    let mut builder = ParameterObjectDefinitionBuilder::new("Test");
+    let mut builder = ParameterObjectDefinitionBuilder::new();
     builder.insert(
         ParameterKey::new("p_key1".into()).unwrap(),
         StringDefinition::new("Desc"),
@@ -163,7 +162,7 @@ fn test_parameter_object_definition_builder_remove() {
 #[test]
 fn test_parameter_object_definition_builder_without() {
     // Why: Test that the builder correctly removes an item using the fluent interface.
-    let def = ParameterObjectDefinitionBuilder::new("Test")
+    let def = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_key1".into()).unwrap(),
             StringDefinition::new("Desc"),
@@ -177,14 +176,14 @@ fn test_parameter_object_definition_builder_without() {
 #[test]
 fn test_parameter_object_definition_inherit() {
     // Why: Test that the builder correctly inherits from another parameter object definition.
-    let parent_def = ParameterObjectDefinitionBuilder::new("Parent")
+    let parent_def = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
 
-    let child_def = ParameterObjectDefinitionBuilder::new("Child")
+    let child_def = ParameterObjectDefinitionBuilder::new()
         .inherit(&parent_def)
         .with(
             ParameterKey::new("p_c1".into()).unwrap(),
@@ -204,14 +203,14 @@ fn test_parameter_object_definition_inherit() {
 #[test]
 fn test_parameter_object_definition_inherit_overwrite() {
     // Why: Test that inheriting from another parameter object definition overwrites existing items with the same key.
-    let parent_def = ParameterObjectDefinitionBuilder::new("Parent")
+    let parent_def = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
 
-    let child_def = ParameterObjectDefinitionBuilder::new("Child")
+    let child_def = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -225,14 +224,14 @@ fn test_parameter_object_definition_inherit_overwrite() {
 #[test]
 fn test_parameter_object_definition_inherit_with_check() {
     // Why: Test that inherit_with_check successfully inherits when there are no key conflicts.
-    let parent_def = ParameterObjectDefinitionBuilder::new("Parent")
+    let parent_def = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
 
-    let result = ParameterObjectDefinitionBuilder::new("Child")
+    let result = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p2".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -252,14 +251,14 @@ fn test_parameter_object_definition_inherit_with_check() {
 #[test]
 fn test_parameter_object_definition_inherit_with_check_error() {
     // Why: Test that inherit_with_check returns an error when there is a key conflict.
-    let parent_def = ParameterObjectDefinitionBuilder::new("Parent")
+    let parent_def = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
 
-    let result = ParameterObjectDefinitionBuilder::new("Child")
+    let result = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -279,12 +278,12 @@ fn test_parameter_object_definition_inherit_with_check_error() {
 #[test]
 fn test_parameter_object_definition_inherit_from_builder() {
     // Why: Test that the builder correctly inherits from another builder.
-    let b1 = ParameterObjectDefinitionBuilder::new("B1").with(
+    let b1 = ParameterObjectDefinitionBuilder::new().with(
         ParameterKey::new("p_p1".into()).unwrap(),
         StringDefinition::new("D1"),
     );
 
-    let b2 = ParameterObjectDefinitionBuilder::new("B2")
+    let b2 = ParameterObjectDefinitionBuilder::new()
         .inherit_from_builder(b1)
         .finish();
 
@@ -295,12 +294,12 @@ fn test_parameter_object_definition_inherit_from_builder() {
 #[test]
 fn test_parameter_object_definition_inherit_from_builder_with_check() {
     // Why: Test that inherit_from_builder_with_check successfully inherits when there are no key conflicts.
-    let b1 = ParameterObjectDefinitionBuilder::new("B1").with(
+    let b1 = ParameterObjectDefinitionBuilder::new().with(
         ParameterKey::new("p_p1".into()).unwrap(),
         StringDefinition::new("D1"),
     );
 
-    let result = ParameterObjectDefinitionBuilder::new("B2")
+    let result = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p2".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -313,12 +312,12 @@ fn test_parameter_object_definition_inherit_from_builder_with_check() {
 #[test]
 fn test_parameter_object_definition_inherit_from_builder_with_check_error() {
     // Why: Test that inherit_from_builder_with_check returns an error when there is a key conflict.
-    let b1 = ParameterObjectDefinitionBuilder::new("B1").with(
+    let b1 = ParameterObjectDefinitionBuilder::new().with(
         ParameterKey::new("p_p1".into()).unwrap(),
         StringDefinition::new("D1"),
     );
 
-    let result = ParameterObjectDefinitionBuilder::new("B2")
+    let result = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D2"),
@@ -338,15 +337,13 @@ fn test_parameter_object_definition_inherit_from_builder_with_check_error() {
 #[test]
 fn test_parameter_object_definition_getters() {
     // Why: Test that parameter object definition getters correctly return the expected values and iterators.
-    let def = ParameterObjectDefinitionBuilder::new("Test")
+    let def = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D1"),
         )
         .finish();
 
-    assert_eq!(def.description().as_str(), "Test");
-    assert_eq!(def.description_ref().as_str(), "Test");
     assert_eq!(def.count(), 1);
     assert!(def.contains("p_p1"));
     assert!(def.contains_str("p_p1"));
@@ -367,7 +364,7 @@ fn test_parameter_object_definition_getters() {
 fn test_parameter_object_definition_launder() {
     // Why: Test that laundering a parameter object definition correctly transfers strings to a new store.
     let store = SharedStringStore::new();
-    let def = ParameterObjectDefinitionBuilder::new("Test")
+    let def = ParameterObjectDefinitionBuilder::new()
         .with(
             ParameterKey::new("p_p1".into()).unwrap(),
             StringDefinition::new("D1"),
@@ -427,7 +424,6 @@ fn test_parameter_object_definition_launder() {
         .finish();
 
     let laundered = def.launder(&store);
-    assert_eq!(laundered.description().as_str(), "Test");
     assert_eq!(laundered.count(), 8);
     assert!(laundered.contains("p_p1"));
     assert!(laundered.contains("p_p2"));

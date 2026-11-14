@@ -5,10 +5,29 @@ use hrafnix_units::{UnitFamilyId, UnitId};
 use std::collections::BTreeMap;
 
 #[test]
+fn parameter_object_from_items_preserves_values_and_item_descriptions() {
+    let item = StringFrozen::new_with_value(StringDefinition::new("Name"), "Example".into());
+    let frozen = ParameterObjectFrozen::new_from_items(BTreeMap::from([(
+        parameter_key!("p_name").into(),
+        ItemFrozen::String(item.clone()),
+    )]));
+
+    assert_eq!(frozen.get("p_name"), Some(&ItemFrozen::String(item)));
+    assert_eq!(
+        frozen.definition(),
+        &ParameterObjectDefinition::builder()
+            .with(parameter_key!("p_name"), StringDefinition::new("Name"))
+            .finish()
+    );
+    assert_eq!(frozen.thaw().freeze(), frozen);
+    assert_eq!(frozen.launder(&SharedStringStore::new()), frozen);
+}
+
+#[test]
 fn test_parameter_object_definition_basic() {
     // Why: Test frozen parameter object creation and items.
     let frozen_1 = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 ParameterKey::new("p_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -16,7 +35,6 @@ fn test_parameter_object_definition_basic() {
             .finish(),
     );
 
-    assert_eq!(frozen_1.definition().description().as_ref(), "Test Object");
     assert_eq!(frozen_1.definition().count(), 1);
     assert!(frozen_1.definition().contains("p_p1"));
     assert!(frozen_1.definition().contains_str("p_p1"));
@@ -26,7 +44,7 @@ fn test_parameter_object_definition_basic() {
 #[test]
 fn test_parameter_object_frozen_ordered_iter_and_print() {
     let frozen = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Ordered")
+        ParameterObjectDefinition::builder()
             .with(
                 ParameterKey::new("p_z".into()).unwrap(),
                 StringDefinition::new("First"),
@@ -48,7 +66,7 @@ fn test_parameter_object_frozen_ordered_iter_and_print() {
     assert_eq!(
         format!("{frozen}"),
         concat!(
-            "Parameter Object Frozen (Ordered)\n",
+            "Parameter Object Frozen\n",
             "    ├── p_z (First) String - \"\"\n",
             "    └── p_a (Second) String - \"\"\n",
         )
@@ -59,7 +77,7 @@ fn test_parameter_object_frozen_ordered_iter_and_print() {
 fn test_parameter_object_definition_equality() {
     // Why: Test that two frozen parameter object definitions with the same items are considered equal.
     let frozen_1 = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 ParameterKey::new("p_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -67,7 +85,7 @@ fn test_parameter_object_definition_equality() {
             .finish(),
     );
     let frozen_2 = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 ParameterKey::new("p_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -75,7 +93,7 @@ fn test_parameter_object_definition_equality() {
             .finish(),
     );
     let frozen_3 = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Test Object")
+        ParameterObjectDefinition::builder()
             .with(
                 ParameterKey::new("p_p1".into()).unwrap(),
                 StringDefinition::new("D2"),
@@ -93,7 +111,7 @@ fn test_parameter_object_definition_equality() {
 fn test_editable_parameter_object_print() {
     // Why: Test parameter object editable print.
     let frozen_1 = ParameterObjectFrozen::new(
-        ParameterObjectDefinitionBuilder::new("Test")
+        ParameterObjectDefinitionBuilder::new()
             .with(
                 ParameterKey::new("p_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -285,7 +303,7 @@ fn test_editable_parameter_object_print() {
     assert_eq!(
         format!("{frozen_1}"),
         concat!(
-            "Parameter Object Frozen (Test)\n",
+            "Parameter Object Frozen\n",
             "    ├── p_p1 (D1) String - \"\"\n",
             "    ├── p_p2 (D2) Boolean - \"\"\n",
             "    ├── p_p3 (D3) File - \"\"\n",
@@ -379,7 +397,7 @@ fn test_editable_parameter_object_print() {
     assert_eq!(
         format!("{frozen_1}"),
         concat!(
-            "Parameter Object Frozen (Test)\n",
+            "Parameter Object Frozen\n",
             "    ├── p_p1 (D1) String - \"edited\"\n",
             "    ├── p_p2 (D2) Boolean - \"true\"\n",
             "    ├── p_p3 (D3) File - \"test.ext\"\n",
@@ -431,7 +449,7 @@ fn test_parameter_object_merge_from_copies_values_and_keeps_definitions() {
     // Why: Merging should accept compatible definitions, copy only values, and keep existing definitions.
     let key = |name: &str| ParameterKey::new(name.into()).unwrap();
     let mut target = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Target")
+        ParameterObjectDefinition::builder()
             .with(
                 key("p_n"),
                 NumberDefinition::new_with_constraint_and_default(
@@ -455,7 +473,7 @@ fn test_parameter_object_merge_from_copies_values_and_keeps_definitions() {
             .finish(),
     );
     let source = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Source")
+        ParameterObjectDefinition::builder()
             .with(
                 key("p_n"),
                 NumberDefinition::new_with_constraint_and_default(
@@ -508,7 +526,7 @@ fn test_parameter_object_merge_from_rebuilds_map_entries_with_existing_definitio
     // Why: Merged map entries should use the target's map item definitions.
     let key = ParameterKey::new("p_m".into()).unwrap();
     let mut target = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Target")
+        ParameterObjectDefinition::builder()
             .with(
                 key.clone(),
                 MapDefinition::new(
@@ -519,7 +537,7 @@ fn test_parameter_object_merge_from_rebuilds_map_entries_with_existing_definitio
             .finish(),
     );
     let source = ParameterObjectFrozen::new(
-        ParameterObjectDefinition::builder("Source")
+        ParameterObjectDefinition::builder()
             .with(
                 key,
                 MapDefinition::new_with_default(

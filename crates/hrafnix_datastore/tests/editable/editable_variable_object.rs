@@ -5,7 +5,7 @@ fn test_editable_variable_object_round_trip() {
     // Why: Editable variable objects should thaw from frozen, allow item edits, and freeze back
     // to an equivalent frozen object reflecting those edits.
     let frozen = VariableObjectFrozen::new(
-        VariableObjectDefinition::builder("Test Object")
+        VariableObjectDefinition::builder()
             .with(
                 VariableKey::new("v_v1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -14,7 +14,6 @@ fn test_editable_variable_object_round_trip() {
     );
 
     let mut editable = frozen.thaw();
-    assert_eq!(editable.definition().description().as_ref(), "Test Object");
 
     let item = editable.get("v_v1").expect("v_v1 item");
     assert_eq!(item.get_string().unwrap().value(), "");
@@ -35,7 +34,7 @@ fn test_editable_variable_object_round_trip() {
 fn test_editable_variable_object_equality() {
     // Why: Two editable variable objects thawed from the same frozen object should be equal.
     let frozen = VariableObjectFrozen::new(
-        VariableObjectDefinition::builder("Test Object")
+        VariableObjectDefinition::builder()
             .with(
                 VariableKey::new("v_v1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -53,7 +52,7 @@ fn test_editable_variable_object_equality() {
 fn test_editable_variable_object_print() {
     // Why: Test variable object editable print.
     let frozen_1 = VariableObjectFrozen::new(
-        VariableObjectDefinitionBuilder::new("Test")
+        VariableObjectDefinitionBuilder::new()
             .with(
                 VariableKey::new("v_p1".into()).unwrap(),
                 StringDefinition::new("D1"),
@@ -225,7 +224,7 @@ fn test_editable_variable_object_print() {
 
     assert_eq!(
         format!("{editable_1}"),
-        "Variable Object Editable (Test)\n    ├── v_p1 (D1) String - \"\"\n    ├── v_p2 (D2) Boolean - \"\"\n    ├── v_p3 (D3) File - \"\"\n    ├── v_p4_v1 (D4) Integer - \"\"\n    ├── v_p4_v2 (D4) Integer - \"\"\n    ├── v_p4_v3 (D4) Integer - \"\"\n    ├── v_p4_v4 (D4) Integer - \"\"\n    ├── v_p4_v5 (D4) Integer - \"\"\n    ├── v_p4_v6 (D4) Integer - \"\"\n    ├── v_p4_v7 (D4) Integer - \"\"\n    ├── v_p4_v8 (D4) Integer - \"\"\n    ├── v_p5_v1 (D5) Number - \"\"\n    ├── v_p5_v2 (D5) Number - \"\"\n    ├── v_p5_v3 (D5) Number - \"\"\n    ├── v_p5_v4 (D5) Number - \"\"\n    ├── v_p5_v5 (D5) Number - \"\"\n    ├── v_p5_v6 (D5) Number - \"\"\n    ├── v_p5_v7 (D5) Number - \"\"\n    ├── v_p5_v8 (D5) Number - \"\"\n    ├── v_p5_v9 (D5) Number - \"\"\n    ├── v_p6 (D6) Choice - \"\"\n    ├── v_p7 (D7) Table 0 rows\n    │   ├── data\n    │   └── Parameter \"\"\n    └── v_p8 (D8) Map\n"
+        "Variable Object Editable\n    ├── v_p1 (D1) String - \"\"\n    ├── v_p2 (D2) Boolean - \"\"\n    ├── v_p3 (D3) File - \"\"\n    ├── v_p4_v1 (D4) Integer - \"\"\n    ├── v_p4_v2 (D4) Integer - \"\"\n    ├── v_p4_v3 (D4) Integer - \"\"\n    ├── v_p4_v4 (D4) Integer - \"\"\n    ├── v_p4_v5 (D4) Integer - \"\"\n    ├── v_p4_v6 (D4) Integer - \"\"\n    ├── v_p4_v7 (D4) Integer - \"\"\n    ├── v_p4_v8 (D4) Integer - \"\"\n    ├── v_p5_v1 (D5) Number - \"\"\n    ├── v_p5_v2 (D5) Number - \"\"\n    ├── v_p5_v3 (D5) Number - \"\"\n    ├── v_p5_v4 (D5) Number - \"\"\n    ├── v_p5_v5 (D5) Number - \"\"\n    ├── v_p5_v6 (D5) Number - \"\"\n    ├── v_p5_v7 (D5) Number - \"\"\n    ├── v_p5_v8 (D5) Number - \"\"\n    ├── v_p5_v9 (D5) Number - \"\"\n    ├── v_p6 (D6) Choice - \"\"\n    ├── v_p7 (D7) Table 0 rows\n    │   ├── data\n    │   └── Parameter \"\"\n    └── v_p8 (D8) Map\n"
     );
 
     editable_set_value(&mut editable_1, "v_p1", "edited").unwrap();
@@ -269,6 +268,6 @@ fn test_editable_variable_object_print() {
 
     assert_eq!(
         format!("{editable_1}"),
-        "Variable Object Editable (Test)\n    ├── v_p1 (D1) String - \"edited\"\n    ├── v_p2 (D2) Boolean - \"true\"\n    ├── v_p3 (D3) File - \"test.ext\"\n    ├── v_p4_v1 (D4) Integer - \"1\"\n    ├── v_p4_v2 (D4) Integer - \"2\"\n    ├── v_p4_v3 (D4) Integer - \"3\"\n    ├── v_p4_v4 (D4) Integer - \"4\"\n    ├── v_p4_v5 (D4) Integer - \"5\"\n    ├── v_p4_v6 (D4) Integer - \"6\"\n    ├── v_p4_v7 (D4) Integer - \"7\"\n    ├── v_p4_v8 (D4) Integer - \"8\"\n    ├── v_p5_v1 (D5) Number - \"1.0\"\n    ├── v_p5_v2 (D5) Number - \"2.0\"\n    ├── v_p5_v3 (D5) Number - \"3.0\"\n    ├── v_p5_v4 (D5) Number - \"4.0\"\n    ├── v_p5_v5 (D5) Number - \"5.0\"\n    ├── v_p5_v6 (D5) Number - \"6.0\"\n    ├── v_p5_v7 (D5) Number - \"7.0\"\n    ├── v_p5_v8 (D5) Number - \"8.0\"\n    ├── v_p5_v9 (D5) Number - \"9.0\"\n    ├── v_p6 (D6) Choice - \"test\"\n    ├── v_p7 (D7) Table 1 rows\n    │   ├── data\n    │   │   └── Row 0\n    │   │       ├── col1 \"100.0\"\n    │   │       └── col2 \"200.0\"\n    │   └── Parameter \"\"\n    └── v_p8 (D8) Map\n        └── key1\n            ├── col1 (C1) String - \"test 1\"\n            ├── col2 (C2) Number - \"55.0\"\n            └── col3 (C3) Table 1 rows\n                ├── data\n                │   └── Row 0\n                │       ├── col3_1 \"150.0\"\n                │       └── col3_2 \"250.0\"\n                └── Parameter \"\"\n"
+        "Variable Object Editable\n    ├── v_p1 (D1) String - \"edited\"\n    ├── v_p2 (D2) Boolean - \"true\"\n    ├── v_p3 (D3) File - \"test.ext\"\n    ├── v_p4_v1 (D4) Integer - \"1\"\n    ├── v_p4_v2 (D4) Integer - \"2\"\n    ├── v_p4_v3 (D4) Integer - \"3\"\n    ├── v_p4_v4 (D4) Integer - \"4\"\n    ├── v_p4_v5 (D4) Integer - \"5\"\n    ├── v_p4_v6 (D4) Integer - \"6\"\n    ├── v_p4_v7 (D4) Integer - \"7\"\n    ├── v_p4_v8 (D4) Integer - \"8\"\n    ├── v_p5_v1 (D5) Number - \"1.0\"\n    ├── v_p5_v2 (D5) Number - \"2.0\"\n    ├── v_p5_v3 (D5) Number - \"3.0\"\n    ├── v_p5_v4 (D5) Number - \"4.0\"\n    ├── v_p5_v5 (D5) Number - \"5.0\"\n    ├── v_p5_v6 (D5) Number - \"6.0\"\n    ├── v_p5_v7 (D5) Number - \"7.0\"\n    ├── v_p5_v8 (D5) Number - \"8.0\"\n    ├── v_p5_v9 (D5) Number - \"9.0\"\n    ├── v_p6 (D6) Choice - \"test\"\n    ├── v_p7 (D7) Table 1 rows\n    │   ├── data\n    │   │   └── Row 0\n    │   │       ├── col1 \"100.0\"\n    │   │       └── col2 \"200.0\"\n    │   └── Parameter \"\"\n    └── v_p8 (D8) Map\n        └── key1\n            ├── col1 (C1) String - \"test 1\"\n            ├── col2 (C2) Number - \"55.0\"\n            └── col3 (C3) Table 1 rows\n                ├── data\n                │   └── Row 0\n                │       ├── col3_1 \"150.0\"\n                │       └── col3_2 \"250.0\"\n                └── Parameter \"\"\n"
     );
 }

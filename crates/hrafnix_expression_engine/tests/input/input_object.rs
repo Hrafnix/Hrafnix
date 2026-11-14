@@ -72,7 +72,7 @@ fn test_global_object_input_data() {
         .into_iter()
         .map(|(k, v)| (GlobalKey::new(format!("g_{k}").into()).unwrap(), v))
         .collect();
-    let frozen = GlobalObjectFrozen::new_from_items("Test object", items);
+    let frozen = GlobalObjectFrozen::new_from_items(items);
 
     let input = GlobalObjectInputData::new(&frozen);
     let data = input.data();
@@ -140,7 +140,7 @@ fn test_parameter_object_input_data() {
         .into_iter()
         .map(|(k, v)| (ParameterKey::new(format!("p_{k}").into()).unwrap(), v))
         .collect();
-    let frozen = ParameterObjectFrozen::new_from_items("Test object", items);
+    let frozen = ParameterObjectFrozen::new_from_items(items);
 
     let input = ParameterObjectInputData::new(&frozen);
     let data = input.data();
@@ -172,7 +172,7 @@ fn test_variable_object_input_data() {
         .into_iter()
         .map(|(k, v)| (VariableKey::new(format!("v_{k}").into()).unwrap(), v))
         .collect();
-    let frozen = VariableObjectFrozen::new_from_items("Test object", items);
+    let frozen = VariableObjectFrozen::new_from_items(items);
 
     let input = VariableObjectInputData::new(&frozen);
     let data = input.data();
@@ -199,7 +199,7 @@ fn test_variable_object_input_data() {
 #[test]
 fn test_global_object_input_data_empty() {
     // Why: An object with no items should produce an empty input data map.
-    let frozen = GlobalObjectFrozen::new(GlobalObjectDefinition::builder("Empty object").finish());
+    let frozen = GlobalObjectFrozen::new(GlobalObjectDefinition::builder().finish());
     let input = GlobalObjectInputData::new(&frozen);
 
     assert!(input.data().is_empty());

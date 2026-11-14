@@ -89,11 +89,7 @@ impl TreePrint for GlobalObjectEditable {
         prefix: &str,
         last: bool,
     ) -> std::fmt::Result {
-        writeln!(
-            f,
-            "Global Object Editable ({})",
-            self.definition.description()
-        )?;
+        writeln!(f, "Global Object Editable")?;
 
         let child_prefix = Self::child_prefix(prefix, last);
 

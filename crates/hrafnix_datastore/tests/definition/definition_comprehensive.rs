@@ -100,12 +100,11 @@ fn test_parameter_definition_comprehensive() {
 #[test]
 fn test_object_definition_comprehensive() {
     // Why: Test that an object definition correctly handles items added via the builder.
-    let obj_def = GlobalObjectDefinition::builder("Obj Desc")
+    let obj_def = GlobalObjectDefinition::builder()
         .with(global_key!("g_p1"), StringDefinition::new("D1"))
         .with(global_key!("g_p2"), NumberDefinition::new("D2"))
         .finish();
 
-    assert_eq!(obj_def.description_ref().as_ref(), "Obj Desc");
     assert_eq!(obj_def.count(), 2);
     assert!(obj_def.contains_str("g_p1"));
     assert!(obj_def.get_str("g_p2").is_some());
@@ -147,10 +146,10 @@ fn test_launder_comprehensive() {
     assert!(laundered_map.contains_key("field"));
 
     // Test GlobalObjectDefinition launder
-    let obj_def = GlobalObjectDefinition::builder("Obj")
+    let obj_def = GlobalObjectDefinition::builder()
         .with(global_key!("g_prop"), basic_def)
         .finish();
     let laundered_obj = obj_def.launder(&store);
-    assert_eq!(laundered_obj.description(), obj_def.description());
+    assert_eq!(laundered_obj, obj_def);
     assert!(laundered_obj.contains("g_prop"));
 }
