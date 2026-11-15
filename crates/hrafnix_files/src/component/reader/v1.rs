@@ -3,6 +3,8 @@ use crate::component::data::ComponentFile;
 use crate::connection::reader::v1::ConnectionReaderV1;
 use crate::decoration_background::reader::v1::BackgroundDecorationReaderV1;
 use crate::decoration_foreground::reader::v1::ForegroundDecorationReaderV1;
+use crate::definition_parameter::reader::v1::ParameterDefinitionReaderV1;
+use crate::definition_variable::reader::v1::VariableDefinitionReaderV1;
 use crate::metadata_general::reader::v1::MetadataReaderV1;
 use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
 use crate::translations::reader::v1::TranslationsReaderV1;
@@ -18,6 +20,10 @@ pub(crate) struct ComponentReaderV1 {
     /// Drawing dimensions and icon associated with the component.
     #[serde(deserialize_with = "deserialize_object")]
     gui_metadata: GuiMetadataReaderV1,
+    /// Required to be ordered parameter-definition array.
+    parameter_definition: ParameterDefinitionReaderV1,
+    /// Required to be ordered variable-definition array.
+    variable_definition: VariableDefinitionReaderV1,
     /// Decorations drawn in front of component contents.
     #[serde(deserialize_with = "deserialize_objects")]
     foreground_decorations: Vec<ForegroundDecorationReaderV1>,
@@ -37,6 +43,8 @@ impl From<ComponentReaderV1> for ComponentFile {
         Self {
             metadata: component.metadata.into(),
             gui_metadata: component.gui_metadata.into(),
+            parameter_definition: component.parameter_definition.into(),
+            variable_definition: component.variable_definition.into(),
             foreground_decorations: component
                 .foreground_decorations
                 .into_iter()

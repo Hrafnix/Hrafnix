@@ -360,10 +360,12 @@ dependencies = [
  "camino",
  "hotpath",
  "hrafnix_common",
+ "hrafnix_datastore",
  "hrafnix_keys",
  "hrafnix_message",
  "hrafnix_shareable_string",
  "hrafnix_translation",
+ "hrafnix_units",
  "serde",
  "serde_json",
 ]

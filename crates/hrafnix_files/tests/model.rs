@@ -7,6 +7,7 @@ mod common;
 
 use camino::Utf8PathBuf;
 use common::{METADATA, TRANSLATIONS, TestDirectory};
+use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
 use hrafnix_files::model::{data::ModelFile, read_model_file, write_model_file};
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;
@@ -21,6 +22,8 @@ fn minimal_model() -> ModelFile {
         foreground_decorations: Vec::new(),
         background_decorations: Vec::new(),
         connections: Vec::new(),
+        parameter_definition: ParameterObjectDefinition::default(),
+        variable_definition: VariableObjectDefinition::default(),
     }
 }
 
@@ -116,7 +119,7 @@ fn unknown_content_is_rejected_instead_of_being_dropped() {
     fs::write(
         &path,
         format!(
-            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}, \"foreground_decorations\": [], \"background_decorations\": [], \"connections\": [], \"unknown\": {{}}}}}}"
+            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}, \"foreground_decorations\": [], \"background_decorations\": [], \"connections\": [], \"parameter_definition\": [], \"variable_definition\": [], \"unknown\": {{}}}}}}"
         ),
     )
     .unwrap();

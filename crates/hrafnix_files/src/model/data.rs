@@ -3,9 +3,10 @@ use crate::decoration_background::data::BackgroundDecoration;
 use crate::decoration_foreground::data::ForegroundDecoration;
 use crate::metadata_general::data::MetadataFile;
 use crate::translations::data::TranslationsFile;
+use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
 
 /// Represents User Model data from a Hrafnix model file.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ModelFile {
     /// Descriptive information about the model.
     pub metadata: MetadataFile,
@@ -17,4 +18,8 @@ pub struct ModelFile {
     pub connections: Vec<Connection>,
     /// Source language and translated text used by the model.
     pub translations: TranslationsFile,
+    /// Ordered parameter definitions, including defaults and descriptions.
+    pub parameter_definition: ParameterObjectDefinition,
+    /// Ordered variable definitions, including defaults and descriptions.
+    pub variable_definition: VariableObjectDefinition,
 }

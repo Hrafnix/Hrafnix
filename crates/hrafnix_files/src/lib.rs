@@ -26,6 +26,12 @@
 //! `language` string and a `translations` object mapping original text to target
 //! language codes and translated strings. Both fields are required, even for an
 //! empty translation table. Duplicate keys and language codes are rejected.
+//! Model and component contents also require ordered `parameter_definition` and
+//! `variable_definition` arrays, including when empty. Items have a plain-string
+//! `key` validated as a parameter (`p_`) or variable (`v_`) key, a snake-case
+//! `type`, and inline definition fields. Duplicate item keys are rejected.
+//! Definitions retain descriptions, constraints, units, and default expressions;
+//! these arrays describe the schema rather than storing evaluated values.
 //! Every text decoration property is required and sits directly inside its
 //! text object. Background decoration kinds are plain strings such as
 //! `"Frame"`. Font sizes are plain integers in hundredths of a drawing unit
@@ -67,10 +73,16 @@ mod common;
 pub mod component;
 /// Connections between component ports and their drawing paths.
 pub mod connection;
+/// Shared datastore definition codecs used by parameter and variable files.
+mod datastore;
 /// Shapes drawn behind model and component contents.
 pub mod decoration_background;
 /// Text and images drawn in front of model and component contents.
 pub mod decoration_foreground;
+/// Ordered parameter-definition codecs.
+pub mod definition_parameter;
+/// Ordered variable-definition codecs.
+pub mod definition_variable;
 /// Geometry and styling values shared by graphical elements.
 pub mod graphics;
 /// Metadata shared by model and component files.
