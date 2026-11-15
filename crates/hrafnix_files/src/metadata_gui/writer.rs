@@ -1,6 +1,6 @@
 use crate::common::serialize::serialize_port_key;
 use crate::graphics::writer::DimensionWriter;
-use crate::gui_metadata::data::{GuiMetadata, Port, PortLocation};
+use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
 use hrafnix_common::port::PortType;
 use hrafnix_keys::PortKey;
 use serde::Serialize;
@@ -115,8 +115,8 @@ mod tests {
     use super::GuiMetadataWriter;
     use crate::common::deserialize::RootObject;
     use crate::graphics::data::Dimension;
-    use crate::gui_metadata::data::{GuiMetadata, Port, PortLocation};
-    use crate::gui_metadata::reader::v1::GuiMetadataReaderV1;
+    use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
+    use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
     use hrafnix_common::port::PortType;
     use hrafnix_keys::port_key;
     use serde_json::{Value, json};

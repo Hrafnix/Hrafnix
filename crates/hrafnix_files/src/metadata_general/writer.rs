@@ -1,5 +1,5 @@
 use crate::common::serialize::serialize_shareable_string;
-use crate::metadata::data::MetadataFile;
+use crate::metadata_general::data::MetadataFile;
 use hrafnix_shareable_string::ShareableString;
 use serde::Serialize;
 

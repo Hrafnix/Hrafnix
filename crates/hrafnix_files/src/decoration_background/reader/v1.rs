@@ -1,5 +1,5 @@
-use crate::background_decoration::data::BackgroundDecoration;
 use crate::common::deserialize::{deserialize_object, deserialize_unit_variant};
+use crate::decoration_background::data::BackgroundDecoration;
 use crate::graphics::reader::v1::{DimensionReaderV1, PositionReaderV1};
 use serde::Deserialize;
 
@@ -40,7 +40,7 @@ pub(crate) enum BackgroundDecorationKindReaderV1 {
 }
 
 impl From<BackgroundDecorationKindReaderV1>
-    for crate::background_decoration::data::BackgroundDecorationKind
+    for crate::decoration_background::data::BackgroundDecorationKind
 {
     fn from(kind: BackgroundDecorationKindReaderV1) -> Self {
         match kind {

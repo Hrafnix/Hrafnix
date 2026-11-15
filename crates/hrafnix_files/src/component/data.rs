@@ -1,8 +1,8 @@
-use crate::background_decoration::data::BackgroundDecoration;
 use crate::connection::data::Connection;
-use crate::foreground_decoration::data::ForegroundDecoration;
-use crate::gui_metadata::data::GuiMetadata;
-use crate::metadata::data::MetadataFile;
+use crate::decoration_background::data::BackgroundDecoration;
+use crate::decoration_foreground::data::ForegroundDecoration;
+use crate::metadata_general::data::MetadataFile;
+use crate::metadata_gui::data::GuiMetadata;
 use crate::translations::data::TranslationsFile;
 
 /// Represents User component data from a Hrafnix component file.

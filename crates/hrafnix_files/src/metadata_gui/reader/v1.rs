@@ -3,7 +3,7 @@ use crate::common::deserialize::{
 };
 use crate::graphics::data::Dimension;
 use crate::graphics::reader::v1::DimensionReaderV1;
-use crate::gui_metadata::data::{GuiMetadata, Port, PortLocation};
+use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
 use hrafnix_common::port::PortType;
 use hrafnix_keys::PortKey;
 use serde::Deserialize;
@@ -124,7 +124,7 @@ impl From<PortLocationReaderV1> for PortLocation {
 mod tests {
     use super::GuiMetadataReaderV1;
     use crate::common::deserialize::RootObject;
-    use crate::gui_metadata::data::{GuiMetadata, PortLocation};
+    use crate::metadata_gui::data::{GuiMetadata, PortLocation};
     use serde_json::{Value, json};
 
     /// Reads GUI metadata through its object-only envelope.

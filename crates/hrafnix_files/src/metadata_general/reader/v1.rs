@@ -1,4 +1,4 @@
-use crate::metadata::data::MetadataFile;
+use crate::metadata_general::data::MetadataFile;
 use serde::Deserialize;
 
 /// The version 1 JSON representation of the `metadata` entry, separate from the

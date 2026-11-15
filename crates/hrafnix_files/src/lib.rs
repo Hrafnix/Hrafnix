@@ -61,22 +61,22 @@
     )
 )]
 
-/// Shapes drawn behind model and component contents.
-pub mod background_decoration;
 /// Shared file I/O and localized diagnostics.
 mod common;
 /// Component definitions and behavior.
 pub mod component;
 /// Connections between component ports and their drawing paths.
 pub mod connection;
+/// Shapes drawn behind model and component contents.
+pub mod decoration_background;
 /// Text and images drawn in front of model and component contents.
-pub mod foreground_decoration;
+pub mod decoration_foreground;
 /// Geometry and styling values shared by graphical elements.
 pub mod graphics;
-/// Drawing dimensions, icons, and port locations associated with components.
-pub mod gui_metadata;
 /// Metadata shared by model and component files.
-pub mod metadata;
+pub mod metadata_general;
+/// Drawing dimensions, icons, and port locations associated with components.
+pub mod metadata_gui;
 /// Simulation model definitions.
 pub mod model;
 /// Source languages and translated text shared by model and component files.

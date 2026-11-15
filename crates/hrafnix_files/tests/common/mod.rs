@@ -1,13 +1,13 @@
 //! Shared support for file integration tests.
 
 use camino::{Utf8Path, Utf8PathBuf};
-use hrafnix_files::background_decoration::data::{BackgroundDecoration, BackgroundDecorationKind};
 use hrafnix_files::connection::data::{Connection, ConnectionLine};
-use hrafnix_files::foreground_decoration::data::{
+use hrafnix_files::decoration_background::data::{BackgroundDecoration, BackgroundDecorationKind};
+use hrafnix_files::decoration_foreground::data::{
     ForegroundDecoration, ForegroundDecorationKind, TextDecoration,
 };
 use hrafnix_files::graphics::data::{Dimension, FontSize, Position};
-use hrafnix_files::metadata::data::MetadataFile;
+use hrafnix_files::metadata_general::data::MetadataFile;
 use hrafnix_files::translations::data::TranslationsFile;
 use hrafnix_keys::{component_key, port_key};
 use hrafnix_message::message::Message;

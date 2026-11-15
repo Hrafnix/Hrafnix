@@ -1,10 +1,10 @@
-use crate::background_decoration::reader::v1::BackgroundDecorationReaderV1;
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
 use crate::component::data::ComponentFile;
 use crate::connection::reader::v1::ConnectionReaderV1;
-use crate::foreground_decoration::reader::v1::ForegroundDecorationReaderV1;
-use crate::gui_metadata::reader::v1::GuiMetadataReaderV1;
-use crate::metadata::reader::v1::MetadataReaderV1;
+use crate::decoration_background::reader::v1::BackgroundDecorationReaderV1;
+use crate::decoration_foreground::reader::v1::ForegroundDecorationReaderV1;
+use crate::metadata_general::reader::v1::MetadataReaderV1;
+use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
 use crate::translations::reader::v1::TranslationsReaderV1;
 use serde::Deserialize;
 

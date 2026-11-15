@@ -10,7 +10,7 @@ use common::TestDirectory;
 use hrafnix_common::port::PortType;
 use hrafnix_files::component::{data::ComponentFile, read_component_file, write_component_file};
 use hrafnix_files::graphics::data::Dimension;
-use hrafnix_files::gui_metadata::data::{GuiMetadata, Port, PortLocation};
+use hrafnix_files::metadata_gui::data::{GuiMetadata, Port, PortLocation};
 use hrafnix_keys::port_key;
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;

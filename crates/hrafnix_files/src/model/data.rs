@@ -1,7 +1,7 @@
-use crate::background_decoration::data::BackgroundDecoration;
 use crate::connection::data::Connection;
-use crate::foreground_decoration::data::ForegroundDecoration;
-use crate::metadata::data::MetadataFile;
+use crate::decoration_background::data::BackgroundDecoration;
+use crate::decoration_foreground::data::ForegroundDecoration;
+use crate::metadata_general::data::MetadataFile;
 use crate::translations::data::TranslationsFile;
 
 /// Represents User Model data from a Hrafnix model file.

@@ -1,7 +1,7 @@
-use crate::background_decoration::writer::BackgroundDecorationWriter;
 use crate::connection::writer::ConnectionWriter;
-use crate::foreground_decoration::writer::ForegroundDecorationWriter;
-use crate::metadata::writer::MetadataWriter;
+use crate::decoration_background::writer::BackgroundDecorationWriter;
+use crate::decoration_foreground::writer::ForegroundDecorationWriter;
+use crate::metadata_general::writer::MetadataWriter;
 use crate::model::data::ModelFile;
 use crate::translations::writer::TranslationsWriter;
 use serde::Serialize;
