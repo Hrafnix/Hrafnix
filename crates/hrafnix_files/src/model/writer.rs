@@ -1,7 +1,9 @@
-use crate::background_decoration::writer::BackgroundDecorationWriter;
 use crate::connection::writer::ConnectionWriter;
-use crate::foreground_decoration::writer::ForegroundDecorationWriter;
-use crate::metadata::writer::MetadataWriter;
+use crate::decoration_background::writer::BackgroundDecorationWriter;
+use crate::decoration_foreground::writer::ForegroundDecorationWriter;
+use crate::definition_parameter::writer::ParameterDefinitionWriter;
+use crate::definition_variable::writer::VariableDefinitionWriter;
+use crate::metadata_general::writer::MetadataWriter;
 use crate::model::data::ModelFile;
 use crate::translations::writer::TranslationsWriter;
 use serde::Serialize;
@@ -21,6 +23,10 @@ pub(crate) struct ModelWriter {
 struct ModelDataWriter {
     /// Descriptive information about the model.
     metadata: MetadataWriter,
+    /// Parameter definitions in datastore iteration order.
+    parameter_definition: ParameterDefinitionWriter,
+    /// Variable definitions in datastore iteration order.
+    variable_definition: VariableDefinitionWriter,
     /// Decorations drawn in front of model contents.
     foreground_decorations: Vec<ForegroundDecorationWriter>,
     /// Decorations drawn behind model contents.
@@ -37,6 +43,8 @@ impl From<ModelFile> for ModelWriter {
             file_version: "1".to_owned(),
             model: ModelDataWriter {
                 metadata: MetadataWriter::from(&model.metadata),
+                parameter_definition: ParameterDefinitionWriter::from(&model.parameter_definition),
+                variable_definition: VariableDefinitionWriter::from(&model.variable_definition),
                 foreground_decorations: model
                     .foreground_decorations
                     .iter()

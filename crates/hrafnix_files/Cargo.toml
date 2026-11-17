@@ -18,11 +18,13 @@ hotpath-alloc = ["hotpath", "hotpath/hotpath-alloc"]
 hotpath = { workspace = true, optional = true }
 camino.workspace = true
 serde.workspace = true
-serde_json.workspace = true
+serde_json = { workspace = true, features = ["float_roundtrip"] }
 hrafnix_common.workspace = true
+hrafnix_datastore.workspace = true
 hrafnix_keys.workspace = true
 hrafnix_message.workspace = true
 hrafnix_shareable_string.workspace = true
+hrafnix_units.workspace = true
 
 [dev-dependencies]
 hrafnix_translation.workspace = true

@@ -1,6 +1,7 @@
 use crate::traits::TreePrint;
 use hrafnix_keys::store_key::StoreKey;
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
+use std::collections::BTreeSet;
 
 /// Definition for a single choice item in a choice-based parameter.
 #[derive(Debug, Clone, PartialEq)]
@@ -61,23 +62,28 @@ pub struct ChoiceDefinition {
 
 impl ChoiceDefinition {
     /// Creates a new `ChoiceDefinition` with the specified choices.
+    ///
+    /// Duplicate IDs use the last choice, in last-occurrence order.
     pub fn new<S: Into<ShareableString>>(
         description: S,
         choices: Vec<ChoiceItemDefinition>,
     ) -> Self {
-        Self {
-            description: description.into(),
-            choices,
-            default_value: ShareableString::default(),
-        }
+        Self::new_with_default(description, choices, ShareableString::default())
     }
 
     /// Creates a new `ChoiceDefinition` with the specified choices and default value.
+    ///
+    /// Duplicate IDs use the last choice, in last-occurrence order.
     pub fn new_with_default<S1: Into<ShareableString>, S2: Into<ShareableString>>(
         description: S1,
-        choices: Vec<ChoiceItemDefinition>,
+        mut choices: Vec<ChoiceItemDefinition>,
         default_value: S2,
     ) -> Self {
+        let mut ids = BTreeSet::new();
+        // Retain from the end so duplicate IDs keep their last occurrence.
+        choices.reverse();
+        choices.retain(|choice| ids.insert(choice.id.clone()));
+        choices.reverse();
         Self {
             description: description.into(),
             choices,

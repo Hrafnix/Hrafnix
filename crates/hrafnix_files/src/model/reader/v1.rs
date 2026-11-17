@@ -1,8 +1,10 @@
-use crate::background_decoration::reader::v1::BackgroundDecorationReaderV1;
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
 use crate::connection::reader::v1::ConnectionReaderV1;
-use crate::foreground_decoration::reader::v1::ForegroundDecorationReaderV1;
-use crate::metadata::reader::v1::MetadataReaderV1;
+use crate::decoration_background::reader::v1::BackgroundDecorationReaderV1;
+use crate::decoration_foreground::reader::v1::ForegroundDecorationReaderV1;
+use crate::definition_parameter::reader::v1::ParameterDefinitionReaderV1;
+use crate::definition_variable::reader::v1::VariableDefinitionReaderV1;
+use crate::metadata_general::reader::v1::MetadataReaderV1;
 use crate::model::data::ModelFile;
 use crate::translations::reader::v1::TranslationsReaderV1;
 use serde::Deserialize;
@@ -18,6 +20,10 @@ pub(crate) struct ModelReaderV1 {
     /// Descriptive information about the model.
     #[serde(deserialize_with = "deserialize_object")]
     metadata: MetadataReaderV1,
+    /// Required to be ordered parameter-definition array.
+    parameter_definition: ParameterDefinitionReaderV1,
+    /// Required to be ordered variable-definition array.
+    variable_definition: VariableDefinitionReaderV1,
     /// Decorations drawn in front of model contents.
     #[serde(deserialize_with = "deserialize_objects")]
     foreground_decorations: Vec<ForegroundDecorationReaderV1>,
@@ -36,6 +42,8 @@ impl From<ModelReaderV1> for ModelFile {
     fn from(model: ModelReaderV1) -> Self {
         Self {
             metadata: model.metadata.into(),
+            parameter_definition: model.parameter_definition.into(),
+            variable_definition: model.variable_definition.into(),
             foreground_decorations: model
                 .foreground_decorations
                 .into_iter()

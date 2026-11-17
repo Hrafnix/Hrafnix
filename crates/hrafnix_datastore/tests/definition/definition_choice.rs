@@ -83,6 +83,29 @@ fn test_definition_choice_with_default() {
 }
 
 #[test]
+fn test_definition_choice_deduplicates_ids_in_last_occurrence_order() {
+    let choices = vec![
+        ChoiceItemDefinition::new(store_key!("a"), "Old A"),
+        ChoiceItemDefinition::new(store_key!("b"), "Old B"),
+        ChoiceItemDefinition::new(store_key!("a"), "A"),
+        ChoiceItemDefinition::new(store_key!("c"), "C"),
+        ChoiceItemDefinition::new(store_key!("b"), "B"),
+        ChoiceItemDefinition::new(store_key!("b"), "Last B"),
+    ];
+    for (definition, default) in [
+        (ChoiceDefinition::new("Choice", choices.clone()), ""),
+        (
+            ChoiceDefinition::new_with_default("Choice", choices, "p_mode"),
+            "p_mode",
+        ),
+    ] {
+        assert_eq!(definition.ids(), vec!["a", "c", "b"]);
+        assert_eq!(definition.descriptions(), vec!["A", "C", "Last B"]);
+        assert_eq!(definition.default_value(), default);
+    }
+}
+
+#[test]
 fn test_definition_choice_equality() {
     // Why: Test that two choice definitions with the same data items are considered equal.
     let def_1 = ChoiceDefinition::new_with_default(

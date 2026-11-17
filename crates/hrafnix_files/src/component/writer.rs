@@ -1,9 +1,11 @@
-use crate::background_decoration::writer::BackgroundDecorationWriter;
 use crate::component::data::ComponentFile;
 use crate::connection::writer::ConnectionWriter;
-use crate::foreground_decoration::writer::ForegroundDecorationWriter;
-use crate::gui_metadata::writer::GuiMetadataWriter;
-use crate::metadata::writer::MetadataWriter;
+use crate::decoration_background::writer::BackgroundDecorationWriter;
+use crate::decoration_foreground::writer::ForegroundDecorationWriter;
+use crate::definition_parameter::writer::ParameterDefinitionWriter;
+use crate::definition_variable::writer::VariableDefinitionWriter;
+use crate::metadata_general::writer::MetadataWriter;
+use crate::metadata_gui::writer::GuiMetadataWriter;
 use crate::translations::writer::TranslationsWriter;
 use serde::Serialize;
 
@@ -24,6 +26,10 @@ struct ComponentDataWriter {
     metadata: MetadataWriter,
     /// Drawing dimensions and icon associated with the component.
     gui_metadata: GuiMetadataWriter,
+    /// Parameter definitions in datastore iteration order.
+    parameter_definition: ParameterDefinitionWriter,
+    /// Variable definitions in datastore iteration order.
+    variable_definition: VariableDefinitionWriter,
     /// Decorations drawn in front of component contents.
     foreground_decorations: Vec<ForegroundDecorationWriter>,
     /// Decorations drawn behind component contents.
@@ -41,6 +47,10 @@ impl From<ComponentFile> for ComponentWriter {
             component: ComponentDataWriter {
                 metadata: MetadataWriter::from(&component.metadata),
                 gui_metadata: GuiMetadataWriter::from(&component.gui_metadata),
+                parameter_definition: ParameterDefinitionWriter::from(
+                    &component.parameter_definition,
+                ),
+                variable_definition: VariableDefinitionWriter::from(&component.variable_definition),
                 foreground_decorations: component
                     .foreground_decorations
                     .iter()

@@ -35,6 +35,38 @@ impl BooleanDefinition {
         }
     }
 
+    /// Creates a boolean definition with custom labels and an unevaluated default expression.
+    pub fn new_with_descriptions_and_default<
+        S1: Into<ShareableString>,
+        S2: Into<ShareableString>,
+        S3: Into<ShareableString>,
+        S4: Into<ShareableString>,
+    >(
+        description: S1,
+        true_description: S2,
+        false_description: S3,
+        default_value: S4,
+    ) -> Self {
+        Self {
+            description: description.into(),
+            true_description: true_description.into(),
+            false_description: false_description.into(),
+            default_value: default_value.into(),
+        }
+    }
+
+    /// Returns a reference to the label for the true state.
+    #[must_use]
+    pub const fn true_description_ref(&self) -> &ShareableString {
+        &self.true_description
+    }
+
+    /// Returns a reference to the label for the false state.
+    #[must_use]
+    pub const fn false_description_ref(&self) -> &ShareableString {
+        &self.false_description
+    }
+
     /// Returns a vector of IDs for the choices.
     #[must_use]
     pub fn ids(&self) -> Vec<ShareableString> {

@@ -1,12 +1,13 @@
-use crate::background_decoration::data::BackgroundDecoration;
 use crate::connection::data::Connection;
-use crate::foreground_decoration::data::ForegroundDecoration;
-use crate::gui_metadata::data::GuiMetadata;
-use crate::metadata::data::MetadataFile;
+use crate::decoration_background::data::BackgroundDecoration;
+use crate::decoration_foreground::data::ForegroundDecoration;
+use crate::metadata_general::data::MetadataFile;
+use crate::metadata_gui::data::GuiMetadata;
 use crate::translations::data::TranslationsFile;
+use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
 
 /// Represents User component data from a Hrafnix component file.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ComponentFile {
     /// Descriptive information about the component.
     pub metadata: MetadataFile,
@@ -20,4 +21,8 @@ pub struct ComponentFile {
     pub connections: Vec<Connection>,
     /// Source language and translated text used by the component.
     pub translations: TranslationsFile,
+    /// Ordered parameter definitions, including defaults and descriptions.
+    pub parameter_definition: ParameterObjectDefinition,
+    /// Ordered variable definitions, including defaults and descriptions.
+    pub variable_definition: VariableObjectDefinition,
 }

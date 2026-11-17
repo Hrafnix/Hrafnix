@@ -16,6 +16,8 @@
       "icon": "../icons/component.svg",
       "ports": []
     },
+    "parameter_definition": [],
+    "variable_definition": [],
     "foreground_decorations": [],
     "background_decorations": [],
     "connections": [],
