@@ -50,7 +50,9 @@ impl TableDefinition {
         let mut column_requirements = BTreeMap::new();
         for (k, v, requirement) in columns {
             let key = k.into();
-            ordered_keys.retain(|existing_key| existing_key != &key);
+            if items.contains_key(&key) {
+                ordered_keys.retain(|existing_key| existing_key != &key);
+            }
             ordered_keys.push(key.clone());
             if requirement == TableColumnRequirement::None {
                 column_requirements.remove(&key);

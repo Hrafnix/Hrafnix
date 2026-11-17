@@ -285,7 +285,9 @@ impl MapDefinition {
         let mut ordered_keys = Vec::new();
         for (k, v) in item_type {
             let key = k.into();
-            ordered_keys.retain(|existing_key| existing_key != &key);
+            if items.contains_key(&key) {
+                ordered_keys.retain(|existing_key| existing_key != &key);
+            }
             ordered_keys.push(key.clone());
             items.insert(key, v.into());
         }
