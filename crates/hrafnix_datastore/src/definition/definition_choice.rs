@@ -66,9 +66,19 @@ impl ChoiceDefinition {
     /// Duplicate IDs use the last choice, in last-occurrence order.
     pub fn new<S: Into<ShareableString>>(
         description: S,
-        choices: Vec<ChoiceItemDefinition>,
+        mut choices: Vec<ChoiceItemDefinition>,
     ) -> Self {
-        Self::new_with_default(description, choices, ShareableString::default())
+        // Retain from the end so duplicate IDs keep their last occurrence.
+        let mut ids = BTreeSet::new();
+        choices.reverse();
+        choices.retain(|choice| ids.insert(choice.id.clone()));
+        choices.reverse();
+
+        Self {
+            description: description.into(),
+            choices,
+            default_value: ShareableString::default(),
+        }
     }
 
     /// Creates a new `ChoiceDefinition` with the specified choices and default value.
@@ -79,11 +89,12 @@ impl ChoiceDefinition {
         mut choices: Vec<ChoiceItemDefinition>,
         default_value: S2,
     ) -> Self {
-        let mut ids = BTreeSet::new();
         // Retain from the end so duplicate IDs keep their last occurrence.
+        let mut ids = BTreeSet::new();
         choices.reverse();
         choices.retain(|choice| ids.insert(choice.id.clone()));
         choices.reverse();
+
         Self {
             description: description.into(),
             choices,
