@@ -35,14 +35,42 @@ impl MapItemDefault {
         )
     }
 
-    /// Normalizes table rows to the corresponding map item definition's column count.
-    fn normalized(self, definition: Option<&MapItemDefinition>) -> Self {
-        let column_count = match definition {
-            Some(MapItemDefinition::Table(table)) => table.count(),
-            Some(MapItemDefinition::TableWithUnits(table)) => table.count(),
-            _ => return self,
-        };
+    /// Matches the item's kind and normalizes table row widths, inheriting mismatched defaults.
+    fn normalized(self, definition: &MapItemDefinition) -> Self {
+        match definition {
+            MapItemDefinition::Boolean(item) => self.normalized_scalar(item.default_value_ref()),
+            MapItemDefinition::Choice(item) => self.normalized_scalar(item.default_value_ref()),
+            MapItemDefinition::File(item) => self.normalized_scalar(item.default_value_ref()),
+            MapItemDefinition::Integer(item) => self.normalized_scalar(item.default_value_ref()),
+            MapItemDefinition::Number(item) => self.normalized_scalar(item.default_value_ref()),
+            MapItemDefinition::NumberWithUnits(item) => {
+                self.normalized_scalar(item.default_value_ref())
+            }
+            MapItemDefinition::String(item) => self.normalized_scalar(item.default_value_ref()),
+            MapItemDefinition::Table(item) => {
+                self.normalized_table(item.count(), item.default_table())
+            }
+            MapItemDefinition::TableWithUnits(item) => {
+                self.normalized_table(item.count(), item.default_table())
+            }
+            MapItemDefinition::Unit(item) => self.normalized_scalar(item.default_value_ref()),
+        }
+    }
 
+    /// Replaces table defaults with the scalar item's default expression.
+    fn normalized_scalar(self, default: &ShareableString) -> Self {
+        match self {
+            scalar @ Self::Scalar(_) => scalar,
+            Self::Table(_) => Self::Scalar(default.clone()),
+        }
+    }
+
+    /// Normalizes table rows or inherits the table's default rows for a scalar default.
+    fn normalized_table(
+        self,
+        column_count: usize,
+        default: Option<&[Vec<ShareableString>]>,
+    ) -> Self {
         match self {
             Self::Table(rows) => Self::Table(
                 rows.into_iter()
@@ -52,7 +80,7 @@ impl MapItemDefault {
                     })
                     .collect(),
             ),
-            scalar @ Self::Scalar(_) => scalar,
+            Self::Scalar(_) => Self::Table(default.unwrap_or_default().to_vec()),
         }
     }
 
@@ -272,8 +300,9 @@ impl MapDefinition {
     /// Creates a new `MapDefinition` with default map entries.
     ///
     /// Items omitted from a default entry inherit the default from their item definition.
-    /// Extra items and defaults whose scalar/table kind does not match the corresponding
-    /// definition are ignored when the map is materialized.
+    /// Extra defaults are truncated to the resulting item count. Defaults whose scalar/table
+    /// kind does not match their item inherit that item's default without shifting later values.
+    /// Table rows are padded or truncated to the corresponding table's column count.
     pub fn new_with_default<
         S1: Into<ShareableString>,
         K: Into<StoreKey>,
@@ -291,10 +320,8 @@ impl MapDefinition {
                 .map(|(key, entry)| {
                     let entry = entry
                         .into_iter()
-                        .enumerate()
-                        .map(|(index, default)| {
-                            default.normalized(item_definitions.get(index).copied())
-                        })
+                        .zip(&item_definitions)
+                        .map(|(default, item)| default.normalized(item))
                         .collect();
                     (key, entry)
                 })

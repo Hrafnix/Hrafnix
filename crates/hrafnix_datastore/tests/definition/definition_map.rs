@@ -1,4 +1,5 @@
 use hrafnix_datastore::prelude::*;
+use hrafnix_units::{UnitFamilyId, UnitId};
 use std::collections::BTreeMap;
 
 #[test]
@@ -154,7 +155,7 @@ fn test_map_definition_with_defaults() {
 }
 
 #[test]
-fn test_map_definition_accepts_unmatched_defaults() {
+fn test_map_definition_truncates_extra_defaults() {
     let too_many_items = BTreeMap::from([(
         store_key!("first").into(),
         vec![
@@ -167,16 +168,177 @@ fn test_map_definition_accepts_unmatched_defaults() {
         vec![(store_key!("name"), StringDefinition::new("Name"))],
         too_many_items,
     );
-    assert_eq!(definition.default_map().unwrap()["first"].len(), 2);
+    assert_eq!(
+        definition.default_map().unwrap()["first"],
+        vec![MapItemDefault::scalar("value")]
+    );
 
-    let wrong_type = BTreeMap::from([(
-        store_key!("first").into(),
-        vec![MapItemDefault::table(vec![vec!["value"]])],
-    )]);
     let definition = MapDefinition::new_with_default(
         "A map",
-        vec![(store_key!("name"), StringDefinition::new("Name"))],
-        wrong_type,
+        Vec::<(StoreKey, MapItemDefinition)>::new(),
+        BTreeMap::from([(
+            store_key!("first").into(),
+            vec![MapItemDefault::scalar("extra")],
+        )]),
     );
-    assert_eq!(definition.default_map().unwrap()["first"].len(), 1);
+    assert_eq!(
+        definition.default_map().unwrap()["first"],
+        Vec::<MapItemDefault>::new()
+    );
+}
+
+#[test]
+fn test_map_definition_replaces_mismatched_scalar_defaults() {
+    let definitions: Vec<MapItemDefinition> = vec![
+        BooleanDefinition::new_with_default("Flag", true).into(),
+        ChoiceDefinition::new_with_default(
+            "Choice",
+            vec![ChoiceItemDefinition::new(store_key!("a"), "A")],
+            "a",
+        )
+        .into(),
+        FileDefinition::new_with_default("File", "*.csv", true, "input.csv").into(),
+        IntegerDefinition::new_with_default("Count", "2 + 3").into(),
+        NumberDefinition::new_with_default("Number", "2.5").into(),
+        MapItemDefinition::NumberWithUnits(NumberWithUnitsDefinition::new_with_default(
+            "Length",
+            "2 m",
+            UnitId::Length_Meter,
+        )),
+        StringDefinition::new_with_default("Label", "base").into(),
+        UnitDefinition::new_with_default("Unit", UnitFamilyId::Length, "u_length_meter").into(),
+    ];
+    for (item, expected) in definitions.into_iter().zip([
+        "true",
+        "a",
+        "input.csv",
+        "2 + 3",
+        "2.5",
+        "2 m",
+        "base",
+        "u_length_meter",
+    ]) {
+        let definition = MapDefinition::new_with_default(
+            "Map",
+            vec![(store_key!("item"), item)],
+            BTreeMap::from([(
+                store_key!("first").into(),
+                vec![MapItemDefault::table(vec![vec!["wrong kind"]])],
+            )]),
+        );
+        assert_eq!(
+            definition.default_map().unwrap()["first"],
+            vec![MapItemDefault::scalar(expected)]
+        );
+    }
+}
+
+#[test]
+fn test_map_definition_inherits_table_defaults_without_shifting_later_items() {
+    let definition = MapDefinition::new_with_default(
+        "Map",
+        vec![
+            (
+                store_key!("table"),
+                MapItemDefinition::from(TableDefinition::new_with_default(
+                    "Table",
+                    vec![(store_key!("value"), NumberDefinition::new("Value"))],
+                    vec![vec!["42"]],
+                )),
+            ),
+            (
+                store_key!("units"),
+                TableWithUnitsDefinition::new_with_default(
+                    "Table with units",
+                    vec![(
+                        store_key!("length"),
+                        NumberWithUnitsDefinition::new("Length", UnitId::Length_Meter),
+                    )],
+                    vec![vec!["2 m"]],
+                )
+                .into(),
+            ),
+            (store_key!("name"), StringDefinition::new("Name").into()),
+        ],
+        BTreeMap::from([
+            (
+                store_key!("first").into(),
+                vec![
+                    MapItemDefault::scalar("wrong kind"),
+                    MapItemDefault::scalar("wrong kind"),
+                    MapItemDefault::scalar("custom"),
+                ],
+            ),
+            (store_key!("omitted").into(), Vec::new()),
+        ]),
+    );
+    assert_eq!(
+        definition.default_map().unwrap()["first"],
+        vec![
+            MapItemDefault::table(vec![vec!["42"]]),
+            MapItemDefault::table(vec![vec!["2 m"]]),
+            MapItemDefault::scalar("custom"),
+        ]
+    );
+    assert_eq!(
+        definition.default_map().unwrap()["omitted"],
+        Vec::<MapItemDefault>::new()
+    );
+}
+
+#[test]
+fn test_map_definition_normalizes_table_defaults() {
+    let definition = MapDefinition::new_with_default(
+        "Map",
+        vec![
+            (
+                store_key!("table"),
+                MapItemDefinition::from(TableDefinition::new(
+                    "Table",
+                    vec![(store_key!("value"), NumberDefinition::new("Value"))],
+                )),
+            ),
+            (
+                store_key!("units"),
+                TableWithUnitsDefinition::new(
+                    "Table with units",
+                    vec![(
+                        store_key!("length"),
+                        NumberWithUnitsDefinition::new("Length", UnitId::Length_Meter),
+                    )],
+                )
+                .into(),
+            ),
+        ],
+        BTreeMap::from([
+            (
+                store_key!("mismatched").into(),
+                vec![
+                    MapItemDefault::scalar("wrong kind"),
+                    MapItemDefault::scalar("wrong kind"),
+                ],
+            ),
+            (
+                store_key!("rows").into(),
+                vec![
+                    MapItemDefault::table(vec![vec!["1", "extra"], vec![]]),
+                    MapItemDefault::table(vec![vec![], vec!["2 m", "extra"]]),
+                ],
+            ),
+        ]),
+    );
+    assert_eq!(
+        definition.default_map().unwrap()["mismatched"],
+        vec![
+            MapItemDefault::table(Vec::<Vec<&str>>::new()),
+            MapItemDefault::table(Vec::<Vec<&str>>::new()),
+        ]
+    );
+    assert_eq!(
+        definition.default_map().unwrap()["rows"],
+        vec![
+            MapItemDefault::table(vec![vec!["1"], vec![""]]),
+            MapItemDefault::table(vec![vec![""], vec!["2 m"]]),
+        ]
+    );
 }
