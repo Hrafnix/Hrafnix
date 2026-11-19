@@ -608,6 +608,35 @@ impl MapFrozen {
         Ok(s)
     }
 
+    /// Creates a new `MapFrozen` that keeps `definition`, including its description and item
+    /// order. `items` may be empty.
+    ///
+    /// # Errors
+    ///
+    /// Returns a schema-mismatch error if any entry's schema differs from the definition's.
+    #[cfg_attr(feature = "hotpath", hotpath::measure)]
+    pub fn new_with_items(
+        definition: MapDefinition,
+        items: BTreeMap<StoreKey, MapEntryFrozen>,
+    ) -> Result<Self, Message> {
+        if items
+            .values()
+            .any(|entry| entry.definition() != *definition.item_type())
+        {
+            return Err(Message::error(
+                MessageCategory::Datastore,
+                "datastore_schema_mismatch",
+            ));
+        }
+        let mut s = Self {
+            definition,
+            items,
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        Ok(s)
+    }
+
     /// Creates a new `MapFrozen` from a given `MapEditable` value.
     #[must_use]
     #[cfg_attr(feature = "hotpath", hotpath::measure)]

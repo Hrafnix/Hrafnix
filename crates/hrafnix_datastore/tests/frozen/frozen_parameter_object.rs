@@ -560,3 +560,61 @@ fn test_parameter_object_merge_from_rebuilds_map_entries_with_existing_definitio
     assert_eq!(item.value(), "hello");
     assert_eq!(item.definition().description(), "Old item");
 }
+
+#[test]
+fn parameter_object_with_items_keeps_definition_order() {
+    // Why: Unlike `new_from_items`, the definition's non-alphabetical order must survive.
+    let definition = ParameterObjectDefinition::builder()
+        .with(parameter_key!("p_z"), StringDefinition::new("Z"))
+        .with(parameter_key!("p_a"), StringDefinition::new("A"))
+        .finish();
+    let z = StringFrozen::new_with_value(StringDefinition::new("Z"), "1".into());
+    let a = StringFrozen::new_with_value(StringDefinition::new("A"), "2".into());
+    let frozen = ParameterObjectFrozen::new_with_items(
+        definition.clone(),
+        BTreeMap::from([
+            (parameter_key!("p_z").into(), ItemFrozen::String(z.clone())),
+            (parameter_key!("p_a").into(), ItemFrozen::String(a)),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(frozen.definition(), &definition);
+    assert_eq!(
+        frozen
+            .ordered_iter()
+            .map(|(key, _)| key.as_str())
+            .collect::<Vec<_>>(),
+        ["p_z", "p_a"]
+    );
+    assert_eq!(frozen.get("p_z"), Some(&ItemFrozen::String(z)));
+}
+
+#[test]
+fn parameter_object_with_items_rejects_schema_mismatches() {
+    // Why: Items must cover exactly the defined keys with identical item definitions.
+    let definition = ParameterObjectDefinition::builder()
+        .with(parameter_key!("p_name"), StringDefinition::new("Name"))
+        .finish();
+    let item =
+        |description| ItemFrozen::String(StringFrozen::new(StringDefinition::new(description)));
+
+    assert!(ParameterObjectFrozen::new_with_items(definition.clone(), BTreeMap::new()).is_err());
+    assert!(
+        ParameterObjectFrozen::new_with_items(
+            definition.clone(),
+            BTreeMap::from([(parameter_key!("p_name").into(), item("Other"))]),
+        )
+        .is_err()
+    );
+    assert!(
+        ParameterObjectFrozen::new_with_items(
+            definition,
+            BTreeMap::from([
+                (parameter_key!("p_name").into(), item("Name")),
+                (parameter_key!("p_extra").into(), item("Name")),
+            ]),
+        )
+        .is_err()
+    );
+}

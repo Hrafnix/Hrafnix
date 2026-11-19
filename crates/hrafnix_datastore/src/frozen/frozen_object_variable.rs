@@ -5,6 +5,7 @@ use crate::frozen::{
 };
 use crate::traits::TreePrint;
 use hrafnix_keys::variable_key::VariableKey;
+use hrafnix_message::message::{Message, MessageCategory};
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use std::collections::BTreeMap;
 
@@ -134,6 +135,40 @@ impl VariableObjectFrozen {
         };
         s.update_hash();
         s
+    }
+
+    /// Creates a new `VariableObjectFrozen` that keeps `definition`, including its item order.
+    ///
+    /// Unlike [`Self::new_from_items`], the definition is not rebuilt from the items.
+    ///
+    /// # Errors
+    ///
+    /// Returns a schema-mismatch error unless `items` holds exactly one item for each defined
+    /// key and every item's definition equals the corresponding item definition.
+    #[cfg_attr(feature = "hotpath", hotpath::measure)]
+    pub fn new_with_items(
+        definition: VariableObjectDefinition,
+        items: BTreeMap<VariableKey, ItemFrozen>,
+    ) -> Result<Self, Message> {
+        let matches = items.len() == definition.count()
+            && definition.iter().all(|(key, item_definition)| {
+                items
+                    .get(key)
+                    .is_some_and(|item| item.definition() == *item_definition)
+            });
+        if !matches {
+            return Err(Message::error(
+                MessageCategory::Datastore,
+                "datastore_schema_mismatch",
+            ));
+        }
+        let mut s = Self {
+            definition,
+            items,
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        Ok(s)
     }
 
     /// Creates a new `VariableObjectFrozen` from a given `VariableObjectEditable` value.
