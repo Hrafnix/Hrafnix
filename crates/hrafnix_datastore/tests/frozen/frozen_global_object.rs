@@ -4,25 +4,6 @@ use hrafnix_units::{UnitFamilyId, UnitId};
 use std::collections::BTreeMap;
 
 #[test]
-fn global_object_from_items_preserves_values_and_item_descriptions() {
-    let item = StringFrozen::new_with_value(StringDefinition::new("Name"), "Example".into());
-    let frozen = GlobalObjectFrozen::new_from_items(BTreeMap::from([(
-        global_key!("g_name").into(),
-        ItemFrozen::String(item.clone()),
-    )]));
-
-    assert_eq!(frozen.get("g_name"), Some(&ItemFrozen::String(item)));
-    assert_eq!(
-        frozen.definition(),
-        &GlobalObjectDefinition::builder()
-            .with(global_key!("g_name"), StringDefinition::new("Name"))
-            .finish()
-    );
-    assert_eq!(frozen.thaw().freeze(), frozen);
-    assert_eq!(frozen.launder(&SharedStringStore::new()), frozen);
-}
-
-#[test]
 fn test_object_frozen_basic() {
     // Why: Test frozen object creation and items.
     let frozen_1 = GlobalObjectFrozen::new(
@@ -442,5 +423,63 @@ fn test_editable_global_object_print() {
             "    ├── g_p12 (D12) Tab\n",
             "    └── g_p13 (D13) Unit - \"u_length_centimeter\"\n",
         )
+    );
+}
+
+#[test]
+fn global_object_with_items_keeps_definition_order() {
+    // Why: The definition's non-alphabetical order must survive.
+    let definition = GlobalObjectDefinition::builder()
+        .with(global_key!("g_z"), StringDefinition::new("Z"))
+        .with(global_key!("g_a"), StringDefinition::new("A"))
+        .finish();
+    let z = StringFrozen::new_with_value(StringDefinition::new("Z"), "1".into());
+    let a = StringFrozen::new_with_value(StringDefinition::new("A"), "2".into());
+    let frozen = GlobalObjectFrozen::new_with_items(
+        definition.clone(),
+        BTreeMap::from([
+            (global_key!("g_z").into(), ItemFrozen::String(z.clone())),
+            (global_key!("g_a").into(), ItemFrozen::String(a)),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(frozen.definition(), &definition);
+    assert_eq!(
+        frozen
+            .ordered_iter()
+            .map(|(key, _)| key.as_str())
+            .collect::<Vec<_>>(),
+        ["g_z", "g_a"]
+    );
+    assert_eq!(frozen.get("g_z"), Some(&ItemFrozen::String(z)));
+}
+
+#[test]
+fn global_object_with_items_rejects_schema_mismatches() {
+    // Why: Items must cover exactly the defined keys with identical item definitions.
+    let definition = GlobalObjectDefinition::builder()
+        .with(global_key!("g_name"), StringDefinition::new("Name"))
+        .finish();
+    let item =
+        |description| ItemFrozen::String(StringFrozen::new(StringDefinition::new(description)));
+
+    assert!(GlobalObjectFrozen::new_with_items(definition.clone(), BTreeMap::new()).is_err());
+    assert!(
+        GlobalObjectFrozen::new_with_items(
+            definition.clone(),
+            BTreeMap::from([(global_key!("g_name").into(), item("Other"))]),
+        )
+        .is_err()
+    );
+    assert!(
+        GlobalObjectFrozen::new_with_items(
+            definition,
+            BTreeMap::from([
+                (global_key!("g_name").into(), item("Name")),
+                (global_key!("g_extra").into(), item("Name")),
+            ]),
+        )
+        .is_err()
     );
 }

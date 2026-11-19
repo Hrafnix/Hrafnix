@@ -4,25 +4,6 @@ use hrafnix_units::{UnitFamilyId, UnitId};
 use std::collections::BTreeMap;
 
 #[test]
-fn variable_object_from_items_preserves_values_and_item_descriptions() {
-    let item = StringFrozen::new_with_value(StringDefinition::new("Name"), "Example".into());
-    let frozen = VariableObjectFrozen::new_from_items(BTreeMap::from([(
-        variable_key!("v_name").into(),
-        ItemFrozen::String(item.clone()),
-    )]));
-
-    assert_eq!(frozen.get("v_name"), Some(&ItemFrozen::String(item)));
-    assert_eq!(
-        frozen.definition(),
-        &VariableObjectDefinition::builder()
-            .with(variable_key!("v_name"), StringDefinition::new("Name"))
-            .finish()
-    );
-    assert_eq!(frozen.thaw().freeze(), frozen);
-    assert_eq!(frozen.launder(&SharedStringStore::new()), frozen);
-}
-
-#[test]
 fn test_variable_object_definition_basic() {
     // Why: Test frozen variable object creation and items.
     let frozen_1 = VariableObjectFrozen::new(
@@ -441,5 +422,63 @@ fn test_editable_variable_object_print() {
             "    ├── v_p12 (D12) Tab\n",
             "    └── v_p13 (D13) Unit - \"u_length_centimeter\"\n",
         )
+    );
+}
+
+#[test]
+fn variable_object_with_items_keeps_definition_order() {
+    // Why: The definition's non-alphabetical order must survive.
+    let definition = VariableObjectDefinition::builder()
+        .with(variable_key!("v_z"), StringDefinition::new("Z"))
+        .with(variable_key!("v_a"), StringDefinition::new("A"))
+        .finish();
+    let z = StringFrozen::new_with_value(StringDefinition::new("Z"), "1".into());
+    let a = StringFrozen::new_with_value(StringDefinition::new("A"), "2".into());
+    let frozen = VariableObjectFrozen::new_with_items(
+        definition.clone(),
+        BTreeMap::from([
+            (variable_key!("v_z").into(), ItemFrozen::String(z.clone())),
+            (variable_key!("v_a").into(), ItemFrozen::String(a)),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(frozen.definition(), &definition);
+    assert_eq!(
+        frozen
+            .ordered_iter()
+            .map(|(key, _)| key.as_str())
+            .collect::<Vec<_>>(),
+        ["v_z", "v_a"]
+    );
+    assert_eq!(frozen.get("v_z"), Some(&ItemFrozen::String(z)));
+}
+
+#[test]
+fn variable_object_with_items_rejects_schema_mismatches() {
+    // Why: Items must cover exactly the defined keys with identical item definitions.
+    let definition = VariableObjectDefinition::builder()
+        .with(variable_key!("v_name"), StringDefinition::new("Name"))
+        .finish();
+    let item =
+        |description| ItemFrozen::String(StringFrozen::new(StringDefinition::new(description)));
+
+    assert!(VariableObjectFrozen::new_with_items(definition.clone(), BTreeMap::new()).is_err());
+    assert!(
+        VariableObjectFrozen::new_with_items(
+            definition.clone(),
+            BTreeMap::from([(variable_key!("v_name").into(), item("Other"))]),
+        )
+        .is_err()
+    );
+    assert!(
+        VariableObjectFrozen::new_with_items(
+            definition,
+            BTreeMap::from([
+                (variable_key!("v_name").into(), item("Name")),
+                (variable_key!("v_extra").into(), item("Name")),
+            ]),
+        )
+        .is_err()
     );
 }

@@ -9,19 +9,27 @@ fn map_item() -> ItemFrozen {
         store_key!("field").into(),
         MapItemFrozen::Number(NumberFrozen::new(NumberDefinition::new("A map field"))),
     )]));
-    let map = MapFrozen::new_from_items(
+    let map_definition = MapDefinition::new(
         "A map",
+        vec![(store_key!("field"), NumberDefinition::new("A map field"))],
+    );
+    let map = MapFrozen::new_with_items(
+        map_definition,
         BTreeMap::from([(store_key!("entry").into(), entry)]),
     )
-    .expect("valid map schema");
+    .expect("entry should match map definition");
     ItemFrozen::Map(map)
 }
 
 fn map_parameters() -> ParameterObjectInputData {
-    let frozen = ParameterObjectFrozen::new_from_items(BTreeMap::from([(
-        parameter_key!("p_map").into(),
-        map_item(),
-    )]));
+    let item = map_item();
+    let frozen = ParameterObjectFrozen::new_with_items(
+        ParameterObjectDefinition::builder()
+            .with(parameter_key!("p_map"), item.definition())
+            .finish(),
+        BTreeMap::from([(parameter_key!("p_map").into(), item)]),
+    )
+    .expect("map should match parameter definition");
     ParameterObjectInputData::new(&frozen)
 }
 
@@ -392,16 +400,27 @@ fn supplied_bare_index_dependencies_are_not_evaluated() {
             )
             .finish(),
     );
-    let parameters = ParameterObjectFrozen::new_from_items(BTreeMap::from([
-        (parameter_key!("p_map").into(), map_item()),
-        (
-            parameter_key!("p_index").into(),
-            ItemFrozen::Integer(IntegerFrozen::new(IntegerDefinition::new_with_default(
-                "Index",
-                "unknown_function()",
-            ))),
-        ),
-    ]));
+    let map = map_item();
+    let parameters = ParameterObjectFrozen::new_with_items(
+        ParameterObjectDefinition::builder()
+            .with(parameter_key!("p_map"), map.definition())
+            .with(
+                parameter_key!("p_index"),
+                IntegerDefinition::new_with_default("Index", "unknown_function()"),
+            )
+            .finish(),
+        BTreeMap::from([
+            (parameter_key!("p_map").into(), map),
+            (
+                parameter_key!("p_index").into(),
+                ItemFrozen::Integer(IntegerFrozen::new(IntegerDefinition::new_with_default(
+                    "Index",
+                    "unknown_function()",
+                ))),
+            ),
+        ]),
+    )
+    .expect("items should match parameter definition");
     let variables = VariableObjectFrozen::new(
         VariableObjectDefinition::builder()
             .with(
@@ -448,14 +467,22 @@ fn unprefixed_and_quoted_index_names_are_literals() {
 #[test]
 fn parent_name_checks_apply_to_globals_and_variables() {
     let engine = ExpressionEngine::new();
-    let globals = GlobalObjectFrozen::new_from_items(BTreeMap::from([(
-        global_key!("g_map").into(),
-        map_item(),
-    )]));
-    let variables = VariableObjectFrozen::new_from_items(BTreeMap::from([(
-        variable_key!("v_map").into(),
-        map_item(),
-    )]));
+    let global_map = map_item();
+    let globals = GlobalObjectFrozen::new_with_items(
+        GlobalObjectDefinition::builder()
+            .with(global_key!("g_map"), global_map.definition())
+            .finish(),
+        BTreeMap::from([(global_key!("g_map").into(), global_map)]),
+    )
+    .expect("map should match global definition");
+    let variable_map = map_item();
+    let variables = VariableObjectFrozen::new_with_items(
+        VariableObjectDefinition::builder()
+            .with(variable_key!("v_map"), variable_map.definition())
+            .finish(),
+        BTreeMap::from([(variable_key!("v_map").into(), variable_map)]),
+    )
+    .expect("map should match variable definition");
     let globals = Some(GlobalObjectInputData::new(&globals));
     let variables = Some(VariableObjectInputData::new(&variables));
     assert!(
@@ -495,8 +522,15 @@ fn parent_name_checks_apply_to_globals_and_variables() {
 #[test]
 fn nested_index_operands_and_base_tables_are_supported() {
     let engine = ExpressionEngine::new();
-    let selector = MapFrozen::new_from_items(
+    let selector_definition = MapDefinition::new(
         "Selector",
+        vec![(
+            store_key!("field"),
+            StringDefinition::new_with_default("Entry", "\"entry\""),
+        )],
+    );
+    let selector = MapFrozen::new_with_items(
+        selector_definition,
         BTreeMap::from([(
             store_key!("entry").into(),
             MapEntryFrozen::new_from_items(BTreeMap::from([(
@@ -508,24 +542,36 @@ fn nested_index_operands_and_base_tables_are_supported() {
             )])),
         )]),
     )
-    .unwrap();
-    let globals = GlobalObjectFrozen::new_from_items(BTreeMap::from([(
-        global_key!("g_selector").into(),
-        ItemFrozen::Map(selector),
-    )]));
-    let parameters = ParameterObjectFrozen::new_from_items(BTreeMap::from([
-        (parameter_key!("p_map").into(), map_item()),
-        (
-            parameter_key!("p_table").into(),
-            ItemFrozen::Table(TableFrozen::new_from_rows(
-                TableDefinition::new(
-                    "Table",
-                    vec![(store_key!("field"), NumberDefinition::new("Field"))],
-                ),
-                vec![vec!["1.0".into()]],
-            )),
-        ),
-    ]));
+    .expect("entry should match selector definition");
+    let globals = GlobalObjectFrozen::new_with_items(
+        GlobalObjectDefinition::builder()
+            .with(global_key!("g_selector"), selector.definition().clone())
+            .finish(),
+        BTreeMap::from([(global_key!("g_selector").into(), ItemFrozen::Map(selector))]),
+    )
+    .expect("selector should match global definition");
+    let map = map_item();
+    let table_definition = TableDefinition::new(
+        "Table",
+        vec![(store_key!("field"), NumberDefinition::new("Field"))],
+    );
+    let parameters = ParameterObjectFrozen::new_with_items(
+        ParameterObjectDefinition::builder()
+            .with(parameter_key!("p_map"), map.definition())
+            .with(parameter_key!("p_table"), table_definition.clone())
+            .finish(),
+        BTreeMap::from([
+            (parameter_key!("p_map").into(), map),
+            (
+                parameter_key!("p_table").into(),
+                ItemFrozen::Table(TableFrozen::new_from_rows(
+                    table_definition,
+                    vec![vec!["1.0".into()]],
+                )),
+            ),
+        ]),
+    )
+    .expect("items should match parameter definition");
     for expression in [
         "p_map[g_selector[entry][field]][field]",
         "p_table[0][field]",
@@ -565,15 +611,26 @@ fn checking_requirements_does_not_invoke_index_functions() {
             },
         ))
         .unwrap();
-    let parameters = ParameterObjectFrozen::new_from_items(BTreeMap::from([
-        (parameter_key!("p_map").into(), map_item()),
-        (
-            parameter_key!("p_choice").into(),
-            ItemFrozen::Integer(IntegerFrozen::new(IntegerDefinition::new_with_default(
-                "Index", "0",
-            ))),
-        ),
-    ]));
+    let map = map_item();
+    let parameters = ParameterObjectFrozen::new_with_items(
+        ParameterObjectDefinition::builder()
+            .with(parameter_key!("p_map"), map.definition())
+            .with(
+                parameter_key!("p_choice"),
+                IntegerDefinition::new_with_default("Index", "0"),
+            )
+            .finish(),
+        BTreeMap::from([
+            (parameter_key!("p_map").into(), map),
+            (
+                parameter_key!("p_choice").into(),
+                ItemFrozen::Integer(IntegerFrozen::new(IntegerDefinition::new_with_default(
+                    "Index", "0",
+                ))),
+            ),
+        ]),
+    )
+    .expect("items should match parameter definition");
     let parameters = Some(ParameterObjectInputData::new(&parameters));
     assert!(
         engine

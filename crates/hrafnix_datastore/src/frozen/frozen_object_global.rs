@@ -5,6 +5,7 @@ use crate::frozen::{
 };
 use crate::traits::TreePrint;
 use hrafnix_keys::global_key::GlobalKey;
+use hrafnix_message::message::{Message, MessageCategory};
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use std::collections::BTreeMap;
 
@@ -121,22 +122,38 @@ impl GlobalObjectFrozen {
         s
     }
 
-    /// Creates a new `GlobalObjectFrozen` with items.
-    #[must_use]
+    /// Creates a new `GlobalObjectFrozen` that keeps `definition`, including its item order.
+    ///
+    /// The definition is not rebuilt from the items.
+    ///
+    /// # Errors
+    ///
+    /// Returns a schema-mismatch error unless `items` holds exactly one item for each defined
+    /// key and every item's definition equals the corresponding item definition.
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
-    pub fn new_from_items(items: BTreeMap<GlobalKey, ItemFrozen>) -> Self {
-        let mut builder = GlobalObjectDefinition::builder();
-        for (k, v) in &items {
-            builder.insert(k.clone(), v.definition());
+    pub fn new_with_items(
+        definition: GlobalObjectDefinition,
+        items: BTreeMap<GlobalKey, ItemFrozen>,
+    ) -> Result<Self, Message> {
+        let matches = items.len() == definition.count()
+            && definition.iter().all(|(key, item_definition)| {
+                items
+                    .get(key)
+                    .is_some_and(|item| item.definition() == *item_definition)
+            });
+        if !matches {
+            return Err(Message::error(
+                MessageCategory::Datastore,
+                "datastore_schema_mismatch",
+            ));
         }
-        let definition = builder.finish();
         let mut s = Self {
             definition,
             items,
             hash: [0u8; 32],
         };
         s.update_hash();
-        s
+        Ok(s)
     }
 
     /// Creates a new `GlobalObjectFrozen` from a given `GlobalObjectEditable` value.

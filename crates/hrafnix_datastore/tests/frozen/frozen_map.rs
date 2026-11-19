@@ -232,65 +232,6 @@ fn test_map_entry_frozen_equality() {
 }
 
 #[test]
-fn test_map_frozen_new_from_items() {
-    // Why: Test constructing a `MapFrozen` from existing entries, inferring the schema.
-    let item_type: BTreeMap<StoreKey, MapItemDefinition> = vec![(
-        store_key!("field1").into(),
-        MapItemDefinition::String(StringDefinition::new("Field 1")),
-    )]
-    .into_iter()
-    .collect();
-
-    let mut entries = BTreeMap::new();
-    entries.insert(store_key!("entry1").into(), MapEntryFrozen::new(&item_type));
-    entries.insert(store_key!("entry2").into(), MapEntryFrozen::new(&item_type));
-
-    let map_frozen = MapFrozen::new_from_items("A map", entries).unwrap();
-    assert_eq!(map_frozen.definition().description().as_ref(), "A map");
-    assert_eq!(map_frozen.definition().count(), 1);
-    assert_eq!(map_frozen.count(), 2);
-}
-
-#[test]
-fn test_map_frozen_new_from_items_empty_error() {
-    // Why: An empty item set cannot be used to infer the map's entry schema.
-    let entries: BTreeMap<StoreKey, MapEntryFrozen> = BTreeMap::new();
-    assert!(MapFrozen::new_from_items("A map", entries).is_err());
-}
-
-#[test]
-fn test_map_frozen_new_from_items_schema_mismatch_error() {
-    // Why: Entries with differing schemas cannot form a valid map.
-    let item_type_1: BTreeMap<StoreKey, MapItemDefinition> = vec![(
-        store_key!("field1").into(),
-        MapItemDefinition::String(StringDefinition::new("Field 1")),
-    )]
-    .into_iter()
-    .collect();
-    let item_type_2: BTreeMap<StoreKey, MapItemDefinition> = vec![(
-        store_key!("field1").into(),
-        MapItemDefinition::Table(TableDefinition::new(
-            "Table field",
-            Vec::<(StoreKey, NumberDefinition)>::new(),
-        )),
-    )]
-    .into_iter()
-    .collect();
-
-    let mut entries = BTreeMap::new();
-    entries.insert(
-        store_key!("entry1").into(),
-        MapEntryFrozen::new(&item_type_1),
-    );
-    entries.insert(
-        store_key!("entry2").into(),
-        MapEntryFrozen::new(&item_type_2),
-    );
-
-    assert!(MapFrozen::new_from_items("A map", entries).is_err());
-}
-
-#[test]
 fn test_map_frozen_materializes_definition_defaults() {
     let table_definition = TableDefinition::new(
         "Values",
@@ -341,5 +282,59 @@ fn test_map_frozen_materializes_definition_defaults() {
             .unwrap()
             .as_ref(),
         "42"
+    );
+}
+
+#[test]
+fn test_map_frozen_new_with_items_keeps_definition() {
+    // Why: The supplied definition, including description and item order, must be kept, and an
+    // empty map is valid because the schema comes from the definition.
+    let definition = MapDefinition::new(
+        "A map",
+        vec![
+            (store_key!("zeta"), StringDefinition::new("Z")),
+            (store_key!("alpha"), StringDefinition::new("A")),
+        ],
+    );
+
+    let empty = MapFrozen::new_with_items(definition.clone(), BTreeMap::new()).unwrap();
+    assert_eq!(empty.definition(), &definition);
+    assert_eq!(empty.count(), 0);
+
+    let entry = MapEntryFrozen::new(definition.item_type());
+    let map = MapFrozen::new_with_items(
+        definition.clone(),
+        BTreeMap::from([(store_key!("entry").into(), entry.clone())]),
+    )
+    .unwrap();
+    assert_eq!(map.definition(), &definition);
+    assert_eq!(
+        map.definition()
+            .keys()
+            .map(StoreKey::as_str)
+            .collect::<Vec<_>>(),
+        ["zeta", "alpha"]
+    );
+    assert_eq!(map.get(store_key!("entry")), Some(&entry));
+}
+
+#[test]
+fn test_map_frozen_new_with_items_schema_mismatch_error() {
+    // Why: Entries must follow the supplied definition's schema.
+    let definition = MapDefinition::new(
+        "A map",
+        vec![(store_key!("field"), StringDefinition::new("Field"))],
+    );
+    let other: BTreeMap<StoreKey, MapItemDefinition> = BTreeMap::from([(
+        store_key!("field").into(),
+        MapItemDefinition::String(StringDefinition::new("Other")),
+    )]);
+
+    assert!(
+        MapFrozen::new_with_items(
+            definition,
+            BTreeMap::from([(store_key!("entry").into(), MapEntryFrozen::new(&other))]),
+        )
+        .is_err()
     );
 }

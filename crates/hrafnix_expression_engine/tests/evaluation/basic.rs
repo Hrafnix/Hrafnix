@@ -114,22 +114,36 @@ fn test_basic_data_choice_identifier_comparison() {
             )
             .finish(),
     );
-    let frozen = ParameterObjectFrozen::new_from_items(BTreeMap::from([
-        (
-            ParameterKey::new("p_equal".into()).expect("valid parameter key"),
-            ItemFrozen::Boolean(BooleanFrozen::new_with_value(
-                BooleanDefinition::new("Choice equals itself"),
-                "g_choice == g_choice".into(),
-            )),
-        ),
-        (
-            ParameterKey::new("p_not_equal".into()).expect("valid parameter key"),
-            ItemFrozen::Boolean(BooleanFrozen::new_with_value(
-                BooleanDefinition::new("Choice does not differ from itself"),
-                "g_choice != g_choice".into(),
-            )),
-        ),
-    ]));
+    let definition = ParameterObjectDefinition::builder()
+        .with(
+            parameter_key!("p_equal"),
+            BooleanDefinition::new("Choice equals itself"),
+        )
+        .with(
+            parameter_key!("p_not_equal"),
+            BooleanDefinition::new("Choice does not differ from itself"),
+        )
+        .finish();
+    let frozen = ParameterObjectFrozen::new_with_items(
+        definition,
+        BTreeMap::from([
+            (
+                parameter_key!("p_equal").into(),
+                ItemFrozen::Boolean(BooleanFrozen::new_with_value(
+                    BooleanDefinition::new("Choice equals itself"),
+                    "g_choice == g_choice".into(),
+                )),
+            ),
+            (
+                parameter_key!("p_not_equal").into(),
+                ItemFrozen::Boolean(BooleanFrozen::new_with_value(
+                    BooleanDefinition::new("Choice does not differ from itself"),
+                    "g_choice != g_choice".into(),
+                )),
+            ),
+        ]),
+    )
+    .expect("items should match definition");
 
     let global_data = GlobalObjectInputData::new(&global_frozen);
     let data = ParameterObjectInputData::new(&frozen);
@@ -415,18 +429,24 @@ fn tables_reject_padded_missing_cells() {
                     let mut engine = ExpressionEngine::new();
                     let table = table_with_missing_cells(&rows, with_units, requirement);
                     let errors = if global {
-                        let globals = GlobalObjectFrozen::new_from_items(BTreeMap::from([(
-                            global_key!("g_source").into(),
-                            table,
-                        )]));
+                        let globals = GlobalObjectFrozen::new_with_items(
+                            GlobalObjectDefinition::builder()
+                                .with(global_key!("g_source"), table.definition())
+                                .finish(),
+                            BTreeMap::from([(global_key!("g_source").into(), table)]),
+                        )
+                        .expect("table should match definition");
                         engine
                             .evaluate_globals(&GlobalObjectInputData::new(&globals))
                             .unwrap_err()
                     } else {
-                        let parameters = ParameterObjectFrozen::new_from_items(BTreeMap::from([(
-                            parameter_key!("p_table").into(),
-                            table,
-                        )]));
+                        let parameters = ParameterObjectFrozen::new_with_items(
+                            ParameterObjectDefinition::builder()
+                                .with(parameter_key!("p_table"), table.definition())
+                                .finish(),
+                            BTreeMap::from([(parameter_key!("p_table").into(), table)]),
+                        )
+                        .expect("table should match definition");
                         engine
                             .evaluate_parameters(&ParameterObjectInputData::new(&parameters))
                             .unwrap_err()

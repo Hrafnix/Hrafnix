@@ -5,25 +5,6 @@ use hrafnix_units::{UnitFamilyId, UnitId};
 use std::collections::BTreeMap;
 
 #[test]
-fn parameter_object_from_items_preserves_values_and_item_descriptions() {
-    let item = StringFrozen::new_with_value(StringDefinition::new("Name"), "Example".into());
-    let frozen = ParameterObjectFrozen::new_from_items(BTreeMap::from([(
-        parameter_key!("p_name").into(),
-        ItemFrozen::String(item.clone()),
-    )]));
-
-    assert_eq!(frozen.get("p_name"), Some(&ItemFrozen::String(item)));
-    assert_eq!(
-        frozen.definition(),
-        &ParameterObjectDefinition::builder()
-            .with(parameter_key!("p_name"), StringDefinition::new("Name"))
-            .finish()
-    );
-    assert_eq!(frozen.thaw().freeze(), frozen);
-    assert_eq!(frozen.launder(&SharedStringStore::new()), frozen);
-}
-
-#[test]
 fn test_parameter_object_definition_basic() {
     // Why: Test frozen parameter object creation and items.
     let frozen_1 = ParameterObjectFrozen::new(
@@ -559,4 +540,62 @@ fn test_parameter_object_merge_from_rebuilds_map_entries_with_existing_definitio
     let item = map.get("e1").unwrap().get_string("s").unwrap();
     assert_eq!(item.value(), "hello");
     assert_eq!(item.definition().description(), "Old item");
+}
+
+#[test]
+fn parameter_object_with_items_keeps_definition_order() {
+    // Why: The definition's non-alphabetical order must survive.
+    let definition = ParameterObjectDefinition::builder()
+        .with(parameter_key!("p_z"), StringDefinition::new("Z"))
+        .with(parameter_key!("p_a"), StringDefinition::new("A"))
+        .finish();
+    let z = StringFrozen::new_with_value(StringDefinition::new("Z"), "1".into());
+    let a = StringFrozen::new_with_value(StringDefinition::new("A"), "2".into());
+    let frozen = ParameterObjectFrozen::new_with_items(
+        definition.clone(),
+        BTreeMap::from([
+            (parameter_key!("p_z").into(), ItemFrozen::String(z.clone())),
+            (parameter_key!("p_a").into(), ItemFrozen::String(a)),
+        ]),
+    )
+    .unwrap();
+
+    assert_eq!(frozen.definition(), &definition);
+    assert_eq!(
+        frozen
+            .ordered_iter()
+            .map(|(key, _)| key.as_str())
+            .collect::<Vec<_>>(),
+        ["p_z", "p_a"]
+    );
+    assert_eq!(frozen.get("p_z"), Some(&ItemFrozen::String(z)));
+}
+
+#[test]
+fn parameter_object_with_items_rejects_schema_mismatches() {
+    // Why: Items must cover exactly the defined keys with identical item definitions.
+    let definition = ParameterObjectDefinition::builder()
+        .with(parameter_key!("p_name"), StringDefinition::new("Name"))
+        .finish();
+    let item =
+        |description| ItemFrozen::String(StringFrozen::new(StringDefinition::new(description)));
+
+    assert!(ParameterObjectFrozen::new_with_items(definition.clone(), BTreeMap::new()).is_err());
+    assert!(
+        ParameterObjectFrozen::new_with_items(
+            definition.clone(),
+            BTreeMap::from([(parameter_key!("p_name").into(), item("Other"))]),
+        )
+        .is_err()
+    );
+    assert!(
+        ParameterObjectFrozen::new_with_items(
+            definition,
+            BTreeMap::from([
+                (parameter_key!("p_name").into(), item("Name")),
+                (parameter_key!("p_extra").into(), item("Name")),
+            ]),
+        )
+        .is_err()
+    );
 }

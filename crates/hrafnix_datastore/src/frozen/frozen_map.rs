@@ -568,37 +568,26 @@ impl MapFrozen {
         s
     }
 
-    /// Creates a new `MapFrozen` with a description and items.
+    /// Creates a new `MapFrozen` that keeps `definition`, including its description and item
+    /// order. `items` may be empty.
     ///
     /// # Errors
     ///
-    /// Returns an error message if the items do not all share the same entry schema
-    /// or if `items` is empty.
+    /// Returns a schema-mismatch error if any entry's schema differs from the definition's.
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
-    pub fn new_from_items<S: Into<ShareableString>>(
-        description: S,
+    pub fn new_with_items(
+        definition: MapDefinition,
         items: BTreeMap<StoreKey, MapEntryFrozen>,
     ) -> Result<Self, Message> {
-        let item_schema = if let Some(first_item) = items.values().next() {
-            let first_schema = first_item.definition();
-            for item in items.values().skip(1) {
-                let schema = item.definition();
-                if first_schema != schema {
-                    return Err(Message::error(
-                        MessageCategory::Datastore,
-                        "datastore_schema_mismatch",
-                    ));
-                }
-            }
-            first_schema
-        } else {
+        if items
+            .values()
+            .any(|entry| entry.definition() != *definition.item_type())
+        {
             return Err(Message::error(
                 MessageCategory::Datastore,
-                "datastore_missing_schema",
+                "datastore_schema_mismatch",
             ));
-        };
-
-        let definition = MapDefinition::new(description, item_schema.into_iter().collect());
+        }
         let mut s = Self {
             definition,
             items,

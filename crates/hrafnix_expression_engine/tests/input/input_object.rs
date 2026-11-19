@@ -27,7 +27,23 @@ fn sample_items() -> BTreeMap<String, ItemFrozen> {
     let mut entries = BTreeMap::new();
     entries.insert(store_key!("entry1").into(), entry_1);
 
-    let map_frozen = MapFrozen::new_from_items("A map", entries).expect("valid map schema");
+    let map_frozen = MapFrozen::new_with_items(
+        MapDefinition::new(
+            "A map",
+            vec![
+                (
+                    store_key!("field1"),
+                    MapItemDefinition::String(StringDefinition::new("Field 1")),
+                ),
+                (
+                    store_key!("field2"),
+                    MapItemDefinition::Number(NumberDefinition::new("Field 2")),
+                ),
+            ],
+        ),
+        entries,
+    )
+    .expect("valid map schema");
 
     let table_frozen = TableFrozen::new_from_rows(
         TableDefinition::new(
@@ -72,7 +88,15 @@ fn test_global_object_input_data() {
         .into_iter()
         .map(|(k, v)| (GlobalKey::new(format!("g_{k}").into()).unwrap(), v))
         .collect();
-    let frozen = GlobalObjectFrozen::new_from_items(items);
+    let definition = items.iter().fold(
+        GlobalObjectDefinition::builder(),
+        |mut builder, (key, item)| {
+            builder.insert(key.clone(), item.definition());
+            builder
+        },
+    );
+    let frozen = GlobalObjectFrozen::new_with_items(definition.finish(), items)
+        .expect("items should match definition");
 
     let input = GlobalObjectInputData::new(&frozen);
     let data = input.data();
@@ -140,7 +164,15 @@ fn test_parameter_object_input_data() {
         .into_iter()
         .map(|(k, v)| (ParameterKey::new(format!("p_{k}").into()).unwrap(), v))
         .collect();
-    let frozen = ParameterObjectFrozen::new_from_items(items);
+    let definition = items.iter().fold(
+        ParameterObjectDefinition::builder(),
+        |mut builder, (key, item)| {
+            builder.insert(key.clone(), item.definition());
+            builder
+        },
+    );
+    let frozen = ParameterObjectFrozen::new_with_items(definition.finish(), items)
+        .expect("items should match definition");
 
     let input = ParameterObjectInputData::new(&frozen);
     let data = input.data();
@@ -172,7 +204,15 @@ fn test_variable_object_input_data() {
         .into_iter()
         .map(|(k, v)| (VariableKey::new(format!("v_{k}").into()).unwrap(), v))
         .collect();
-    let frozen = VariableObjectFrozen::new_from_items(items);
+    let definition = items.iter().fold(
+        VariableObjectDefinition::builder(),
+        |mut builder, (key, item)| {
+            builder.insert(key.clone(), item.definition());
+            builder
+        },
+    );
+    let frozen = VariableObjectFrozen::new_with_items(definition.finish(), items)
+        .expect("items should match definition");
 
     let input = VariableObjectInputData::new(&frozen);
     let data = input.data();
