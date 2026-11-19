@@ -6,9 +6,14 @@ use std::collections::BTreeMap;
 /// `BasicInputData`, extracted via the crate's public conversion path (`new` on
 /// `BasicInputData` is crate-private, so this is how tests must construct instances).
 fn basic_data_for(item: ItemFrozen) -> BasicInputData {
-    let mut items = BTreeMap::new();
-    items.insert(GlobalKey::new("g_field".into()).unwrap(), item);
-    let frozen = GlobalObjectFrozen::new_from_items(items);
+    let definition = GlobalObjectDefinition::builder()
+        .with(GlobalKey::new("g_field".into()).unwrap(), item.definition())
+        .finish();
+    let frozen = GlobalObjectFrozen::new_with_items(
+        definition,
+        BTreeMap::from([(GlobalKey::new("g_field".into()).unwrap(), item)]),
+    )
+    .expect("item should match definition");
     let input = GlobalObjectInputData::new(&frozen);
 
     match input.data().get("g_field").unwrap() {

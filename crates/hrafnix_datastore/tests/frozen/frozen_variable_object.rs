@@ -4,25 +4,6 @@ use hrafnix_units::{UnitFamilyId, UnitId};
 use std::collections::BTreeMap;
 
 #[test]
-fn variable_object_from_items_preserves_values_and_item_descriptions() {
-    let item = StringFrozen::new_with_value(StringDefinition::new("Name"), "Example".into());
-    let frozen = VariableObjectFrozen::new_from_items(BTreeMap::from([(
-        variable_key!("v_name").into(),
-        ItemFrozen::String(item.clone()),
-    )]));
-
-    assert_eq!(frozen.get("v_name"), Some(&ItemFrozen::String(item)));
-    assert_eq!(
-        frozen.definition(),
-        &VariableObjectDefinition::builder()
-            .with(variable_key!("v_name"), StringDefinition::new("Name"))
-            .finish()
-    );
-    assert_eq!(frozen.thaw().freeze(), frozen);
-    assert_eq!(frozen.launder(&SharedStringStore::new()), frozen);
-}
-
-#[test]
 fn test_variable_object_definition_basic() {
     // Why: Test frozen variable object creation and items.
     let frozen_1 = VariableObjectFrozen::new(
@@ -446,7 +427,7 @@ fn test_editable_variable_object_print() {
 
 #[test]
 fn variable_object_with_items_keeps_definition_order() {
-    // Why: Unlike `new_from_items`, the definition's non-alphabetical order must survive.
+    // Why: The definition's non-alphabetical order must survive.
     let definition = VariableObjectDefinition::builder()
         .with(variable_key!("v_z"), StringDefinition::new("Z"))
         .with(variable_key!("v_a"), StringDefinition::new("A"))

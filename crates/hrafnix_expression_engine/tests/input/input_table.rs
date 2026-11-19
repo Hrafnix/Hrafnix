@@ -6,12 +6,20 @@ use std::collections::BTreeMap;
 /// `TableInputData`, extracted via the crate's public conversion path (`new` on
 /// `TableInputData` is crate-private, so this is how tests must construct instances).
 fn table_data_for(table: TableFrozen) -> TableInputData {
-    let mut items = BTreeMap::new();
-    items.insert(
-        GlobalKey::new("g_field".into()).unwrap(),
-        ItemFrozen::Table(table),
-    );
-    let frozen = GlobalObjectFrozen::new_from_items(items);
+    let definition = GlobalObjectDefinition::builder()
+        .with(
+            GlobalKey::new("g_field".into()).unwrap(),
+            table.definition().clone(),
+        )
+        .finish();
+    let frozen = GlobalObjectFrozen::new_with_items(
+        definition,
+        BTreeMap::from([(
+            GlobalKey::new("g_field".into()).unwrap(),
+            ItemFrozen::Table(table),
+        )]),
+    )
+    .expect("table should match definition");
     let input = GlobalObjectInputData::new(&frozen);
 
     match input.data().get("g_field").unwrap() {

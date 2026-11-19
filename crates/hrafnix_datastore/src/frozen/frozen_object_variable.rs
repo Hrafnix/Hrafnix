@@ -119,27 +119,9 @@ impl VariableObjectFrozen {
         s
     }
 
-    /// Creates a new `VariableObjectFrozen` with items.
-    #[must_use]
-    #[cfg_attr(feature = "hotpath", hotpath::measure)]
-    pub fn new_from_items(items: BTreeMap<VariableKey, ItemFrozen>) -> Self {
-        let mut builder = VariableObjectDefinition::builder();
-        for (k, v) in &items {
-            builder.insert(k.clone(), v.definition());
-        }
-        let definition = builder.finish();
-        let mut s = Self {
-            definition,
-            items,
-            hash: [0u8; 32],
-        };
-        s.update_hash();
-        s
-    }
-
     /// Creates a new `VariableObjectFrozen` that keeps `definition`, including its item order.
     ///
-    /// Unlike [`Self::new_from_items`], the definition is not rebuilt from the items.
+    /// The definition is not rebuilt from the items.
     ///
     /// # Errors
     ///

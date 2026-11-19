@@ -4,25 +4,6 @@ use hrafnix_units::{UnitFamilyId, UnitId};
 use std::collections::BTreeMap;
 
 #[test]
-fn global_object_from_items_preserves_values_and_item_descriptions() {
-    let item = StringFrozen::new_with_value(StringDefinition::new("Name"), "Example".into());
-    let frozen = GlobalObjectFrozen::new_from_items(BTreeMap::from([(
-        global_key!("g_name").into(),
-        ItemFrozen::String(item.clone()),
-    )]));
-
-    assert_eq!(frozen.get("g_name"), Some(&ItemFrozen::String(item)));
-    assert_eq!(
-        frozen.definition(),
-        &GlobalObjectDefinition::builder()
-            .with(global_key!("g_name"), StringDefinition::new("Name"))
-            .finish()
-    );
-    assert_eq!(frozen.thaw().freeze(), frozen);
-    assert_eq!(frozen.launder(&SharedStringStore::new()), frozen);
-}
-
-#[test]
 fn test_object_frozen_basic() {
     // Why: Test frozen object creation and items.
     let frozen_1 = GlobalObjectFrozen::new(
@@ -447,7 +428,7 @@ fn test_editable_global_object_print() {
 
 #[test]
 fn global_object_with_items_keeps_definition_order() {
-    // Why: Unlike `new_from_items`, the definition's non-alphabetical order must survive.
+    // Why: The definition's non-alphabetical order must survive.
     let definition = GlobalObjectDefinition::builder()
         .with(global_key!("g_z"), StringDefinition::new("Z"))
         .with(global_key!("g_a"), StringDefinition::new("A"))

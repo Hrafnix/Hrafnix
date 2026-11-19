@@ -71,7 +71,11 @@ fn test_editable_map_round_trip() {
     .into_iter()
     .collect();
 
-    let frozen_map = MapFrozen::new_from_items("A map", items).expect("valid schema");
+    let definition = MapDefinition::new(
+        "A map",
+        vec![(store_key!("field1"), StringDefinition::new("Field 1"))],
+    );
+    let frozen_map = MapFrozen::new_with_items(definition, items).expect("valid schema");
     let editable_map = frozen_map.thaw();
 
     assert_eq!(editable_map.count(), 2);
@@ -98,7 +102,11 @@ fn test_editable_map_get_mut() {
     let items: BTreeMap<StoreKey, MapEntryFrozen> = vec![(store_key!("row1").into(), entry)]
         .into_iter()
         .collect();
-    let frozen_map = MapFrozen::new_from_items("A map", items).expect("valid schema");
+    let definition = MapDefinition::new(
+        "A map",
+        vec![(store_key!("field1"), StringDefinition::new("Field 1"))],
+    );
+    let frozen_map = MapFrozen::new_with_items(definition, items).expect("valid schema");
 
     let mut editable_map = frozen_map.thaw();
     let entry_mut = editable_map.get_mut("row1").expect("row1 entry");
