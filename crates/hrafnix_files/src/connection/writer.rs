@@ -96,7 +96,7 @@ mod tests {
             );
             let reader: RootObject<ConnectionReaderV1> =
                 serde_json::from_str(&written.to_string()).unwrap();
-            assert_eq!(Connection::from(reader.document), connection);
+            assert_eq!(Connection::try_from(reader.document).unwrap(), connection);
             assert_eq!(connection, original);
         }
     }

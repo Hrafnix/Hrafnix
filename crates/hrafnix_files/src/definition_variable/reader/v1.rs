@@ -1,16 +1,16 @@
-use crate::common::deserialize::{deserialize_objects, deserialize_variable_key};
+use crate::common::deserialize::deserialize_objects;
+use crate::common::validate::ensure_unique_keys;
 use crate::datastore::definition::reader::v1::item::ItemDefinitionReaderV1;
 use hrafnix_datastore::definition::{ItemDefinitionType, VariableObjectDefinition};
 use hrafnix_keys::VariableKey;
-use serde::{Deserialize, Deserializer, de::Error};
-use std::collections::BTreeSet;
+use hrafnix_message::message::Message;
+use serde::{Deserialize, Deserializer};
 
-/// One version-1 variable with its validated key and inline definition.
+/// One version-1 variable with its key and inline definition.
 #[derive(Debug, Deserialize)]
 struct VariableItemReaderV1 {
-    /// Plain-string variable identifier.
-    #[serde(deserialize_with = "deserialize_variable_key")]
-    key: VariableKey,
+    /// Plain-string variable identifier, validated during conversion.
+    key: String,
     /// Tagged definition; each variant rejects unknown fields.
     #[serde(flatten)]
     definition: ItemDefinitionReaderV1,
@@ -26,25 +26,25 @@ pub(crate) struct VariableDefinitionReaderV1 {
 impl<'de> Deserialize<'de> for VariableDefinitionReaderV1 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let items = deserialize_objects::<VariableItemReaderV1, D>(deserializer)?;
-        let mut keys = BTreeSet::new();
-        for item in &items {
-            if !keys.insert(&item.key) {
-                return Err(D::Error::custom(format!(
-                    "duplicate variable key `{}`",
-                    item.key
-                )));
-            }
-        }
         Ok(Self { items })
     }
 }
 
-impl From<VariableDefinitionReaderV1> for VariableObjectDefinition {
-    fn from(variables: VariableDefinitionReaderV1) -> Self {
+impl TryFrom<VariableDefinitionReaderV1> for VariableObjectDefinition {
+    type Error = Message;
+
+    fn try_from(variables: VariableDefinitionReaderV1) -> Result<Self, Self::Error> {
+        ensure_unique_keys(
+            variables.items.iter().map(|item| &item.key),
+            "files_duplicate_variable_key",
+        )?;
         let mut builder = Self::builder();
         for item in variables.items {
-            builder.insert(item.key, ItemDefinitionType::from(item.definition));
+            builder.insert(
+                VariableKey::new(item.key.into())?,
+                ItemDefinitionType::try_from(item.definition)?,
+            );
         }
-        builder.finish()
+        Ok(builder.finish())
     }
 }

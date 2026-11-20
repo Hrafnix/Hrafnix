@@ -242,10 +242,8 @@ fn global_settings_are_required_and_validated() {
         json!([null]),
         json!([{}]),
         json!([["g_label", "string", {}, "value"]]),
-        json!([item, item]),
     ];
     for (field, value) in [
-        ("key", json!("p_label")),
         ("key", json!(1)),
         ("type", json!(0)),
         ("type", json!("unknown")),
@@ -287,6 +285,22 @@ fn global_settings_are_required_and_validated() {
             "{document}",
         );
         assert!(error.extra_detail().is_some(), "{document}");
+    }
+    let mut invalid_key = item.clone();
+    *invalid_key.get_mut("key").unwrap() = json!("p_label");
+    for (settings, message_key) in [
+        (json!([item, item]), "files_duplicate_global_key"),
+        (json!([invalid_key]), "datastore_key_invalid_prefix"),
+    ] {
+        let mut invalid = document.clone();
+        *invalid.pointer_mut("/model/global_settings").unwrap() = settings;
+        fs::write(&path, serde_json::to_string(&invalid).unwrap()).unwrap();
+        let error = read_model_file(&path).unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            message_key,
+            "{invalid}",
+        );
     }
 }
 

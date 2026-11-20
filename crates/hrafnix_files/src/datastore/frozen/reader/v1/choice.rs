@@ -1,6 +1,7 @@
 use crate::common::deserialize::deserialize_object;
 use crate::datastore::definition::reader::v1::choice::ChoiceDefinitionReaderV1;
 use hrafnix_datastore::frozen::ChoiceFrozen;
+use hrafnix_message::message::Message;
 use serde::Deserialize;
 
 /// Version-1 frozen choice definition and unevaluated expression.
@@ -14,8 +15,13 @@ pub(crate) struct ChoiceReaderV1 {
     value: String,
 }
 
-impl From<ChoiceReaderV1> for ChoiceFrozen {
-    fn from(choice: ChoiceReaderV1) -> Self {
-        ChoiceFrozen::new_with_value(choice.definition.into(), choice.value)
+impl TryFrom<ChoiceReaderV1> for ChoiceFrozen {
+    type Error = Message;
+
+    fn try_from(choice: ChoiceReaderV1) -> Result<Self, Self::Error> {
+        Ok(ChoiceFrozen::new_with_value(
+            choice.definition.try_into()?,
+            choice.value,
+        ))
     }
 }

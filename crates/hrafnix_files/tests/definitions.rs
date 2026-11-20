@@ -553,6 +553,7 @@ fn definition_arrays_validate_keys_shapes_and_all_item_fields() {
             let mut missing = base.clone();
             missing[root].as_object_mut().unwrap().remove(field);
             let mut invalid_documents = vec![missing];
+            let mut invalid_key_documents = Vec::new();
             for value in [
                 Value::Null,
                 json!({}),
@@ -584,17 +585,26 @@ fn definition_arrays_validate_keys_shapes_and_all_item_fields() {
                 let mut unknown = valid.clone();
                 unknown[root][field][0]["unexpected"] = json!(true);
                 invalid_documents.push(unknown);
-                for invalid_key in [
-                    json!(""),
-                    json!("plain"),
-                    json!(format!("{other_prefix}_item")),
-                    json!(format!("{prefix}_invalid key")),
-                    json!(1),
-                    json!({"key": format!("{prefix}_item")}),
-                ] {
+                for invalid_key in [json!(1), json!({"key": format!("{prefix}_item")})] {
                     let mut document = valid.clone();
                     document[root][field][0]["key"] = invalid_key;
                     invalid_documents.push(document);
+                }
+                for (invalid_key, message_key) in [
+                    (String::new(), "datastore_key_empty"),
+                    ("plain".to_owned(), "datastore_key_invalid_prefix"),
+                    (
+                        format!("{other_prefix}_item"),
+                        "datastore_key_invalid_prefix",
+                    ),
+                    (
+                        format!("{prefix}_invalid key"),
+                        "datastore_key_invalid_character",
+                    ),
+                ] {
+                    let mut document = valid.clone();
+                    document[root][field][0]["key"] = json!(invalid_key);
+                    invalid_key_documents.push((document, message_key));
                 }
                 for invalid_type in [json!("unknown"), json!({"string": null}), json!(index)] {
                     let mut document = valid.clone();
@@ -617,6 +627,15 @@ fn definition_arrays_validate_keys_shapes_and_all_item_fields() {
                     "files_json_data"
                 );
                 assert!(error.extra_detail().is_some());
+            }
+            for (document, message_key) in invalid_key_documents {
+                fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+                let error = read(root, &path).expect_err(&document.to_string());
+                assert_eq!(
+                    error.translate_data().message_key().as_str(),
+                    message_key,
+                    "{document}"
+                );
             }
         }
     }
@@ -668,7 +687,12 @@ fn duplicate_definition_keys_and_json_fields_are_rejected() {
             let item = format!(
                 r#"{{"key":"{prefix}_item","type":"string","description":"","default":""}}"#
             );
-            let mut invalid_arrays = vec![format!("[{item},{item}]")];
+            let duplicate_key_message = if prefix == "p" {
+                "files_duplicate_parameter_key"
+            } else {
+                "files_duplicate_variable_key"
+            };
+            let mut invalid_arrays = vec![(format!("[{item},{item}]"), duplicate_key_message)];
             for (name, value) in [
                 ("key", format!("\"{prefix}_item\"")),
                 ("type", "\"string\"".to_owned()),
@@ -680,29 +704,36 @@ fn duplicate_definition_keys_and_json_fields_are_rejected() {
                     &format!("\"{name}\":{value},\"{name}\":{value}"),
                 );
                 assert_ne!(duplicate, item);
-                invalid_arrays.push(format!("[{duplicate}]"));
+                invalid_arrays.push((format!("[{duplicate}]"), "files_json_data"));
             }
             let contents = common::contents(root);
             let mut invalid_bodies: Vec<_> = invalid_arrays
                 .iter()
-                .map(|array| {
-                    contents.replace(
-                        &format!("\"{field}\": []"),
-                        &format!("\"{field}\": {array}"),
+                .map(|(array, message_key)| {
+                    (
+                        contents.replace(
+                            &format!("\"{field}\": []"),
+                            &format!("\"{field}\": {array}"),
+                        ),
+                        *message_key,
                     )
                 })
                 .collect();
-            invalid_bodies.push(contents.replace(
-                &format!("\"{field}\": []"),
-                &format!("\"{field}\": [], \"{field}\": []"),
+            invalid_bodies.push((
+                contents.replace(
+                    &format!("\"{field}\": []"),
+                    &format!("\"{field}\": [], \"{field}\": []"),
+                ),
+                "files_json_data",
             ));
-            for body in invalid_bodies {
+            for (body, message_key) in invalid_bodies {
                 let document = format!("{{\"file-version\":\"1\",\"{root}\":{body}}}");
                 fs::write(&path, &document).unwrap();
                 let error = read(root, &path).expect_err(&document);
                 assert_eq!(
                     error.translate_data().message_key().as_str(),
-                    "files_json_data"
+                    message_key,
+                    "{document}"
                 );
             }
         }

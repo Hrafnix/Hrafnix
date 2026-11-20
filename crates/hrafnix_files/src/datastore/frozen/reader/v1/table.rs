@@ -1,6 +1,7 @@
 use crate::common::deserialize::deserialize_object;
 use crate::datastore::definition::reader::v1::table::TableDefinitionReaderV1;
 use hrafnix_datastore::frozen::TableFrozen;
+use hrafnix_message::message::Message;
 use hrafnix_shareable_string::ShareableString;
 use serde::Deserialize;
 
@@ -17,13 +18,19 @@ pub(crate) struct TableReaderV1 {
     rows: Vec<Vec<String>>,
 }
 
-impl From<TableReaderV1> for TableFrozen {
-    fn from(table: TableReaderV1) -> Self {
+impl TryFrom<TableReaderV1> for TableFrozen {
+    type Error = Message;
+
+    fn try_from(table: TableReaderV1) -> Result<Self, Self::Error> {
         let rows = table
             .rows
             .into_iter()
             .map(|row| row.into_iter().map(ShareableString::from).collect())
             .collect();
-        TableFrozen::new_from_rows_with_parameter(table.definition.into(), rows, table.parameter)
+        Ok(TableFrozen::new_from_rows_with_parameter(
+            table.definition.try_into()?,
+            rows,
+            table.parameter,
+        ))
     }
 }

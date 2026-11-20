@@ -1,4 +1,5 @@
-use crate::common::deserialize::{deserialize_entries, deserialize_object, deserialize_store_key};
+use crate::common::deserialize::{deserialize_entries, deserialize_object};
+use crate::common::validate::unique_entries;
 use crate::datastore::definition::reader::v1::map::MapDefinitionReaderV1;
 use hrafnix_datastore::definition::{MapDefinition, MapItemDefinition};
 use hrafnix_datastore::frozen::{
@@ -9,9 +10,7 @@ use hrafnix_datastore::frozen::{
 use hrafnix_keys::StoreKey;
 use hrafnix_message::message::Message;
 use hrafnix_shareable_string::ShareableString;
-use serde::de::value::StringDeserializer;
 use serde::{Deserialize, Deserializer};
-use std::collections::BTreeMap;
 
 /// Untagged map item value whose type is supplied by the map definition.
 #[derive(Debug, Deserialize)]
@@ -115,22 +114,16 @@ fn into_rows(rows: Vec<Vec<String>>) -> Vec<Vec<ShareableString>> {
         .collect()
 }
 
-/// Map entry values with validated keys and duplicate-key rejection.
+/// Map entry values in file order; keys are validated during conversion.
 #[derive(Debug)]
 struct MapValueReaderV1 {
     /// Entry keys mapped to item values in definition order.
-    entries: BTreeMap<StoreKey, Vec<MapItemValueReaderV1>>,
+    entries: Vec<(String, Vec<MapItemValueReaderV1>)>,
 }
 
 impl<'de> Deserialize<'de> for MapValueReaderV1 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let entries = deserialize_entries::<Vec<MapItemValueReaderV1>, D>(deserializer)?
-            .into_iter()
-            .map(|(key, values)| {
-                let key = deserialize_store_key(StringDeserializer::<D::Error>::new(key))?;
-                Ok((key, values))
-            })
-            .collect::<Result<_, D::Error>>()?;
+        let entries = deserialize_entries(deserializer)?;
         Ok(Self { entries })
     }
 }
@@ -150,10 +143,14 @@ impl TryFrom<MapReaderV1> for MapFrozen {
     type Error = Message;
 
     fn try_from(map: MapReaderV1) -> Result<Self, Self::Error> {
-        let definition: MapDefinition = map.definition.into();
-        let items = map
+        let definition: MapDefinition = map.definition.try_into()?;
+        let entries = map
             .value
             .entries
+            .into_iter()
+            .map(|(key, values)| Ok((StoreKey::new(key.into())?, values)))
+            .collect::<Result<Vec<_>, Message>>()?;
+        let items = unique_entries(entries, "files_duplicate_map_entry_key")?
             .into_iter()
             .map(|(entry_key, values)| {
                 if values.len() != definition.count() {

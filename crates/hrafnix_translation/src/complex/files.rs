@@ -813,4 +813,136 @@ pub(crate) fn add_files_translation_map(translation_map: &mut SharedStringTransl
             ),
         ]),
     );
+    translation_map.set_translation_key(
+        "files_duplicate_component_id",
+        HashMap::from([
+            ("en", "Duplicate component ID '%{key}'"),
+            ("zh", "组件 ID“%{key}”重复"),
+            ("de", "Doppelte Komponenten-ID '%{key}'"),
+            ("es", "ID de componente duplicado '%{key}'"),
+            ("fr", "Identifiant de composant en double '%{key}'"),
+            ("ja", "コンポーネント ID '%{key}' が重複しています"),
+            ("ko", "구성 요소 ID '%{key}'이(가) 중복되었습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_duplicate_parameter_key",
+        HashMap::from([
+            ("en", "Duplicate parameter key '%{key}'"),
+            ("zh", "参数键“%{key}”重复"),
+            ("de", "Doppelter Parameterschlüssel '%{key}'"),
+            ("es", "Clave de parámetro duplicada '%{key}'"),
+            ("fr", "Clé de paramètre en double '%{key}'"),
+            ("ja", "パラメーターキー '%{key}' が重複しています"),
+            ("ko", "매개변수 키 '%{key}'이(가) 중복되었습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_duplicate_global_key",
+        HashMap::from([
+            ("en", "Duplicate global key '%{key}'"),
+            ("zh", "全局键“%{key}”重复"),
+            ("de", "Doppelter globaler Schlüssel '%{key}'"),
+            ("es", "Clave global duplicada '%{key}'"),
+            ("fr", "Clé globale en double '%{key}'"),
+            ("ja", "グローバルキー '%{key}' が重複しています"),
+            ("ko", "전역 키 '%{key}'이(가) 중복되었습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_duplicate_variable_key",
+        HashMap::from([
+            ("en", "Duplicate variable key '%{key}'"),
+            ("zh", "变量键“%{key}”重复"),
+            ("de", "Doppelter Variablenschlüssel '%{key}'"),
+            ("es", "Clave de variable duplicada '%{key}'"),
+            ("fr", "Clé de variable en double '%{key}'"),
+            ("ja", "変数キー '%{key}' が重複しています"),
+            ("ko", "변수 키 '%{key}'이(가) 중복되었습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_duplicate_column_key",
+        HashMap::from([
+            ("en", "Duplicate column key '%{key}'"),
+            ("zh", "列键“%{key}”重复"),
+            ("de", "Doppelter Spaltenschlüssel '%{key}'"),
+            ("es", "Clave de columna duplicada '%{key}'"),
+            ("fr", "Clé de colonne en double '%{key}'"),
+            ("ja", "列キー '%{key}' が重複しています"),
+            ("ko", "열 키 '%{key}'이(가) 중복되었습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_duplicate_map_item_key",
+        HashMap::from([
+            ("en", "Duplicate map item key '%{key}'"),
+            ("zh", "映射项键“%{key}”重复"),
+            ("de", "Doppelter Map-Elementschlüssel '%{key}'"),
+            ("es", "Clave de elemento de mapa duplicada '%{key}'"),
+            ("fr", "Clé d’élément de map en double '%{key}'"),
+            ("ja", "マップ項目キー '%{key}' が重複しています"),
+            ("ko", "맵 항목 키 '%{key}'이(가) 중복되었습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_duplicate_map_entry_key",
+        HashMap::from([
+            ("en", "Duplicate map entry key '%{key}'"),
+            ("zh", "映射条目键“%{key}”重复"),
+            ("de", "Doppelter Map-Eintragsschlüssel '%{key}'"),
+            ("es", "Clave de entrada de mapa duplicada '%{key}'"),
+            ("fr", "Clé d’entrée de map en double '%{key}'"),
+            ("ja", "マップエントリキー '%{key}' が重複しています"),
+            ("ko", "맵 엔트리 키 '%{key}'이(가) 중복되었습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_duplicate_translation_key",
+        HashMap::from([
+            ("en", "Duplicate translation key '%{key}'"),
+            ("zh", "翻译键“%{key}”重复"),
+            ("de", "Doppelter Übersetzungsschlüssel '%{key}'"),
+            ("es", "Clave de traducción duplicada '%{key}'"),
+            ("fr", "Clé de traduction en double '%{key}'"),
+            ("ja", "翻訳キー '%{key}' が重複しています"),
+            ("ko", "번역 키 '%{key}'이(가) 중복되었습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_duplicate_translation_language",
+        HashMap::from([
+            ("en", "Duplicate translation language '%{key}'"),
+            ("zh", "翻译语言“%{key}”重复"),
+            ("de", "Doppelte Übersetzungssprache '%{key}'"),
+            ("es", "Idioma de traducción duplicado '%{key}'"),
+            ("fr", "Langue de traduction en double '%{key}'"),
+            ("ja", "翻訳言語 '%{key}' が重複しています"),
+            ("ko", "번역 언어 '%{key}'이(가) 중복되었습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_table_default_row_width",
+        HashMap::from([
+            ("en", "Table default row %{row} has %{values} values but the table has %{columns} columns"),
+            ("zh", "表格默认第 %{row} 行有 %{values} 个值，但表格有 %{columns} 列"),
+            ("de", "Standardzeile %{row} der Tabelle hat %{values} Werte, die Tabelle hat aber %{columns} Spalten"),
+            ("es", "La fila predeterminada %{row} de la tabla tiene %{values} valores, pero la tabla tiene %{columns} columnas"),
+            ("fr", "La ligne par défaut %{row} du tableau contient %{values} valeurs, mais le tableau a %{columns} colonnes"),
+            ("ja", "テーブルの既定行 %{row} には %{values} 個の値がありますが、テーブルの列数は %{columns} です"),
+            ("ko", "테이블 기본 행 %{row}에 값이 %{values}개 있지만 테이블의 열은 %{columns}개입니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_table_unit_count_mismatch",
+        HashMap::from([
+            ("en", "Table unit count %{units} does not match its column count %{columns}"),
+            ("zh", "表格单位数量 %{units} 与列数 %{columns} 不匹配"),
+            ("de", "Die Anzahl der Tabelleneinheiten %{units} stimmt nicht mit der Spaltenanzahl %{columns} überein"),
+            ("es", "El número de unidades de la tabla, %{units}, no coincide con su número de columnas, %{columns}"),
+            ("fr", "Le nombre d’unités du tableau (%{units}) ne correspond pas à son nombre de colonnes (%{columns})"),
+            ("ja", "テーブルの単位数 %{units} が列数 %{columns} と一致しません"),
+            ("ko", "테이블 단위 수 %{units}이(가) 열 수 %{columns}와(과) 일치하지 않습니다"),
+        ]),
+    );
 }

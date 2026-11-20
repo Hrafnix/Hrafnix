@@ -1,8 +1,6 @@
-use hrafnix_keys::{ComponentKey, GlobalKey, ParameterKey, PortKey, StoreKey, VariableKey};
 use serde::de::value::{MapAccessDeserializer, StrDeserializer, StringDeserializer};
 use serde::de::{DeserializeSeed, Error, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use std::collections::{BTreeMap, BTreeSet, btree_map::Entry};
 use std::fmt;
 use std::marker::PhantomData;
 
@@ -44,41 +42,11 @@ pub(crate) fn deserialize_objects<'de, T: Deserialize<'de>, D: Deserializer<'de>
         .map(|objects| objects.into_iter().map(|object| object.document).collect())
 }
 
-/// An array element identified by a key that must be unique within its array.
-pub(crate) trait UniqueKey {
-    /// Human-readable key name used in duplicate-key errors.
-    const KEY_NAME: &'static str;
-
-    /// Returns the element's identifying key.
-    fn unique_key(&self) -> &StoreKey;
-}
-
-/// Deserializes an array of objects, rejecting positional arrays and duplicate keys.
-pub(crate) fn deserialize_unique_objects<
-    'de,
-    T: Deserialize<'de> + UniqueKey,
-    D: Deserializer<'de>,
->(
-    deserializer: D,
-) -> Result<Vec<T>, D::Error> {
-    let items = deserialize_objects::<T, D>(deserializer)?;
-    let mut keys = BTreeSet::new();
-    for item in &items {
-        let key = item.unique_key();
-        if !keys.insert(key) {
-            return Err(D::Error::custom(format!(
-                "duplicate {} `{key}`",
-                T::KEY_NAME
-            )));
-        }
-    }
-    Ok(items)
-}
-
-/// Deserializes an object without silently overwriting duplicate entries.
+/// Deserializes an object's entries in file order, keeping repeated keys so that
+/// conversion can reject them with a localized diagnostic.
 pub(crate) fn deserialize_entries<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
     deserializer: D,
-) -> Result<BTreeMap<String, T>, D::Error> {
+) -> Result<Vec<(String, T)>, D::Error> {
     deserializer.deserialize_map(EntriesVisitor { value: PhantomData })
 }
 
@@ -89,84 +57,6 @@ pub(crate) fn deserialize_unit_variant<'de, T: Deserialize<'de>, D: Deserializer
 ) -> Result<T, D::Error> {
     deserializer.deserialize_str(UnitVariantVisitor {
         variant: PhantomData,
-    })
-}
-
-/// Deserializes a plain string through the shared component-key validator.
-pub(crate) fn deserialize_component_key<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<ComponentKey, D::Error> {
-    let key = String::deserialize(deserializer)?;
-    ComponentKey::new(key.as_str().into()).map_err(|error| {
-        serde::de::Error::custom(format!(
-            "invalid component key `{key}`: {}",
-            error.translate_data().message_key().as_str(),
-        ))
-    })
-}
-
-/// Deserializes a plain string through the shared port-key validator.
-pub(crate) fn deserialize_port_key<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<PortKey, D::Error> {
-    let key = String::deserialize(deserializer)?;
-    PortKey::new(key.as_str().into()).map_err(|error| {
-        serde::de::Error::custom(format!(
-            "invalid port key `{key}`: {}",
-            error.translate_data().message_key().as_str(),
-        ))
-    })
-}
-
-/// Deserializes a plain string through the shared store-key validator.
-pub(crate) fn deserialize_store_key<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<StoreKey, D::Error> {
-    let key = String::deserialize(deserializer)?;
-    StoreKey::new(key.as_str().into()).map_err(|error| {
-        serde::de::Error::custom(format!(
-            "invalid store key `{key}`: {}",
-            error.translate_data().message_key().as_str(),
-        ))
-    })
-}
-
-/// Deserializes a plain string through the shared global-key validator.
-pub(crate) fn deserialize_global_key<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<GlobalKey, D::Error> {
-    let key = String::deserialize(deserializer)?;
-    GlobalKey::new(key.as_str().into()).map_err(|error| {
-        serde::de::Error::custom(format!(
-            "invalid global key `{key}`: {}",
-            error.translate_data().message_key().as_str(),
-        ))
-    })
-}
-
-/// Deserializes a plain string through the shared parameter-key validator.
-pub(crate) fn deserialize_parameter_key<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<ParameterKey, D::Error> {
-    let key = String::deserialize(deserializer)?;
-    ParameterKey::new(key.as_str().into()).map_err(|error| {
-        serde::de::Error::custom(format!(
-            "invalid parameter key `{key}`: {}",
-            error.translate_data().message_key().as_str(),
-        ))
-    })
-}
-
-/// Deserializes a plain string through the shared variable-key validator.
-pub(crate) fn deserialize_variable_key<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<VariableKey, D::Error> {
-    let key = String::deserialize(deserializer)?;
-    VariableKey::new(key.as_str().into()).map_err(|error| {
-        serde::de::Error::custom(format!(
-            "invalid variable key `{key}`: {}",
-            error.translate_data().message_key().as_str(),
-        ))
     })
 }
 
@@ -287,30 +177,23 @@ impl<'de, T: Deserialize<'de>> Visitor<'de> for ObjectVisitor<T> {
     }
 }
 
-/// Accepts only objects whose keys occur once.
+/// Accepts only objects and keeps every entry in file order.
 struct EntriesVisitor<T> {
     /// The type of each entry's value.
     value: PhantomData<T>,
 }
 
 impl<'de, T: Deserialize<'de>> Visitor<'de> for EntriesVisitor<T> {
-    type Value = BTreeMap<String, T>;
+    type Value = Vec<(String, T)>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("a JSON object with unique keys")
+        formatter.write_str("a JSON object")
     }
 
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
-        let mut entries = BTreeMap::new();
-        while let Some(key) = map.next_key::<String>()? {
-            match entries.entry(key) {
-                Entry::Vacant(entry) => {
-                    entry.insert(map.next_value()?);
-                }
-                Entry::Occupied(entry) => {
-                    return Err(A::Error::custom(format!("duplicate key `{}`", entry.key())));
-                }
-            }
+        let mut entries = Vec::new();
+        while let Some(entry) = map.next_entry()? {
+            entries.push(entry);
         }
         Ok(entries)
     }

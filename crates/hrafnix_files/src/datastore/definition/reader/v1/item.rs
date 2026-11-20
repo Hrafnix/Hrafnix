@@ -9,6 +9,7 @@ use super::{
 };
 use crate::common::deserialize::StringTagDeserializer;
 use hrafnix_datastore::definition::ItemDefinitionType;
+use hrafnix_message::message::Message;
 use serde::{Deserialize, Deserializer};
 
 /// Version-1 tagged item definition, flattened alongside its typed key.
@@ -51,23 +52,25 @@ impl<'de> Deserialize<'de> for ItemDefinitionReaderV1 {
     }
 }
 
-impl From<ItemDefinitionReaderV1> for ItemDefinitionType {
-    fn from(definition: ItemDefinitionReaderV1) -> Self {
-        match definition {
+impl TryFrom<ItemDefinitionReaderV1> for ItemDefinitionType {
+    type Error = Message;
+
+    fn try_from(definition: ItemDefinitionReaderV1) -> Result<Self, Self::Error> {
+        Ok(match definition {
             ItemDefinitionReaderV1::Boolean(item) => Self::Boolean(item.into()),
-            ItemDefinitionReaderV1::Choice(item) => Self::Choice(item.into()),
+            ItemDefinitionReaderV1::Choice(item) => Self::Choice(item.try_into()?),
             ItemDefinitionReaderV1::File(item) => Self::File(item.into()),
             ItemDefinitionReaderV1::Folder(item) => Self::Folder(item.into()),
             ItemDefinitionReaderV1::Integer(item) => Self::Integer(item.into()),
-            ItemDefinitionReaderV1::Map(item) => Self::Map(item.into()),
+            ItemDefinitionReaderV1::Map(item) => Self::Map(item.try_into()?),
             ItemDefinitionReaderV1::Number(item) => Self::Number(item.into()),
             ItemDefinitionReaderV1::NumberWithUnits(item) => Self::NumberWithUnits(item.into()),
             ItemDefinitionReaderV1::String(item) => Self::String(item.into()),
-            ItemDefinitionReaderV1::Table(item) => Self::Table(item.into()),
-            ItemDefinitionReaderV1::TableWithUnits(item) => Self::TableWithUnits(item.into()),
+            ItemDefinitionReaderV1::Table(item) => Self::Table(item.try_into()?),
+            ItemDefinitionReaderV1::TableWithUnits(item) => Self::TableWithUnits(item.try_into()?),
             ItemDefinitionReaderV1::Unit(item) => Self::Unit(item.into()),
             ItemDefinitionReaderV1::Tab(item) => Self::Tab(item.into()),
             ItemDefinitionReaderV1::Separator(item) => Self::Separator(item.into()),
-        }
+        })
     }
 }

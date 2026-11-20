@@ -6,3 +6,8 @@ pub(crate) mod error;
 pub(crate) mod file;
 /// Shared Serde serialization helpers.
 pub(crate) mod serialize;
+/// Test helpers that read documents through parsing and conversion.
+#[cfg(test)]
+pub(crate) mod test_support;
+/// Localized post-parse validation shared by readers and writers.
+pub(crate) mod validate;

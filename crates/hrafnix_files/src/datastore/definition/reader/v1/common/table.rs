@@ -1,22 +1,5 @@
 use hrafnix_datastore::definition::TableColumnRequirement;
 use serde::Deserialize;
-use serde::de::Error;
-
-/// Rejects default rows whose width differs from the table's column count.
-pub(crate) fn validate_default_rows<E: Error>(
-    rows: &[Vec<String>],
-    column_count: usize,
-) -> Result<(), E> {
-    rows.iter()
-        .enumerate()
-        .find(|(_, row)| row.len() != column_count)
-        .map_or(Ok(()), |(index, row)| {
-            Err(E::custom(format!(
-                "default row {index} has {} values but the table has {column_count} columns",
-                row.len()
-            )))
-        })
-}
 
 /// Adjacent-row requirements accepted by version-1 tables.
 #[derive(Debug, Deserialize)]

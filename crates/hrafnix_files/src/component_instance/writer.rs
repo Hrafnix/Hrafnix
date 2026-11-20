@@ -1,12 +1,13 @@
 use crate::common::serialize::{serialize_component_key, serialize_shareable_string};
+use crate::common::validate::ensure_unique_keys;
 use crate::component_instance::data::{ComponentInstance, ComponentSource, PackageReference};
 use crate::frozen_parameter::writer::ParameterFrozenWriter;
 use crate::graphics::writer::PositionWriter;
 use crate::metadata_gui::writer::GuiMetadataWriter;
 use hrafnix_keys::ComponentKey;
+use hrafnix_message::message::Message;
 use hrafnix_shareable_string::ShareableString;
-use serde::{Serialize, Serializer, ser::Error};
-use std::collections::BTreeSet;
+use serde::Serialize;
 
 /// Current JSON representation of a saved component instance.
 #[derive(Debug, Serialize)]
@@ -36,21 +37,12 @@ impl From<&ComponentInstance> for ComponentInstanceWriter {
     }
 }
 
-/// Serializes instances without emitting duplicate component identifiers.
-pub(crate) fn serialize_component_instances<S: Serializer>(
-    instances: &[ComponentInstanceWriter],
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    let mut ids = BTreeSet::new();
-    for instance in instances {
-        if !ids.insert(&instance.id) {
-            return Err(S::Error::custom(format!(
-                "duplicate component id `{}`",
-                instance.id
-            )));
-        }
-    }
-    instances.serialize(serializer)
+/// Rejects instances that would be saved with repeated component identifiers.
+pub(crate) fn ensure_unique_component_ids(instances: &[ComponentInstance]) -> Result<(), Message> {
+    ensure_unique_keys(
+        instances.iter().map(|instance| &instance.id),
+        "files_duplicate_component_id",
+    )
 }
 
 /// Current JSON representation of an unresolved source reference.

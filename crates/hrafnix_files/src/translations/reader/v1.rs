@@ -1,12 +1,14 @@
 use crate::common::deserialize::deserialize_entries;
+use crate::common::validate::unique_entries;
 use crate::translations::data::TranslationsFile;
+use hrafnix_message::message::Message;
 use serde::Deserialize;
-use std::collections::BTreeMap;
 
 /// The version 1 JSON representation of the `translations` entry.
 ///
-/// Every field is required. Unknown fields and duplicate translation keys or
-/// language codes are rejected so nothing is silently dropped when writing back.
+/// Every field is required. Unknown fields are rejected during parsing, and
+/// duplicate translation keys or language codes during conversion, so nothing is
+/// silently dropped when writing back.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct TranslationsReaderV1 {
@@ -14,52 +16,52 @@ pub(crate) struct TranslationsReaderV1 {
     language: String,
     /// Original text mapped to target languages and their translations.
     #[serde(deserialize_with = "deserialize_entries")]
-    translations: BTreeMap<String, LanguageTranslationsReaderV1>,
+    translations: Vec<(String, LanguageTranslationsReaderV1)>,
 }
 
 /// Target language codes mapped to translated text for one translation key.
 #[derive(Debug, Deserialize)]
 #[serde(transparent)]
 struct LanguageTranslationsReaderV1 {
-    /// Translations with unique language codes and string values.
+    /// Translations from language codes to string values, in file order.
     #[serde(deserialize_with = "deserialize_entries")]
-    translations: BTreeMap<String, String>,
+    translations: Vec<(String, String)>,
 }
 
-impl From<TranslationsReaderV1> for TranslationsFile {
-    fn from(translations: TranslationsReaderV1) -> Self {
-        Self {
-            language: translations.language.into(),
-            translations: translations
-                .translations
+impl TryFrom<TranslationsReaderV1> for TranslationsFile {
+    type Error = Message;
+
+    fn try_from(translations: TranslationsReaderV1) -> Result<Self, Self::Error> {
+        let entries = unique_entries(translations.translations, "files_duplicate_translation_key")?
+            .into_iter()
+            .map(|(key, languages)| {
+                let languages = unique_entries(
+                    languages.translations,
+                    "files_duplicate_translation_language",
+                )?
                 .into_iter()
-                .map(|(key, languages)| {
-                    (
-                        key.into(),
-                        languages
-                            .translations
-                            .into_iter()
-                            .map(|(language, value)| (language.into(), value.into()))
-                            .collect(),
-                    )
-                })
-                .collect(),
-        }
+                .map(|(language, value)| (language.into(), value.into()))
+                .collect();
+                Ok((key.into(), languages))
+            })
+            .collect::<Result<_, Message>>()?;
+        Ok(Self {
+            language: translations.language.into(),
+            translations: entries,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::TranslationsReaderV1;
-    use crate::common::deserialize::RootObject;
+    use crate::common::test_support::{ReadError, read_str, read_value};
     use crate::translations::data::TranslationsFile;
     use serde_json::{Value, json};
 
     /// Reads translations through their object-only envelope.
-    fn read(value: &Value) -> Result<TranslationsFile, serde_json::Error> {
-        let reader: RootObject<TranslationsReaderV1> =
-            serde_json::from_str(&serde_json::to_string(value)?)?;
-        Ok(reader.document.into())
+    fn read(value: &Value) -> Result<TranslationsFile, ReadError> {
+        read_value::<TranslationsReaderV1, _>(value)
     }
 
     /// Creates translations with an explicit source language and translation table.
@@ -142,7 +144,7 @@ mod tests {
                 } else {
                     value["translations"]["Target temperature"]["es"] = invalid.clone();
                 }
-                let error = read(&value).unwrap_err();
+                let error = read(&value).unwrap_err().json();
                 assert!(error.is_data(), "{value}: {error}");
                 assert!(error.line() > 0);
                 assert!(error.column() > 0);
@@ -179,23 +181,57 @@ mod tests {
         for json in [
             r#"{"language":"en","language":"es","translations":{}}"#,
             r#"{"language":"en","translations":{},"translations":{}}"#,
-            r#"{"language":"en","translations":{"Target temperature":{},"Target temperature":{}}}"#,
-            r#"{"language":"en","translations":{"key":{},"\u006bey":{}}}"#,
-            r#"{"language":"en","translations":{"Target temperature":{"es":"a","es":"b"}}}"#,
-            r#"{"language":"en","translations":{"key":{"es":"a","\u0065s":"b"}}}"#,
         ] {
-            let error = serde_json::from_str::<RootObject<TranslationsReaderV1>>(json).unwrap_err();
+            let error = read_str::<TranslationsReaderV1, TranslationsFile>(json)
+                .unwrap_err()
+                .json();
             assert!(error.is_data(), "{json}: {error}");
             assert!(error.to_string().contains("duplicate"), "{json}: {error}");
+        }
+        for (json, key, diagnostic) in [
+            (
+                r#"{"language":"en","translations":{"Target temperature":{},"Target temperature":{}}}"#,
+                "Target temperature",
+                "files_duplicate_translation_key",
+            ),
+            (
+                r#"{"language":"en","translations":{"key":{},"\u006bey":{}}}"#,
+                "key",
+                "files_duplicate_translation_key",
+            ),
+            (
+                r#"{"language":"en","translations":{"Target temperature":{"es":"a","es":"b"}}}"#,
+                "es",
+                "files_duplicate_translation_language",
+            ),
+            (
+                r#"{"language":"en","translations":{"key":{"es":"a","\u0065s":"b"}}}"#,
+                "es",
+                "files_duplicate_translation_language",
+            ),
+        ] {
+            let error = read_str::<TranslationsReaderV1, TranslationsFile>(json)
+                .unwrap_err()
+                .message();
+            assert_eq!(
+                error.translate_data().message_key().as_str(),
+                diagnostic,
+                "{json}"
+            );
+            assert_eq!(
+                error.translate_data().message_params()["key"].as_str(),
+                key,
+                "{json}"
+            );
         }
     }
 
     #[test]
     fn source_language_can_follow_the_translation_table() {
-        let reader: RootObject<TranslationsReaderV1> =
-            serde_json::from_str(r#"{"translations":{"key":{"fr":"texte"}},"language":"en"}"#)
-                .unwrap();
-        let translations = TranslationsFile::from(reader.document);
+        let translations = read_str::<TranslationsReaderV1, TranslationsFile>(
+            r#"{"translations":{"key":{"fr":"texte"}},"language":"en"}"#,
+        )
+        .unwrap();
         assert_eq!(translations.language.as_str(), "en");
         assert_eq!(translations.translations["key"]["fr"].as_str(), "texte");
     }

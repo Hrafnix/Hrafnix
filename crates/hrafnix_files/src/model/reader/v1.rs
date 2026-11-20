@@ -1,6 +1,6 @@
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
 use crate::component_instance::reader::v1::{
-    ComponentInstanceReaderV1, deserialize_component_instances,
+    ComponentInstanceReaderV1, convert_component_instances,
 };
 use crate::connection::reader::v1::ConnectionReaderV1;
 use crate::decoration_background::reader::v1::BackgroundDecorationReaderV1;
@@ -38,7 +38,7 @@ pub(crate) struct ModelReaderV1 {
     /// Ordered global settings with embedded definitions and frozen values.
     global_settings: GlobalFrozenReaderV1,
     /// Ordered component instances with unique identifiers.
-    #[serde(deserialize_with = "deserialize_component_instances")]
+    #[serde(deserialize_with = "deserialize_objects")]
     components: Vec<ComponentInstanceReaderV1>,
     /// Connections between component ports within the model.
     #[serde(deserialize_with = "deserialize_objects")]
@@ -54,8 +54,8 @@ impl TryFrom<ModelReaderV1> for ModelFile {
     fn try_from(model: ModelReaderV1) -> Result<Self, Self::Error> {
         Ok(Self {
             metadata: model.metadata.into(),
-            parameter_definition: model.parameter_definition.into(),
-            variable_definition: model.variable_definition.into(),
+            parameter_definition: model.parameter_definition.try_into()?,
+            variable_definition: model.variable_definition.try_into()?,
             foreground_decorations: model
                 .foreground_decorations
                 .into_iter()
@@ -67,13 +67,13 @@ impl TryFrom<ModelReaderV1> for ModelFile {
                 .map(Into::into)
                 .collect(),
             global_settings: model.global_settings.try_into()?,
-            components: model
-                .components
+            components: convert_component_instances(model.components)?,
+            translations: model.translations.try_into()?,
+            connections: model
+                .connections
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<_, _>>()?,
-            translations: model.translations.into(),
-            connections: model.connections.into_iter().map(Into::into).collect(),
         })
     }
 }

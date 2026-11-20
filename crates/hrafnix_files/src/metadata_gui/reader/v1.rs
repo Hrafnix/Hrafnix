@@ -1,11 +1,12 @@
 use crate::common::deserialize::{
-    deserialize_object, deserialize_objects, deserialize_port_key, deserialize_unit_variant,
+    deserialize_object, deserialize_objects, deserialize_unit_variant,
 };
 use crate::graphics::data::Dimension;
 use crate::graphics::reader::v1::DimensionReaderV1;
 use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
 use hrafnix_common::port::PortType;
 use hrafnix_keys::PortKey;
+use hrafnix_message::message::Message;
 use serde::Deserialize;
 
 /// The version 1 JSON representation of GUI metadata.
@@ -22,23 +23,25 @@ pub(crate) struct GuiMetadataReaderV1 {
     ports: Vec<PortReaderV1>,
 }
 
-impl From<GuiMetadataReaderV1> for GuiMetadata {
-    fn from(metadata: GuiMetadataReaderV1) -> Self {
+impl TryFrom<GuiMetadataReaderV1> for GuiMetadata {
+    type Error = Message;
+
+    fn try_from(metadata: GuiMetadataReaderV1) -> Result<Self, Self::Error> {
         let dimensions: Dimension = metadata.dimensions.into();
-        Self {
+        Ok(Self {
             dimensions,
             icon: metadata.icon.into(),
             ports: metadata
                 .ports
                 .into_iter()
                 .map(|port| {
-                    let mut port: Port = port.into();
+                    let mut port = Port::try_from(port)?;
                     port.location.x = port.location.x.min(dimensions.width());
                     port.location.y = port.location.y.min(dimensions.height());
-                    port
+                    Ok(port)
                 })
-                .collect(),
-        }
+                .collect::<Result<_, Message>>()?,
+        })
     }
 }
 
@@ -46,9 +49,8 @@ impl From<GuiMetadataReaderV1> for GuiMetadata {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct PortReaderV1 {
-    /// Validated identifier of the port, represented by a plain string.
-    #[serde(deserialize_with = "deserialize_port_key")]
-    id: PortKey,
+    /// Plain-string port identifier, validated during conversion.
+    id: String,
     /// The role of the connection, represented by a plain string.
     #[serde(rename = "type", deserialize_with = "deserialize_unit_variant")]
     port_type: PortTypeReaderV1,
@@ -57,13 +59,15 @@ struct PortReaderV1 {
     location: PortLocationReaderV1,
 }
 
-impl From<PortReaderV1> for Port {
-    fn from(port: PortReaderV1) -> Self {
-        Self {
-            id: port.id,
+impl TryFrom<PortReaderV1> for Port {
+    type Error = Message;
+
+    fn try_from(port: PortReaderV1) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: PortKey::new(port.id.into())?,
             port_type: port.port_type.into(),
             location: port.location.into(),
-        }
+        })
     }
 }
 
@@ -124,14 +128,13 @@ impl From<PortLocationReaderV1> for PortLocation {
 mod tests {
     use super::GuiMetadataReaderV1;
     use crate::common::deserialize::RootObject;
+    use crate::common::test_support::{ReadError, read_value};
     use crate::metadata_gui::data::{GuiMetadata, PortLocation};
     use serde_json::{Value, json};
 
     /// Reads GUI metadata through its object-only envelope.
-    fn read(value: &Value) -> Result<GuiMetadata, serde_json::Error> {
-        let reader: RootObject<GuiMetadataReaderV1> =
-            serde_json::from_str(&serde_json::to_string(value)?)?;
-        Ok(reader.document.into())
+    fn read(value: &Value) -> Result<GuiMetadata, ReadError> {
+        read_value::<GuiMetadataReaderV1, _>(value)
     }
 
     /// Creates GUI metadata with explicit dimensions and an unresolved icon path.
@@ -207,7 +210,7 @@ mod tests {
         for port in invalid_ports {
             let mut value = metadata_json();
             value["ports"] = json!([port]);
-            let error = read(&value).unwrap_err();
+            let error = read(&value).unwrap_err().json();
             assert!(error.is_data(), "{value}: {error}");
             assert!(error.line() > 0);
             assert!(error.column() > 0);
@@ -262,10 +265,7 @@ mod tests {
             let mut value = metadata_json();
             value["ports"] = json!([port]);
             let error = read(&value).unwrap_err();
-            assert!(error.is_data(), "{id}: {error}");
-            assert!(error.to_string().contains(diagnostic), "{id}: {error}");
-            assert!(error.line() > 0);
-            assert!(error.column() > 0);
+            assert_eq!(error.message_key(), diagnostic, "{id}");
         }
     }
 
@@ -371,7 +371,7 @@ mod tests {
         for invalid in [Value::Null, json!(123), json!(false), json!([]), json!({})] {
             let mut value = metadata_json();
             value["icon"] = invalid;
-            let error = read(&value).unwrap_err();
+            let error = read(&value).unwrap_err().json();
             assert!(error.is_data(), "{error}");
             assert!(error.line() > 0);
             assert!(error.column() > 0);
