@@ -1,15 +1,15 @@
-use crate::common::deserialize::{deserialize_objects, deserialize_store_key};
+use crate::common::deserialize::deserialize_objects;
 use hrafnix_datastore::definition::{ChoiceDefinition, ChoiceItemDefinition};
 use hrafnix_keys::StoreKey;
+use hrafnix_message::message::Message;
 use serde::Deserialize;
 
 /// Version-1 choice item.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ChoiceItemDefinitionReaderV1 {
-    /// Validated choice identifier.
-    #[serde(deserialize_with = "deserialize_store_key")]
-    id: StoreKey,
+    /// Plain-string choice identifier, validated during conversion.
+    id: String,
     /// Choice label.
     description: String,
 }
@@ -27,14 +27,25 @@ pub(crate) struct ChoiceDefinitionReaderV1 {
     items: Vec<ChoiceItemDefinitionReaderV1>,
 }
 
-impl From<ChoiceDefinitionReaderV1> for ChoiceDefinition {
-    fn from(choice: ChoiceDefinitionReaderV1) -> Self {
+impl TryFrom<ChoiceDefinitionReaderV1> for ChoiceDefinition {
+    type Error = Message;
+
+    fn try_from(choice: ChoiceDefinitionReaderV1) -> Result<Self, Self::Error> {
         let items = choice
             .items
             .into_iter()
-            .map(|item| ChoiceItemDefinition::new(item.id, item.description))
-            .collect();
-        ChoiceDefinition::new_with_default(choice.description, items, choice.default)
+            .map(|item| {
+                Ok(ChoiceItemDefinition::new(
+                    StoreKey::new(item.id.into())?,
+                    item.description,
+                ))
+            })
+            .collect::<Result<_, Message>>()?;
+        Ok(ChoiceDefinition::new_with_default(
+            choice.description,
+            items,
+            choice.default,
+        ))
     }
 }
 
@@ -56,7 +67,7 @@ mod tests {
             ]
         });
         let reader = serde_json::from_value::<RootObject<ChoiceDefinitionReaderV1>>(value).unwrap();
-        let choice = ChoiceDefinition::from(reader.document);
+        let choice = ChoiceDefinition::try_from(reader.document).unwrap();
         assert_eq!(choice.ids(), vec!["slow", "fast"]);
         assert_eq!(choice.descriptions(), vec!["Slow", "Also fast"]);
         assert_eq!(choice.default_value(), "fast");

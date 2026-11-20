@@ -1,21 +1,18 @@
-use crate::common::deserialize::{
-    UniqueKey, deserialize_store_key, deserialize_unique_objects, deserialize_unit_variant,
-};
+use crate::common::deserialize::{deserialize_objects, deserialize_unit_variant};
+use crate::common::validate::{ensure_unique_keys, validate_default_rows};
 use crate::datastore::definition::reader::v1::common::constraints::ConstraintNumberDefinitionReaderV1;
-use crate::datastore::definition::reader::v1::common::table::{
-    RequirementDefinitionReaderV1, validate_default_rows,
-};
+use crate::datastore::definition::reader::v1::common::table::RequirementDefinitionReaderV1;
 use hrafnix_datastore::definition::{NumberDefinition, TableDefinition};
 use hrafnix_keys::StoreKey;
-use serde::{Deserialize, Deserializer};
+use hrafnix_message::message::Message;
+use serde::Deserialize;
 
 /// One version 1 numeric column.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct TableColumnDefinitionReaderV1 {
-    /// Validated column identifier.
-    #[serde(deserialize_with = "deserialize_store_key")]
-    key: StoreKey,
+    /// Plain-string column identifier, validated during conversion.
+    key: String,
     /// Column description.
     description: String,
     /// Default cell expression.
@@ -27,22 +24,14 @@ pub(crate) struct TableColumnDefinitionReaderV1 {
     requirement: RequirementDefinitionReaderV1,
 }
 
-impl UniqueKey for TableColumnDefinitionReaderV1 {
-    const KEY_NAME: &'static str = "column key";
-
-    fn unique_key(&self) -> &StoreKey {
-        &self.key
-    }
-}
-
 /// Version-1 numeric table definition.
 #[derive(Debug, Deserialize)]
-#[serde(remote = "Self", deny_unknown_fields)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct TableDefinitionReaderV1 {
     /// Item description.
     description: String,
-    /// Ordered columns with unique keys.
-    #[serde(deserialize_with = "deserialize_unique_objects")]
+    /// Ordered columns; keys are checked for uniqueness during conversion.
+    #[serde(deserialize_with = "deserialize_objects")]
     columns: Vec<TableColumnDefinitionReaderV1>,
     /// Required nullable default rows, each with one value per column.
     #[serde(deserialize_with = "Option::deserialize")]
@@ -56,46 +45,45 @@ impl TableDefinitionReaderV1 {
     }
 }
 
-impl<'de> Deserialize<'de> for TableDefinitionReaderV1 {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let table = Self::deserialize(deserializer)?;
+impl TryFrom<TableDefinitionReaderV1> for TableDefinition {
+    type Error = Message;
+
+    fn try_from(table: TableDefinitionReaderV1) -> Result<Self, Self::Error> {
+        ensure_unique_keys(
+            table.columns.iter().map(|column| &column.key),
+            "files_duplicate_column_key",
+        )?;
         if let Some(rows) = &table.default {
             validate_default_rows(rows, table.column_count())?;
         }
-        Ok(table)
-    }
-}
-
-impl From<TableDefinitionReaderV1> for TableDefinition {
-    fn from(table: TableDefinitionReaderV1) -> Self {
         let columns = table
             .columns
             .into_iter()
             .map(|column| {
-                (
-                    column.key,
+                Ok((
+                    StoreKey::new(column.key.into())?,
                     NumberDefinition::new_with_constraint_and_default(
                         column.description,
                         column.constraint.into(),
                         column.default,
                     ),
                     column.requirement.into(),
-                )
+                ))
             })
-            .collect();
-        match table.default {
+            .collect::<Result<_, Message>>()?;
+        Ok(match table.default {
             Some(default) => {
                 Self::new_with_column_requirements_and_default(table.description, columns, default)
             }
             None => Self::new_with_column_requirements(table.description, columns),
-        }
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::deserialize::RootObject;
+    use crate::common::test_support::{ReadError, read_owned_value};
     use hrafnix_datastore::definition::{NumberConstraint, TableColumnRequirement};
     use serde_json::{Value, json};
 
@@ -123,9 +111,11 @@ mod tests {
     }
 
     fn read_table(value: Value) -> TableDefinition {
-        let reader = serde_json::from_value::<RootObject<TableDefinitionReaderV1>>(value)
-            .expect("valid table definition");
-        reader.document.into()
+        try_read(value).expect("valid table definition")
+    }
+
+    fn try_read(value: Value) -> Result<TableDefinition, ReadError> {
+        read_owned_value::<TableDefinitionReaderV1, _>(value)
     }
 
     #[test]
@@ -193,8 +183,7 @@ mod tests {
             .as_object_mut()
             .expect("table object")
             .remove("default");
-        let error = serde_json::from_value::<RootObject<TableDefinitionReaderV1>>(value)
-            .expect_err("missing default must be rejected");
+        let error = try_read(value).expect_err("missing default must be rejected");
         assert!(error.to_string().contains("missing field `default`"));
     }
 
@@ -202,25 +191,31 @@ mod tests {
     fn rejects_duplicate_column_keys() {
         let mut value = table_json(&Value::Null);
         value["columns"][1]["key"] = json!("z");
-        let error = serde_json::from_value::<RootObject<TableDefinitionReaderV1>>(value)
-            .expect_err("duplicate column key must be rejected");
-        assert!(
-            error.to_string().contains("duplicate column key `z`"),
-            "{error}"
+        let error = try_read(value)
+            .expect_err("duplicate column key must be rejected")
+            .message();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "files_duplicate_column_key"
         );
+        assert_eq!(error.translate_data().message_params()["key"].as_str(), "z");
     }
 
     #[test]
     fn rejects_default_rows_with_wrong_width() {
-        for (rows, message) in [
-            (json!([["1", "2", "3"]]), "default row 0 has 3 values"),
-            (json!([["1", "2"], ["3"]]), "default row 1 has 1 values"),
-            (json!([[]]), "default row 0 has 0 values"),
+        for (rows, row, values) in [
+            (json!([["1", "2", "3"]]), "0", "3"),
+            (json!([["1", "2"], ["3"]]), "1", "1"),
+            (json!([[]]), "0", "0"),
         ] {
-            let error =
-                serde_json::from_value::<RootObject<TableDefinitionReaderV1>>(table_json(&rows))
-                    .expect_err("mismatched row must be rejected");
-            assert!(error.to_string().contains(message), "{rows}: {error}");
+            let error = try_read(table_json(&rows))
+                .expect_err("mismatched row must be rejected")
+                .message();
+            let data = error.translate_data();
+            assert_eq!(data.message_key().as_str(), "files_table_default_row_width");
+            assert_eq!(data.message_params()["row"].as_str(), row, "{rows}");
+            assert_eq!(data.message_params()["values"].as_str(), values, "{rows}");
+            assert_eq!(data.message_params()["columns"].as_str(), "2", "{rows}");
         }
     }
 
@@ -238,13 +233,13 @@ mod tests {
         ] {
             let mut value = table_json(&Value::Null);
             value["columns"][0] = column;
-            assert!(serde_json::from_value::<RootObject<TableDefinitionReaderV1>>(value).is_err());
+            assert!(try_read(value).is_err());
         }
 
         for requirement in [json!({"increasing": null}), json!("unknown"), Value::Null] {
             let mut value = table_json(&Value::Null);
             value["columns"][0]["requirement"] = requirement;
-            assert!(serde_json::from_value::<RootObject<TableDefinitionReaderV1>>(value).is_err());
+            assert!(try_read(value).is_err());
         }
     }
 }

@@ -1,23 +1,21 @@
 use crate::common::deserialize::{
-    StringTagDeserializer, deserialize_component_key, deserialize_object, deserialize_objects,
-    deserialize_optional_object,
+    StringTagDeserializer, deserialize_object, deserialize_optional_object,
 };
+use crate::common::validate::ensure_unique_keys;
 use crate::component_instance::data::{ComponentInstance, ComponentSource, PackageReference};
 use crate::frozen_parameter::reader::v1::ParameterFrozenReaderV1;
 use crate::graphics::reader::v1::PositionReaderV1;
 use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
 use hrafnix_keys::ComponentKey;
 use hrafnix_message::message::Message;
-use serde::{Deserialize, Deserializer, de::Error};
-use std::collections::BTreeSet;
+use serde::{Deserialize, Deserializer};
 
 /// Version 1 component instance with its saved GUI and parameter snapshot.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct ComponentInstanceReaderV1 {
-    /// Plain-string component identifier.
-    #[serde(deserialize_with = "deserialize_component_key")]
-    id: ComponentKey,
+    /// Plain-string component identifier, validated during conversion.
+    id: String,
     /// Tagged reference to a file or built-in definition.
     #[serde(deserialize_with = "deserialize_object")]
     source: ComponentSourceReaderV1,
@@ -36,30 +34,24 @@ impl TryFrom<ComponentInstanceReaderV1> for ComponentInstance {
 
     fn try_from(instance: ComponentInstanceReaderV1) -> Result<Self, Self::Error> {
         Ok(Self {
-            id: instance.id,
+            id: ComponentKey::new(instance.id.into())?,
             source: instance.source.into(),
             position: instance.position.into(),
-            gui_metadata: instance.gui_metadata.into(),
+            gui_metadata: instance.gui_metadata.try_into()?,
             parameters: instance.parameters.try_into()?,
         })
     }
 }
 
-/// Reads an ordered array of component objects with unique identifiers.
-pub(crate) fn deserialize_component_instances<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Vec<ComponentInstanceReaderV1>, D::Error> {
-    let instances = deserialize_objects::<ComponentInstanceReaderV1, D>(deserializer)?;
-    let mut ids = BTreeSet::new();
-    for instance in &instances {
-        if !ids.insert(&instance.id) {
-            return Err(D::Error::custom(format!(
-                "duplicate component id `{}`",
-                instance.id
-            )));
-        }
-    }
-    Ok(instances)
+/// Converts instances in file order, rejecting repeated component identifiers.
+pub(crate) fn convert_component_instances(
+    instances: Vec<ComponentInstanceReaderV1>,
+) -> Result<Vec<ComponentInstance>, Message> {
+    ensure_unique_keys(
+        instances.iter().map(|instance| &instance.id),
+        "files_duplicate_component_id",
+    )?;
+    instances.into_iter().map(TryInto::try_into).collect()
 }
 
 /// Version 1 source reference selected by a plain-string type tag.

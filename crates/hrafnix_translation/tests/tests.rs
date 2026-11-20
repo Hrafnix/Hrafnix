@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 const LANGUAGES: [&str; 7] = ["en", "zh", "de", "es", "fr", "ja", "ko"];
 
-const TRANSLATION_KEYS: [&str; 175] = [
+const TRANSLATION_KEYS: [&str; 186] = [
     "files_io_replaced_sync_failed",
     "files_io_error",
     "files_io_not_found",
@@ -54,6 +54,17 @@ const TRANSLATION_KEYS: [&str; 175] = [
     "files_json_serialization",
     "files_invalid_utf8",
     "files_incomplete_utf8",
+    "files_duplicate_component_id",
+    "files_duplicate_parameter_key",
+    "files_duplicate_global_key",
+    "files_duplicate_variable_key",
+    "files_duplicate_column_key",
+    "files_duplicate_map_item_key",
+    "files_duplicate_map_entry_key",
+    "files_duplicate_translation_key",
+    "files_duplicate_translation_language",
+    "files_table_default_row_width",
+    "files_table_unit_count_mismatch",
     "datastore_key_empty",
     "datastore_key_invalid_character",
     "datastore_key_invalid_prefix",

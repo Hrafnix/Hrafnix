@@ -56,7 +56,7 @@ impl TryFrom<ItemReaderV1> for ItemFrozen {
     fn try_from(item: ItemReaderV1) -> Result<Self, Self::Error> {
         Ok(match item {
             ItemReaderV1::Boolean(value) => Self::Boolean(value.into()),
-            ItemReaderV1::Choice(value) => Self::Choice(value.into()),
+            ItemReaderV1::Choice(value) => Self::Choice(value.try_into()?),
             ItemReaderV1::File(value) => Self::File(value.into()),
             ItemReaderV1::Folder(value) => Self::Folder(value.into()),
             ItemReaderV1::Integer(value) => Self::Integer(value.into()),
@@ -64,8 +64,8 @@ impl TryFrom<ItemReaderV1> for ItemFrozen {
             ItemReaderV1::Number(value) => Self::Number(value.into()),
             ItemReaderV1::NumberWithUnits(value) => Self::NumberWithUnits(value.into()),
             ItemReaderV1::String(value) => Self::String(value.into()),
-            ItemReaderV1::Table(value) => Self::Table(value.into()),
-            ItemReaderV1::TableWithUnits(value) => Self::TableWithUnits(value.into()),
+            ItemReaderV1::Table(value) => Self::Table(value.try_into()?),
+            ItemReaderV1::TableWithUnits(value) => Self::TableWithUnits(value.try_into()?),
             ItemReaderV1::Unit(value) => Self::Unit(value.into()),
             ItemReaderV1::Tab(value) => Self::Tab(value.into()),
             ItemReaderV1::Separator(value) => Self::Separator(value.into()),
@@ -208,13 +208,14 @@ mod tests {
                 let units = json!(vec!["length_meter"; unit_count]);
                 let mut table = table_json(true, column_count, "");
                 table["units"] = units.clone();
-                let error = serde_json::from_value::<RootObject<ItemReaderV1>>(table).unwrap_err();
-                assert!(
-                    error.to_string().contains(&format!(
-                        "table has {unit_count} units but {column_count} columns"
-                    )),
-                    "{error}"
+                let error = read_item(table).unwrap_err();
+                let data = error.translate_data();
+                assert_eq!(
+                    data.message_key().as_str(),
+                    "files_table_unit_count_mismatch"
                 );
+                assert_eq!(data.message_params()["units"], unit_count.to_string());
+                assert_eq!(data.message_params()["columns"], column_count.to_string());
 
                 let mut map = map_with_tables_json(column_count, "");
                 map["value"]["entry"][1]["units"] = units;

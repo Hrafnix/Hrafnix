@@ -4,6 +4,7 @@ use crate::common::file::{read_file_to_string, write_string_to_file};
 use crate::component::data::ComponentFile;
 use crate::component::reader::versions::ComponentReader;
 use crate::component::writer::ComponentWriter;
+use crate::component_instance::writer::ensure_unique_component_ids;
 use camino::Utf8Path;
 use hrafnix_message::message::Message;
 
@@ -35,6 +36,7 @@ pub fn read_component_file(path: &Utf8Path) -> Result<ComponentFile, Message> {
 ///
 /// Returns a localized error if serialization or atomic file replacement fails.
 pub fn write_component_file(component_file: ComponentFile, path: &Utf8Path) -> Result<(), Message> {
+    ensure_unique_component_ids(&component_file.components)?;
     let component_writer: ComponentWriter = component_file.into();
 
     let component_serialized: String = serde_json::to_string_pretty(&component_writer)

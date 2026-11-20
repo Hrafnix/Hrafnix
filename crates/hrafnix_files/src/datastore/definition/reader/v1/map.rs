@@ -4,10 +4,8 @@
 //! may omit trailing items. The datastore definition normalizes extra defaults,
 //! scalar/table mismatches, and table row widths.
 
-use crate::common::deserialize::{
-    StringTagDeserializer, UniqueKey, deserialize_entries, deserialize_store_key,
-    deserialize_unique_objects,
-};
+use crate::common::deserialize::{StringTagDeserializer, deserialize_entries, deserialize_objects};
+use crate::common::validate::{ensure_unique_keys, unique_entries};
 use crate::datastore::definition::reader::v1::{
     boolean::BooleanDefinitionReaderV1, choice::ChoiceDefinitionReaderV1,
     file::FileDefinitionReaderV1, integer::IntegerDefinitionReaderV1,
@@ -17,27 +15,17 @@ use crate::datastore::definition::reader::v1::{
 };
 use hrafnix_datastore::definition::{MapDefinition, MapItemDefault, MapItemDefinition};
 use hrafnix_keys::StoreKey;
-use serde::de::value::StringDeserializer;
+use hrafnix_message::message::Message;
 use serde::{Deserialize, Deserializer};
-use std::collections::BTreeMap;
 
 /// One named item in the ordered map entry schema.
 #[derive(Debug, Deserialize)]
 pub(crate) struct MapItemDefinitionReaderV1 {
-    /// Validated item identifier.
-    #[serde(deserialize_with = "deserialize_store_key")]
-    key: StoreKey,
+    /// Plain-string item identifier, validated during conversion.
+    key: String,
     /// Tagged definition; each variant rejects unknown fields.
     #[serde(flatten)]
     definition: MapItemEnumDefinitionReaderV1,
-}
-
-impl UniqueKey for MapItemDefinitionReaderV1 {
-    const KEY_NAME: &'static str = "map item key";
-
-    fn unique_key(&self) -> &StoreKey {
-        &self.key
-    }
 }
 
 /// Definitions supported inside a version-1 map entry.
@@ -72,11 +60,13 @@ impl<'de> Deserialize<'de> for MapItemEnumDefinitionReaderV1 {
     }
 }
 
-impl From<MapItemEnumDefinitionReaderV1> for MapItemDefinition {
-    fn from(definition: MapItemEnumDefinitionReaderV1) -> Self {
-        match definition {
+impl TryFrom<MapItemEnumDefinitionReaderV1> for MapItemDefinition {
+    type Error = Message;
+
+    fn try_from(definition: MapItemEnumDefinitionReaderV1) -> Result<Self, Self::Error> {
+        Ok(match definition {
             MapItemEnumDefinitionReaderV1::Boolean(item) => Self::Boolean(item.into()),
-            MapItemEnumDefinitionReaderV1::Choice(item) => Self::Choice(item.into()),
+            MapItemEnumDefinitionReaderV1::Choice(item) => Self::Choice(item.try_into()?),
             MapItemEnumDefinitionReaderV1::File(item) => Self::File(item.into()),
             MapItemEnumDefinitionReaderV1::Integer(item) => Self::Integer(item.into()),
             MapItemEnumDefinitionReaderV1::Number(item) => Self::Number(item.into()),
@@ -84,12 +74,12 @@ impl From<MapItemEnumDefinitionReaderV1> for MapItemDefinition {
                 Self::NumberWithUnits(item.into())
             }
             MapItemEnumDefinitionReaderV1::String(item) => Self::String(item.into()),
-            MapItemEnumDefinitionReaderV1::Table(item) => Self::Table(item.into()),
+            MapItemEnumDefinitionReaderV1::Table(item) => Self::Table(item.try_into()?),
             MapItemEnumDefinitionReaderV1::TableWithUnits(item) => {
-                Self::TableWithUnits(item.into())
+                Self::TableWithUnits(item.try_into()?)
             }
             MapItemEnumDefinitionReaderV1::Unit(item) => Self::Unit(item.into()),
-        }
+        })
     }
 }
 
@@ -112,23 +102,16 @@ impl From<MapItemDefaultDefinitionReaderV1> for MapItemDefault {
     }
 }
 
-/// Default entries with validated, unique store keys.
+/// Default entries in file order; keys are validated during conversion.
 #[derive(Debug)]
 struct MapDefaultsDefinitionReaderV1 {
     /// Ordered item defaults for each named entry.
-    entries: BTreeMap<StoreKey, Vec<MapItemDefaultDefinitionReaderV1>>,
+    entries: Vec<(String, Vec<MapItemDefaultDefinitionReaderV1>)>,
 }
 
 impl<'de> Deserialize<'de> for MapDefaultsDefinitionReaderV1 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let entries =
-            deserialize_entries::<Vec<MapItemDefaultDefinitionReaderV1>, D>(deserializer)?
-                .into_iter()
-                .map(|(key, values)| {
-                    let key = deserialize_store_key(StringDeserializer::<D::Error>::new(key))?;
-                    Ok((key, values))
-                })
-                .collect::<Result<_, D::Error>>()?;
+        let entries = deserialize_entries(deserializer)?;
         Ok(Self { entries })
     }
 }
@@ -139,8 +122,8 @@ impl<'de> Deserialize<'de> for MapDefaultsDefinitionReaderV1 {
 pub(crate) struct MapDefinitionReaderV1 {
     /// Item description.
     description: String,
-    /// Ordered entry schema with unique item keys.
-    #[serde(deserialize_with = "deserialize_unique_objects")]
+    /// Ordered entry schema; item keys are checked for uniqueness during conversion.
+    #[serde(deserialize_with = "deserialize_objects")]
     items: Vec<MapItemDefinitionReaderV1>,
     /// Required nullable default entries. Each entry may omit trailing items, which then
     /// inherit their item definition's default.
@@ -148,31 +131,48 @@ pub(crate) struct MapDefinitionReaderV1 {
     default: Option<MapDefaultsDefinitionReaderV1>,
 }
 
-impl From<MapDefinitionReaderV1> for MapDefinition {
-    fn from(map: MapDefinitionReaderV1) -> Self {
+impl TryFrom<MapDefinitionReaderV1> for MapDefinition {
+    type Error = Message;
+
+    fn try_from(map: MapDefinitionReaderV1) -> Result<Self, Self::Error> {
+        ensure_unique_keys(
+            map.items.iter().map(|item| &item.key),
+            "files_duplicate_map_item_key",
+        )?;
         let items: Vec<_> = map
             .items
             .into_iter()
-            .map(|item| (item.key, MapItemDefinition::from(item.definition)))
-            .collect();
-        match map.default {
+            .map(|item| {
+                Ok((
+                    StoreKey::new(item.key.into())?,
+                    MapItemDefinition::try_from(item.definition)?,
+                ))
+            })
+            .collect::<Result<_, Message>>()?;
+        Ok(match map.default {
             Some(default) => {
                 let entries = default
                     .entries
                     .into_iter()
-                    .map(|(key, values)| (key, values.into_iter().map(Into::into).collect()))
-                    .collect();
+                    .map(|(key, values)| {
+                        Ok((
+                            StoreKey::new(key.into())?,
+                            values.into_iter().map(Into::into).collect(),
+                        ))
+                    })
+                    .collect::<Result<Vec<_>, Message>>()?;
+                let entries = unique_entries(entries, "files_duplicate_map_entry_key")?;
                 Self::new_with_default(map.description, items, entries)
             }
             None => Self::new(map.description, items),
-        }
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::deserialize::RootObject;
+    use crate::common::test_support::{ReadError, read_owned_value, read_str};
     use hrafnix_datastore::definition::{
         BooleanDefinition, ChoiceDefinition, ChoiceItemDefinition, FileDefinition,
         IntegerConstraint, IntegerDefinition, NumberConstraint, NumberDefinition,
@@ -181,16 +181,22 @@ mod tests {
     };
     use hrafnix_units::{UnitFamilyId, UnitId};
     use serde_json::{Value, json};
+    use std::collections::BTreeMap;
 
     fn key(value: &str) -> StoreKey {
         StoreKey::new(value.into()).expect("valid store key")
     }
 
     fn read_map(value: Value) -> MapDefinition {
-        serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value)
-            .expect("valid map definition")
-            .document
-            .into()
+        try_read(value).expect("valid map definition")
+    }
+
+    fn try_read(value: Value) -> Result<MapDefinition, ReadError> {
+        read_owned_value::<MapDefinitionReaderV1, _>(value)
+    }
+
+    fn try_read_str(text: &str) -> Result<MapDefinition, ReadError> {
+        read_str::<MapDefinitionReaderV1, _>(text)
     }
 
     fn map_json(default: &Value) -> Value {
@@ -383,27 +389,21 @@ mod tests {
         for field in ["description", "items", "default"] {
             let mut value = map_json(&Value::Null);
             value.as_object_mut().unwrap().remove(field);
-            assert!(
-                serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value).is_err(),
-                "{field}"
-            );
+            assert!(try_read(value).is_err(), "{field}");
         }
         let mut value = map_json(&Value::Null);
         value["unexpected"] = json!(true);
-        assert!(serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value).is_err());
+        assert!(try_read(value).is_err());
 
         for field in ["key", "type", "description", "default"] {
             let mut value = map_json(&Value::Null);
             value["items"][0].as_object_mut().unwrap().remove(field);
-            assert!(
-                serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value).is_err(),
-                "{field}"
-            );
+            assert!(try_read(value).is_err(), "{field}");
         }
         for index in 0..3 {
             let mut value = map_json(&Value::Null);
             value["items"][index]["unexpected"] = json!(true);
-            assert!(serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value).is_err());
+            assert!(try_read(value).is_err());
         }
     }
 
@@ -423,7 +423,7 @@ mod tests {
         ] {
             let mut value = map_json(&Value::Null);
             value["items"][0] = item;
-            assert!(serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value).is_err());
+            assert!(try_read(value).is_err());
         }
     }
 
@@ -440,10 +440,7 @@ mod tests {
             json!({"first": [[1]]}),
             json!({"first": [[["1", false]]]}),
         ] {
-            assert!(
-                serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(map_json(&default))
-                    .is_err()
-            );
+            assert!(try_read(map_json(&default)).is_err());
         }
     }
 
@@ -451,12 +448,14 @@ mod tests {
     fn rejects_duplicate_item_keys() {
         let mut value = map_json(&Value::Null);
         value["items"][2]["key"] = json!("z");
-        let error = serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value)
-            .expect_err("duplicate item key must be rejected");
-        assert!(
-            error.to_string().contains("duplicate map item key `z`"),
-            "{error}"
+        let error = try_read(value)
+            .expect_err("duplicate item key must be rejected")
+            .message();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "files_duplicate_map_item_key"
         );
+        assert_eq!(error.translate_data().message_params()["key"].as_str(), "z");
     }
 
     #[test]
@@ -527,10 +526,7 @@ mod tests {
             r#"{"description":"","items":[{"key":"a","type":"string","type":"string","description":"","default":""}],"default":null}"#,
             r#"{"description":"","items":[{"key":"a","type":"string","description":"","default":"","default":""}],"default":null}"#,
         ] {
-            assert!(
-                serde_json::from_str::<RootObject<MapDefinitionReaderV1>>(text).is_err(),
-                "{text}"
-            );
+            assert!(try_read_str(text).is_err(), "{text}");
         }
     }
 }

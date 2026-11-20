@@ -443,15 +443,41 @@ pub(super) fn assert_translation_structure(root: &str, read: fn(&Utf8Path) -> Re
     for translations in [
         r#"{"language":"en","language":"es","translations":{}}"#,
         r#"{"language":"en","translations":{},"translations":{}}"#,
-        r#"{"language":"en","translations":{"key":{},"key":{}}}"#,
-        r#"{"language":"en","translations":{"key":{},"\u006bey":{}}}"#,
-        r#"{"language":"en","translations":{"key":{"es":"a","es":"b"}}}"#,
-        r#"{"language":"en","translations":{"key":{"es":"a","\u0065s":"b"}}}"#,
     ] {
         documents.push(format!(
             "{{\"file-version\":\"1\",\"{root}\":{}}}",
             contents.replace(TRANSLATIONS, translations),
         ));
+    }
+    for (translations, message_key) in [
+        (
+            r#"{"language":"en","translations":{"key":{},"key":{}}}"#,
+            "files_duplicate_translation_key",
+        ),
+        (
+            r#"{"language":"en","translations":{"key":{},"\u006bey":{}}}"#,
+            "files_duplicate_translation_key",
+        ),
+        (
+            r#"{"language":"en","translations":{"key":{"es":"a","es":"b"}}}"#,
+            "files_duplicate_translation_language",
+        ),
+        (
+            r#"{"language":"en","translations":{"key":{"es":"a","\u0065s":"b"}}}"#,
+            "files_duplicate_translation_language",
+        ),
+    ] {
+        let document = format!(
+            "{{\"file-version\":\"1\",\"{root}\":{}}}",
+            contents.replace(TRANSLATIONS, translations),
+        );
+        fs::write(&path, &document).unwrap();
+        let error = read(&path).unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            message_key,
+            "{document}",
+        );
     }
     documents.push(format!(
         "{{\"file-version\":\"1\",\"{root}\":{}}}",

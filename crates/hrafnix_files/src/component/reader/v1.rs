@@ -1,7 +1,7 @@
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
 use crate::component::data::ComponentFile;
 use crate::component_instance::reader::v1::{
-    ComponentInstanceReaderV1, deserialize_component_instances,
+    ComponentInstanceReaderV1, convert_component_instances,
 };
 use crate::connection::reader::v1::ConnectionReaderV1;
 use crate::decoration_background::reader::v1::BackgroundDecorationReaderV1;
@@ -35,7 +35,7 @@ pub(crate) struct ComponentReaderV1 {
     #[serde(deserialize_with = "deserialize_objects")]
     background_decorations: Vec<BackgroundDecorationReaderV1>,
     /// Ordered nested component instances with unique identifiers.
-    #[serde(deserialize_with = "deserialize_component_instances")]
+    #[serde(deserialize_with = "deserialize_objects")]
     components: Vec<ComponentInstanceReaderV1>,
     /// Connections between component ports within the component.
     #[serde(deserialize_with = "deserialize_objects")]
@@ -51,9 +51,9 @@ impl TryFrom<ComponentReaderV1> for ComponentFile {
     fn try_from(component: ComponentReaderV1) -> Result<Self, Self::Error> {
         Ok(Self {
             metadata: component.metadata.into(),
-            gui_metadata: component.gui_metadata.into(),
-            parameter_definition: component.parameter_definition.into(),
-            variable_definition: component.variable_definition.into(),
+            gui_metadata: component.gui_metadata.try_into()?,
+            parameter_definition: component.parameter_definition.try_into()?,
+            variable_definition: component.variable_definition.try_into()?,
             foreground_decorations: component
                 .foreground_decorations
                 .into_iter()
@@ -64,13 +64,13 @@ impl TryFrom<ComponentReaderV1> for ComponentFile {
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            translations: component.translations.into(),
-            components: component
-                .components
+            translations: component.translations.try_into()?,
+            components: convert_component_instances(component.components)?,
+            connections: component
+                .connections
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<_, _>>()?,
-            connections: component.connections.into_iter().map(Into::into).collect(),
         })
     }
 }

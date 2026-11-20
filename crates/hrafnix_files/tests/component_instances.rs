@@ -146,6 +146,17 @@ fn assert_rejected(root: &str, path: &Utf8Path, document: &str) {
     assert!(error.extra_detail().is_some(), "{document}");
 }
 
+/// Verifies post-parse validation failures report their own localized diagnostic.
+fn assert_rejected_with(root: &str, path: &Utf8Path, document: &str, message_key: &str) {
+    fs::write(path, document).unwrap();
+    let error = read(root, path).unwrap_err();
+    assert_eq!(
+        error.translate_data().message_key().as_str(),
+        message_key,
+        "{document}"
+    );
+}
+
 #[test]
 fn example_instances_round_trip_with_sources_snapshots_and_order() {
     let directory = TestDirectory::new();
@@ -363,17 +374,36 @@ fn components_arrays_and_all_instance_fields_are_required_and_strict() {
 fn identifiers_tags_source_fields_geometry_and_parameters_are_validated() {
     let directory = TestDirectory::new();
     let path = directory.path.join("invalid-fields.json");
+    let invalid_keys = [
+        ("/components/0/id", "", "datastore_key_empty"),
+        ("/components/0/id", "true", "datastore_key_reserved"),
+        (
+            "/components/0/id",
+            "Temperature",
+            "datastore_key_invalid_character",
+        ),
+        (
+            "/components/0/id",
+            "1sensor",
+            "datastore_key_invalid_character",
+        ),
+        (
+            "/components/0/id",
+            "sensor-name",
+            "datastore_key_invalid_character",
+        ),
+        (
+            "/components/0/id",
+            "p_sensor",
+            "datastore_key_invalid_prefix",
+        ),
+        (
+            "/components/0/parameters/0/key",
+            "v_unit",
+            "datastore_key_invalid_prefix",
+        ),
+    ];
     let mut invalid_fields = Vec::new();
-    for id in [
-        "",
-        "true",
-        "Temperature",
-        "1sensor",
-        "sensor-name",
-        "p_sensor",
-    ] {
-        invalid_fields.push(("/components/0/id", json!(id)));
-    }
     for tag in [
         json!("unknown"),
         json!("File"),
@@ -451,7 +481,6 @@ fn identifiers_tags_source_fields_geometry_and_parameters_are_validated() {
     invalid_fields.extend([
         ("/components/0/source/type", json!("builtin")),
         ("/components/2/source/type", json!("file")),
-        ("/components/0/parameters/0/key", json!("v_unit")),
         ("/components/0/parameters/0/type", json!(0)),
         ("/components/0/parameters/0/type", json!("unknown")),
         ("/components/0/parameters/0/value", json!(1)),
@@ -467,18 +496,30 @@ fn identifiers_tags_source_fields_geometry_and_parameters_are_validated() {
             *invalid[root].pointer_mut(pointer).unwrap() = value.clone();
             assert_rejected(root, &path, &serde_json::to_string(&invalid).unwrap());
         }
+        for (pointer, key, message_key) in invalid_keys {
+            let mut invalid = document.clone();
+            *invalid[root].pointer_mut(pointer).unwrap() = json!(key);
+            let invalid = serde_json::to_string(&invalid).unwrap();
+            assert_rejected_with(root, &path, &invalid, message_key);
+        }
         let mut duplicate_id = document.clone();
         duplicate_id[root]["components"][2]["id"] = json!("temperature_sensor");
-        assert_rejected(root, &path, &serde_json::to_string(&duplicate_id).unwrap());
+        assert_rejected_with(
+            root,
+            &path,
+            &serde_json::to_string(&duplicate_id).unwrap(),
+            "files_duplicate_component_id",
+        );
         let mut duplicate_parameter = document.clone();
         duplicate_parameter[root]["components"][0]["parameters"] = json!([
             document[root]["components"][0]["parameters"][0],
             document[root]["components"][0]["parameters"][0]
         ]);
-        assert_rejected(
+        assert_rejected_with(
             root,
             &path,
             &serde_json::to_string(&duplicate_parameter).unwrap(),
+            "files_duplicate_parameter_key",
         );
     }
 }
@@ -647,14 +688,11 @@ fn writing_duplicate_instance_ids_preserves_the_existing_document() {
 
         assert_eq!(
             error.translate_data().message_key().as_str(),
-            "files_json_serialization"
+            "files_duplicate_component_id"
         );
-        assert!(
-            error
-                .extra_detail()
-                .unwrap()
-                .as_str()
-                .contains("duplicate component id")
+        assert_eq!(
+            error.translate_data().message_params()["key"].as_str(),
+            "temperature_sensor"
         );
         assert_eq!(fs::read_to_string(&path).unwrap(), original);
         assert_eq!(directory.entries(), ["duplicate-ids.json"]);

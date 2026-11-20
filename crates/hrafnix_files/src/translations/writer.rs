@@ -96,7 +96,7 @@ mod tests {
                     json!({"language": language, "translations": expected}),
                 );
                 let reader: RootObject<TranslationsReaderV1> = serde_json::from_str(&json).unwrap();
-                assert_eq!(TranslationsFile::from(reader.document), data);
+                assert_eq!(TranslationsFile::try_from(reader.document).unwrap(), data);
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::component_instance::writer::{ComponentInstanceWriter, serialize_component_instances};
+use crate::component_instance::writer::ComponentInstanceWriter;
 use crate::connection::writer::ConnectionWriter;
 use crate::decoration_background::writer::BackgroundDecorationWriter;
 use crate::decoration_foreground::writer::ForegroundDecorationWriter;
@@ -36,7 +36,6 @@ struct ModelDataWriter {
     /// Global settings in definition order with their definitions and frozen values.
     global_settings: GlobalFrozenWriter,
     /// Ordered saved component instances with unique identifiers.
-    #[serde(serialize_with = "serialize_component_instances")]
     components: Vec<ComponentInstanceWriter>,
     /// Connections between component ports within the model.
     connections: Vec<ConnectionWriter>,

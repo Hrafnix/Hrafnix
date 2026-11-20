@@ -145,7 +145,7 @@ mod tests {
                     }),
                 );
                 let reader: RootObject<GuiMetadataReaderV1> = serde_json::from_str(&json).unwrap();
-                assert_eq!(GuiMetadata::from(reader.document), metadata);
+                assert_eq!(GuiMetadata::try_from(reader.document).unwrap(), metadata);
             }
         }
     }
@@ -187,7 +187,7 @@ mod tests {
                     );
                     let reader: RootObject<GuiMetadataReaderV1> =
                         serde_json::from_str(&text).unwrap();
-                    assert_eq!(GuiMetadata::from(reader.document), metadata);
+                    assert_eq!(GuiMetadata::try_from(reader.document).unwrap(), metadata);
                 }
             }
         }
