@@ -2,7 +2,7 @@
 
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 const LANGUAGES: [&str; 7] = ["en", "zh", "de", "es", "fr", "ja", "ko"];
 
@@ -213,6 +213,47 @@ fn generated_map_contains_every_translation_key() {
                 map.get_translation(key, language, None)
                     .is_some_and(|value| !value.as_str().is_empty()),
                 "empty {language} translation for {key}"
+            );
+        }
+    }
+}
+
+/// Extracts placeholder names, rejecting malformed catalog templates.
+fn placeholders(template: &str) -> BTreeSet<&str> {
+    template
+        .split("%{")
+        .skip(1)
+        .map(|part| {
+            let (name, _) = part
+                .split_once('}')
+                .unwrap_or_else(|| panic!("unterminated placeholder in {template:?}"));
+            assert!(!name.is_empty(), "empty placeholder in {template:?}");
+            name
+        })
+        .collect()
+}
+
+#[test]
+fn generated_map_uses_consistent_placeholders_in_every_language() {
+    let map = generate_translation_map(&SharedStringStore::new());
+
+    for key in TRANSLATION_KEYS {
+        let english = map
+            .get_translation(key, "en", None)
+            .unwrap_or_else(|| panic!("missing English translation for {key}"));
+        let expected = placeholders(english.as_str());
+
+        let languages = map
+            .languages_for_key(key)
+            .unwrap_or_else(|| panic!("missing translation key {key}"));
+        for language in languages {
+            let translation = map
+                .get_translation(key, &language, None)
+                .unwrap_or_else(|| panic!("missing {language} translation for {key}"));
+            assert_eq!(
+                placeholders(translation.as_str()),
+                expected,
+                "placeholder mismatch for {key}: {language}"
             );
         }
     }
