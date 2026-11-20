@@ -32,6 +32,10 @@
 //! `type`, and inline definition fields. Duplicate item keys are rejected.
 //! Definitions retain descriptions, constraints, units, and default expressions;
 //! these arrays describe the schema rather than storing evaluated values.
+//! Model contents also require a `global_settings` array, including when empty.
+//! Each item has a unique plain-string `g_` key, a snake-case `type`, an embedded
+//! `definition`, and frozen value fields. Global settings preserve definition
+//! order, and values must match their embedded definitions.
 //! Every text decoration property is required and sits directly inside its
 //! text object. Background decoration kinds are plain strings such as
 //! `"Frame"`. Font sizes are plain integers in hundredths of a drawing unit

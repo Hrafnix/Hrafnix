@@ -19,14 +19,14 @@ pub(crate) mod writer;
 /// # Errors
 ///
 /// Returns a localized error if the file cannot be read, exceeds the size limit,
-/// contains invalid UTF-8, or does not match a supported model JSON format.
+/// contains invalid UTF-8, does not match a supported model JSON format, or has
+/// global values that do not match their embedded definitions.
 pub fn read_model_file(path: &Utf8Path) -> Result<ModelFile, Message> {
     let model_string = read_file_to_string(path)?;
 
     let model_deserialized: RootObject<ModelReader> =
         serde_json::from_str(&model_string).map_err(|error| json_error(path, error))?;
-    let model_file: ModelFile = model_deserialized.document.into();
-    Ok(model_file)
+    model_deserialized.document.try_into()
 }
 
 /// Writes a model file as pretty-printed JSON without a final newline.

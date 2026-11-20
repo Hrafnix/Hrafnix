@@ -4,9 +4,11 @@ use crate::decoration_background::reader::v1::BackgroundDecorationReaderV1;
 use crate::decoration_foreground::reader::v1::ForegroundDecorationReaderV1;
 use crate::definition_parameter::reader::v1::ParameterDefinitionReaderV1;
 use crate::definition_variable::reader::v1::VariableDefinitionReaderV1;
+use crate::frozen_global::reader::v1::GlobalFrozenReaderV1;
 use crate::metadata_general::reader::v1::MetadataReaderV1;
 use crate::model::data::ModelFile;
 use crate::translations::reader::v1::TranslationsReaderV1;
+use hrafnix_message::message::Message;
 use serde::Deserialize;
 
 /// The version 1 JSON representation of a model, separate from the
@@ -30,6 +32,8 @@ pub(crate) struct ModelReaderV1 {
     /// Decorations drawn behind model contents.
     #[serde(deserialize_with = "deserialize_objects")]
     background_decorations: Vec<BackgroundDecorationReaderV1>,
+    /// Ordered global settings with embedded definitions and frozen values.
+    global_settings: GlobalFrozenReaderV1,
     /// Connections between component ports within the model.
     #[serde(deserialize_with = "deserialize_objects")]
     connections: Vec<ConnectionReaderV1>,
@@ -38,9 +42,11 @@ pub(crate) struct ModelReaderV1 {
     translations: TranslationsReaderV1,
 }
 
-impl From<ModelReaderV1> for ModelFile {
-    fn from(model: ModelReaderV1) -> Self {
-        Self {
+impl TryFrom<ModelReaderV1> for ModelFile {
+    type Error = Message;
+
+    fn try_from(model: ModelReaderV1) -> Result<Self, Self::Error> {
+        Ok(Self {
             metadata: model.metadata.into(),
             parameter_definition: model.parameter_definition.into(),
             variable_definition: model.variable_definition.into(),
@@ -54,8 +60,9 @@ impl From<ModelReaderV1> for ModelFile {
                 .into_iter()
                 .map(Into::into)
                 .collect(),
+            global_settings: model.global_settings.try_into()?,
             translations: model.translations.into(),
             connections: model.connections.into_iter().map(Into::into).collect(),
-        }
+        })
     }
 }
