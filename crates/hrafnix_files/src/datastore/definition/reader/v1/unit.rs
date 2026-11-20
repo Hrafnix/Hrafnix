@@ -5,7 +5,7 @@ use serde::{Deserialize, Deserializer};
 /// Unit selection expression and family.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct UnitReaderV1 {
+pub(crate) struct UnitDefinitionReaderV1 {
     /// Item description.
     description: String,
     /// Default expression.
@@ -15,8 +15,8 @@ pub(crate) struct UnitReaderV1 {
     unit_family: UnitFamilyId,
 }
 
-impl From<UnitReaderV1> for UnitDefinition {
-    fn from(unit: UnitReaderV1) -> Self {
+impl From<UnitDefinitionReaderV1> for UnitDefinition {
+    fn from(unit: UnitDefinitionReaderV1) -> Self {
         Self::new_with_default(unit.description, unit.unit_family, unit.default)
     }
 }
@@ -26,13 +26,13 @@ fn deserialize_unit_family<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<UnitFamilyId, D::Error> {
     let family = String::deserialize(deserializer)?;
-    UnitFamilyReaderV1::deserialize(serde::de::value::StrDeserializer::new(&family))
+    UnitFamilyDefinitionReaderV1::deserialize(serde::de::value::StrDeserializer::new(&family))
 }
 
 /// Frozen version-1 family identifiers, independent of future runtime additions.
 #[derive(Deserialize)]
 #[serde(remote = "UnitFamilyId", rename_all = "snake_case")]
-enum UnitFamilyReaderV1 {
+enum UnitFamilyDefinitionReaderV1 {
     /// No units.
     None,
     /// Length.
@@ -153,7 +153,7 @@ mod tests {
                 .description()
                 .to_ascii_lowercase()
                 .replace([' ', '-'], "_");
-            let reader = serde_json::from_value::<RootObject<UnitReaderV1>>(json!({
+            let reader = serde_json::from_value::<RootObject<UnitDefinitionReaderV1>>(json!({
                 "description": "Units",
                 "default": "selected_unit",
                 "unit_family": name
@@ -179,7 +179,7 @@ mod tests {
             serde_json::Value::Null,
         ] {
             assert!(
-                serde_json::from_value::<RootObject<UnitReaderV1>>(json!({
+                serde_json::from_value::<RootObject<UnitDefinitionReaderV1>>(json!({
                     "description": "",
                     "default": "",
                     "unit_family": family

@@ -5,9 +5,9 @@ use serde::Serialize;
 
 /// A unit represented by its plain-string version-1 identifier.
 #[derive(Debug, Serialize)]
-pub(crate) struct UnitIdWriterV1(&'static str);
+pub(crate) struct UnitIdDefinitionWriterV1(&'static str);
 
-impl From<UnitId> for UnitIdWriterV1 {
+impl From<UnitId> for UnitIdDefinitionWriterV1 {
     fn from(unit: UnitId) -> Self {
         Self(match unit {
             UnitId::None => "none",

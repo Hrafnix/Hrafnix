@@ -549,8 +549,8 @@ fn parameter_object_with_items_keeps_definition_order() {
         .with(parameter_key!("p_z"), StringDefinition::new("Z"))
         .with(parameter_key!("p_a"), StringDefinition::new("A"))
         .finish();
-    let z = StringFrozen::new_with_value(StringDefinition::new("Z"), "1".into());
-    let a = StringFrozen::new_with_value(StringDefinition::new("A"), "2".into());
+    let z = StringFrozen::new_with_value(StringDefinition::new("Z"), "1");
+    let a = StringFrozen::new_with_value(StringDefinition::new("A"), "2");
     let frozen = ParameterObjectFrozen::new_with_items(
         definition.clone(),
         BTreeMap::from([

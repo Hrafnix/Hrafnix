@@ -4,7 +4,7 @@ use serde::Deserialize;
 /// Boolean expression and labels.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct BooleanReaderV1 {
+pub(crate) struct BooleanDefinitionReaderV1 {
     /// Item description.
     description: String,
     /// Default expression.
@@ -15,8 +15,8 @@ pub(crate) struct BooleanReaderV1 {
     false_description: String,
 }
 
-impl From<BooleanReaderV1> for BooleanDefinition {
-    fn from(boolean: BooleanReaderV1) -> Self {
+impl From<BooleanDefinitionReaderV1> for BooleanDefinition {
+    fn from(boolean: BooleanDefinitionReaderV1) -> Self {
         BooleanDefinition::new_with_descriptions_and_default(
             boolean.description,
             boolean.true_description,

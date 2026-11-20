@@ -1,6 +1,7 @@
 use crate::common::deserialize::deserialize_object;
 use crate::model::data::ModelFile;
 use crate::model::reader::v1::ModelReaderV1;
+use hrafnix_message::message::Message;
 use serde::Deserialize;
 
 /// Model data selected by the `file-version` tag.
@@ -16,10 +17,12 @@ pub(crate) enum ModelReader {
     },
 }
 
-impl From<ModelReader> for ModelFile {
-    fn from(document: ModelReader) -> Self {
+impl TryFrom<ModelReader> for ModelFile {
+    type Error = Message;
+
+    fn try_from(document: ModelReader) -> Result<Self, Self::Error> {
         match document {
-            ModelReader::V1 { model } => model.into(),
+            ModelReader::V1 { model } => model.try_into(),
         }
     }
 }

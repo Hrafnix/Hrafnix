@@ -86,7 +86,7 @@ impl MapItemFrozen {
                 Self::NumberWithUnits(NumberWithUnitsFrozen::new_with_value(
                     definition.clone(),
                     value.clone(),
-                    definition.preferred_units().string_id().into(),
+                    definition.preferred_units().string_id(),
                 ))
             }
             (MapItemDefinition::String(definition), MapItemDefault::Scalar(value)) => Self::String(

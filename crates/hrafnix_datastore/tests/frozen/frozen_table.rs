@@ -143,3 +143,20 @@ fn test_table_frozen_uses_definition_default_table() {
 
     assert_eq!(table.cell_by_index(0, 0).map(AsRef::as_ref), Some("42"));
 }
+
+#[test]
+fn table_from_rows_preserves_parameter_reference() {
+    let definition = TableDefinition::new(
+        "Table",
+        vec![(store_key!("value"), NumberDefinition::new("Value"))],
+    );
+    let rows = vec![vec!["7".into(), "discarded".into()], vec![]];
+    let mut editable = TableFrozen::new_from_rows(definition.clone(), rows.clone()).thaw();
+    editable.set_parameter("p_source");
+
+    let table = TableFrozen::new_from_rows_with_parameter(definition, rows, "p_source");
+
+    assert_eq!(table.parameter(), "p_source");
+    assert_eq!(table, editable.freeze());
+    assert_eq!(table.thaw().freeze(), table);
+}

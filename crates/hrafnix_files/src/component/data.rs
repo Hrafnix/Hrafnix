@@ -1,3 +1,4 @@
+use crate::component_instance::data::ComponentInstance;
 use crate::connection::data::Connection;
 use crate::decoration_background::data::BackgroundDecoration;
 use crate::decoration_foreground::data::ForegroundDecoration;
@@ -17,6 +18,8 @@ pub struct ComponentFile {
     pub foreground_decorations: Vec<ForegroundDecoration>,
     /// Shapes drawn behind the component's contents.
     pub background_decorations: Vec<BackgroundDecoration>,
+    /// Ordered nested component instances with saved GUI and parameter snapshots.
+    pub components: Vec<ComponentInstance>,
     /// Connections between component ports within the component.
     pub connections: Vec<Connection>,
     /// Source language and translated text used by the component.

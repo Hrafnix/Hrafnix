@@ -1,5 +1,8 @@
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
 use crate::component::data::ComponentFile;
+use crate::component_instance::reader::v1::{
+    ComponentInstanceReaderV1, deserialize_component_instances,
+};
 use crate::connection::reader::v1::ConnectionReaderV1;
 use crate::decoration_background::reader::v1::BackgroundDecorationReaderV1;
 use crate::decoration_foreground::reader::v1::ForegroundDecorationReaderV1;
@@ -8,6 +11,7 @@ use crate::definition_variable::reader::v1::VariableDefinitionReaderV1;
 use crate::metadata_general::reader::v1::MetadataReaderV1;
 use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
 use crate::translations::reader::v1::TranslationsReaderV1;
+use hrafnix_message::message::Message;
 use serde::Deserialize;
 
 /// The version 1 JSON representation of a component.
@@ -30,6 +34,9 @@ pub(crate) struct ComponentReaderV1 {
     /// Decorations drawn behind component contents.
     #[serde(deserialize_with = "deserialize_objects")]
     background_decorations: Vec<BackgroundDecorationReaderV1>,
+    /// Ordered nested component instances with unique identifiers.
+    #[serde(deserialize_with = "deserialize_component_instances")]
+    components: Vec<ComponentInstanceReaderV1>,
     /// Connections between component ports within the component.
     #[serde(deserialize_with = "deserialize_objects")]
     connections: Vec<ConnectionReaderV1>,
@@ -38,9 +45,11 @@ pub(crate) struct ComponentReaderV1 {
     translations: TranslationsReaderV1,
 }
 
-impl From<ComponentReaderV1> for ComponentFile {
-    fn from(component: ComponentReaderV1) -> Self {
-        Self {
+impl TryFrom<ComponentReaderV1> for ComponentFile {
+    type Error = Message;
+
+    fn try_from(component: ComponentReaderV1) -> Result<Self, Self::Error> {
+        Ok(Self {
             metadata: component.metadata.into(),
             gui_metadata: component.gui_metadata.into(),
             parameter_definition: component.parameter_definition.into(),
@@ -56,7 +65,12 @@ impl From<ComponentReaderV1> for ComponentFile {
                 .map(Into::into)
                 .collect(),
             translations: component.translations.into(),
+            components: component
+                .components
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<_, _>>()?,
             connections: component.connections.into_iter().map(Into::into).collect(),
-        }
+        })
     }
 }

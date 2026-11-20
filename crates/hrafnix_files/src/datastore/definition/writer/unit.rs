@@ -6,7 +6,7 @@ use serde::Serialize;
 
 /// Version-1 unit selection expression and family.
 #[derive(Debug, Serialize)]
-pub(crate) struct UnitWriterV1 {
+pub(crate) struct UnitDefinitionWriterV1 {
     /// Item description.
     #[serde(serialize_with = "serialize_shareable_string")]
     description: ShareableString,
@@ -14,11 +14,11 @@ pub(crate) struct UnitWriterV1 {
     #[serde(serialize_with = "serialize_shareable_string")]
     default: ShareableString,
     /// Unit family as a plain snake-case string.
-    #[serde(with = "UnitFamilyWriterV1")]
+    #[serde(with = "UnitFamilyDefinitionWriterV1")]
     unit_family: UnitFamilyId,
 }
 
-impl From<&UnitDefinition> for UnitWriterV1 {
+impl From<&UnitDefinition> for UnitDefinitionWriterV1 {
     fn from(unit: &UnitDefinition) -> Self {
         Self {
             description: unit.description(),
@@ -31,7 +31,7 @@ impl From<&UnitDefinition> for UnitWriterV1 {
 /// Frozen version-1 family identifiers, independent of runtime display names.
 #[derive(Debug, Serialize)]
 #[serde(remote = "UnitFamilyId", rename_all = "snake_case")]
-enum UnitFamilyWriterV1 {
+enum UnitFamilyDefinitionWriterV1 {
     /// No units.
     None,
     /// Length.

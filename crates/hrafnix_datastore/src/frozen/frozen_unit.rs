@@ -31,10 +31,10 @@ impl UnitFrozen {
 
     /// Creates a new `UnitFrozen` instance with a specified value.
     #[must_use]
-    pub fn new_with_value(definition: UnitDefinition, value: ShareableString) -> Self {
+    pub fn new_with_value<S: Into<ShareableString>>(definition: UnitDefinition, value: S) -> Self {
         let mut s = Self {
             definition,
-            value,
+            value: value.into(),
             hash: [0u8; 32],
         };
         s.update_hash();

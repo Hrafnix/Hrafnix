@@ -1,9 +1,11 @@
 use super::{
-    boolean::BooleanWriterV1, choice::ChoiceWriterV1, file::FileWriterV1, folder::FolderWriterV1,
-    integer::IntegerWriterV1, map::MapWriterV1, number::NumberWriterV1,
-    number_with_units::NumberWithUnitWriterV1, separator::SeparatorWriterV1,
-    string::StringWriterV1, tab::TabWriterV1, table::TableWriterV1,
-    table_with_units::TableWithUnitsWriterV1, unit::UnitWriterV1,
+    boolean::BooleanDefinitionWriterV1, choice::ChoiceDefinitionWriterV1,
+    file::FileDefinitionWriterV1, folder::FolderDefinitionWriterV1,
+    integer::IntegerDefinitionWriterV1, map::MapDefinitionWriterV1,
+    number::NumberDefinitionWriterV1, number_with_units::NumberWithUnitDefinitionWriterV1,
+    separator::SeparatorDefinitionWriterV1, string::StringDefinitionWriterV1,
+    tab::TabDefinitionWriterV1, table::TableDefinitionWriterV1,
+    table_with_units::TableWithUnitsDefinitionWriterV1, unit::UnitDefinitionWriterV1,
 };
 use hrafnix_datastore::definition::ItemDefinitionType;
 use serde::Serialize;
@@ -13,33 +15,33 @@ use serde::Serialize;
 #[serde(tag = "type", rename_all = "snake_case")]
 pub(crate) enum ItemDefinitionWriter {
     /// Boolean expression and state labels.
-    Boolean(BooleanWriterV1),
+    Boolean(BooleanDefinitionWriterV1),
     /// Choice expression and choices.
-    Choice(ChoiceWriterV1),
+    Choice(ChoiceDefinitionWriterV1),
     /// File expression and dialog options.
-    File(FileWriterV1),
+    File(FileDefinitionWriterV1),
     /// Folder expression and archive option.
-    Folder(FolderWriterV1),
+    Folder(FolderDefinitionWriterV1),
     /// Integer expression and bounds.
-    Integer(IntegerWriterV1),
+    Integer(IntegerDefinitionWriterV1),
     /// Ordered map schema and default entries.
-    Map(MapWriterV1),
+    Map(MapDefinitionWriterV1),
     /// Numeric expression and bounds.
-    Number(NumberWriterV1),
+    Number(NumberDefinitionWriterV1),
     /// Numeric expression with units.
-    NumberWithUnits(NumberWithUnitWriterV1),
+    NumberWithUnits(NumberWithUnitDefinitionWriterV1),
     /// String expression.
-    String(StringWriterV1),
+    String(StringDefinitionWriterV1),
     /// Numeric table.
-    Table(TableWriterV1),
+    Table(TableDefinitionWriterV1),
     /// Numeric table with units.
-    TableWithUnits(TableWithUnitsWriterV1),
+    TableWithUnits(TableWithUnitsDefinitionWriterV1),
     /// Unit selection.
-    Unit(UnitWriterV1),
+    Unit(UnitDefinitionWriterV1),
     /// Tab label.
-    Tab(TabWriterV1),
+    Tab(TabDefinitionWriterV1),
     /// Separator label.
-    Separator(SeparatorWriterV1),
+    Separator(SeparatorDefinitionWriterV1),
 }
 
 impl From<&ItemDefinitionType> for ItemDefinitionWriter {

@@ -19,14 +19,14 @@ pub(crate) mod writer;
 /// # Errors
 ///
 /// Returns a localized error if the file cannot be read, exceeds the size limit,
-/// contains invalid UTF-8, or does not match a supported component JSON format.
+/// contains invalid UTF-8, does not match a supported component JSON format, or
+/// has instance parameter values that do not match their embedded definitions.
 pub fn read_component_file(path: &Utf8Path) -> Result<ComponentFile, Message> {
     let component_string = read_file_to_string(path)?;
 
     let component_deserialized: RootObject<ComponentReader> =
         serde_json::from_str(&component_string).map_err(|error| json_error(path, error))?;
-    let component_file: ComponentFile = component_deserialized.document.into();
-    Ok(component_file)
+    component_deserialized.document.try_into()
 }
 
 /// Writes a component file as pretty-printed JSON without a final newline.

@@ -53,8 +53,23 @@ impl TableWithUnitsFrozen {
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn new_from_rows(
         definition: TableWithUnitsDefinition,
+        rows: Vec<Vec<ShareableString>>,
+        units: Vec<ShareableString>,
+    ) -> Self {
+        Self::new_from_rows_with_parameter(definition, rows, units, "")
+    }
+
+    /// Creates a table with rows, column units, and an unevaluated parameter reference.
+    ///
+    /// Rows are padded with empty strings or truncated to the definition's column count.
+    /// `units` must contain one entry per column in definition column order.
+    #[must_use]
+    #[cfg_attr(feature = "hotpath", hotpath::measure)]
+    pub fn new_from_rows_with_parameter<S: Into<ShareableString>>(
+        definition: TableWithUnitsDefinition,
         mut rows: Vec<Vec<ShareableString>>,
         units: Vec<ShareableString>,
+        parameter: S,
     ) -> Self {
         let column_count = definition.count();
         for row in &mut rows {
@@ -64,7 +79,7 @@ impl TableWithUnitsFrozen {
             definition,
             units,
             rows,
-            parameter: ShareableString::new(""),
+            parameter: parameter.into(),
             hash: [0u8; 32],
         };
         table.update_hash();
