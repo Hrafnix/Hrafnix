@@ -12,8 +12,12 @@ use hrafnix_datastore::definition::{
     VariableObjectDefinition,
 };
 use hrafnix_datastore::frozen::{GlobalObjectFrozen, IntegerFrozen, ItemFrozen, StringFrozen};
-use hrafnix_files::model::{data::ModelFile, read_model_file, write_model_file};
-use hrafnix_keys::global_key;
+use hrafnix_files::hashes::model_interface_hash;
+use hrafnix_files::model::{
+    data::ModelFile, read_model_file, read_model_file_with_hashes, write_model_file,
+    write_model_file_with_hashes,
+};
+use hrafnix_keys::{global_key, parameter_key, variable_key};
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;
 use serde_json::{Value, json};
@@ -150,6 +154,102 @@ fn model_round_trips_through_the_writer_and_disk() {
 
     assert_eq!(fs::read_to_string(&destination).unwrap(), minimal_text());
     assert_eq!(read_model_file(&destination).unwrap(), model);
+}
+
+#[test]
+fn model_hashes_cover_exact_bytes_but_ignore_json_formatting() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("hashes.hxm");
+    let model = minimal_model();
+    let saved = write_model_file_with_hashes(model.clone(), &path).unwrap();
+    assert_eq!(fs::read_to_string(&path).unwrap(), minimal_text());
+    assert_eq!(saved.whole_file, blake3::hash(&fs::read(&path).unwrap()));
+    assert_eq!(
+        read_model_file_with_hashes(&path).unwrap(),
+        (model.clone(), saved)
+    );
+    assert_eq!(
+        saved.interface,
+        blake3::hash(
+            b"hrafnix/interface/v1\0{\"kind\":\"model\",\"parameter_definition\":[],\"variable_definition\":[]}",
+        ),
+    );
+
+    let document: Value = serde_json::from_str(&minimal_text()).unwrap();
+    let compact = serde_json::to_string(&document).unwrap();
+    for text in [
+        compact.clone(),
+        serde_json::to_string_pretty(&document)
+            .unwrap()
+            .replace('\n', "\r\n"),
+        format!("\u{feff}{compact}"),
+        format!("{compact}\n"),
+    ] {
+        fs::write(&path, &text).unwrap();
+        let (restored, hashes) = read_model_file_with_hashes(&path).unwrap();
+        assert_eq!(restored, model);
+        assert_eq!(hashes.whole_file, blake3::hash(text.as_bytes()));
+        assert_ne!(hashes.whole_file, saved.whole_file);
+        assert_eq!(hashes.interface, saved.interface);
+    }
+}
+
+#[test]
+fn model_interface_tracks_definitions_but_not_internal_settings() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("interface.hxm");
+    let mut model = minimal_model();
+    let baseline = model_interface_hash(&model, &path).unwrap();
+    let saved = write_model_file_with_hashes(model.clone(), &path).unwrap();
+    model.metadata.description = "Changed metadata".into();
+    model.translations = common::populated_translations();
+    model
+        .foreground_decorations
+        .push(common::foreground_decoration());
+    model
+        .background_decorations
+        .push(common::background_decoration());
+    model.connections = common::connections();
+    let definition = GlobalObjectDefinition::builder()
+        .with(
+            global_key!("g_label"),
+            StringDefinition::new_with_default("Label", "\"run\""),
+        )
+        .finish();
+    model.global_settings = GlobalObjectFrozen::new(definition);
+    let changed = write_model_file_with_hashes(model.clone(), &path).unwrap();
+    assert_eq!(changed.interface, baseline);
+    assert_ne!(changed.whole_file, saved.whole_file);
+
+    model.parameter_definition = ParameterObjectDefinition::builder()
+        .with(parameter_key!("p_label"), StringDefinition::new("Label"))
+        .finish();
+    let parameters_changed = model_interface_hash(&model, &path).unwrap();
+    assert_ne!(parameters_changed, baseline);
+    model.variable_definition = VariableObjectDefinition::builder()
+        .with(variable_key!("v_state"), StringDefinition::new("State"))
+        .finish();
+    let both_changed = model_interface_hash(&model, &path).unwrap();
+    assert_ne!(both_changed, parameters_changed);
+    let saved = write_model_file_with_hashes(model, &path).unwrap();
+    assert_eq!(saved.interface, both_changed);
+    assert_eq!(read_model_file_with_hashes(&path).unwrap().1, saved);
+}
+
+#[test]
+fn model_hash_apis_preserve_file_and_schema_errors() {
+    common::assert_read_only_file_preserved(|path| {
+        write_model_file_with_hashes(minimal_model(), path).map(|_| ())
+    });
+    let directory = TestDirectory::new();
+    let path = directory.path.join("invalid.hxm");
+    for bytes in [b"{".as_slice(), b"\xff", b"{\"file-version\":\"unknown\"}"] {
+        fs::write(&path, bytes).unwrap();
+        assert_eq!(
+            read_model_file_with_hashes(&path).unwrap_err(),
+            read_model_file(&path).unwrap_err(),
+        );
+    }
 }
 
 #[test]

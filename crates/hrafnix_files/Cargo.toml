@@ -15,6 +15,7 @@ hotpath = ["dep:hotpath", "hotpath/hotpath"]
 hotpath-alloc = ["hotpath", "hotpath/hotpath-alloc"]
 
 [dependencies]
+blake3.workspace = true
 hotpath = { workspace = true, optional = true }
 camino.workspace = true
 serde.workspace = true

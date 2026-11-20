@@ -9,8 +9,12 @@ use camino::Utf8PathBuf;
 use common::TestDirectory;
 use hrafnix_common::port::PortType;
 use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
-use hrafnix_files::component::{data::ComponentFile, read_component_file, write_component_file};
+use hrafnix_files::component::{
+    data::ComponentFile, read_component_file, read_component_file_with_hashes,
+    write_component_file, write_component_file_with_hashes,
+};
 use hrafnix_files::graphics::data::Dimension;
+use hrafnix_files::hashes::component_interface_hash;
 use hrafnix_files::metadata_gui::data::{GuiMetadata, Port, PortLocation};
 use hrafnix_keys::port_key;
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
@@ -150,6 +154,178 @@ fn component_round_trips_through_the_writer_and_disk() {
 
     assert_eq!(fs::read_to_string(&destination).unwrap(), minimal_text());
     assert_eq!(read_component_file(&destination).unwrap(), component);
+}
+
+#[test]
+fn component_hashes_cover_exact_bytes_but_ignore_json_formatting() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("hashes.hxc");
+    let component = minimal_component();
+    let saved = write_component_file_with_hashes(component.clone(), &path).unwrap();
+    assert_eq!(fs::read_to_string(&path).unwrap(), minimal_text());
+    assert_eq!(saved.whole_file, blake3::hash(&fs::read(&path).unwrap()));
+    assert_eq!(
+        read_component_file_with_hashes(&path).unwrap(),
+        (component.clone(), saved),
+    );
+    assert_eq!(
+        saved.interface,
+        blake3::hash(
+            b"hrafnix/interface/v1\0{\"kind\":\"component\",\"gui_metadata\":{\"dimensions\":{\"width\":100,\"height\":50},\"icon\":\"../icons/component.svg\",\"ports\":[]},\"parameter_definition\":[],\"variable_definition\":[]}",
+        ),
+    );
+
+    let document: Value = serde_json::from_str(&minimal_text()).unwrap();
+    let compact = serde_json::to_string(&document).unwrap();
+    let pretty = serde_json::to_string_pretty(&document).unwrap();
+    for text in [
+        compact.clone(),
+        pretty.replace('\n', "\r\n"),
+        format!("\u{feff}{compact}"),
+        format!("{compact}\n"),
+    ] {
+        fs::write(&path, &text).unwrap();
+        let (restored, hashes) = read_component_file_with_hashes(&path).unwrap();
+        assert_eq!(restored, component);
+        assert_eq!(hashes.whole_file, blake3::hash(text.as_bytes()));
+        assert_ne!(hashes.whole_file, saved.whole_file);
+        assert_eq!(hashes.interface, saved.interface);
+    }
+}
+
+#[test]
+fn component_interface_hash_tracks_the_complete_ordered_public_contract() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("interface.hxc");
+    let mut document: Value = serde_json::from_str(&minimal_text()).unwrap();
+    document["component"]["gui_metadata"]["ports"] = json!([
+        {"id": "input", "type": "input", "location": {"x": 0, "y": 10}},
+        {"id": "output", "type": "output", "location": {"x": 100, "y": 20}},
+    ]);
+    document["component"]["parameter_definition"] = json!([
+        {"key": "p_label", "type": "string", "description": "Label", "default": "\"A\""},
+        {"key": "p_count", "type": "integer", "description": "Count", "default": "1",
+         "constraint": {"type": "none"}},
+    ]);
+    document["component"]["variable_definition"] = json!([
+        {"key": "v_state", "type": "string", "description": "State", "default": "\"\""},
+        {"key": "v_previous", "type": "string", "description": "Previous", "default": "\"\""},
+    ]);
+    let hash = |value: &Value| {
+        fs::write(&path, serde_json::to_string(value).unwrap()).unwrap();
+        read_component_file_with_hashes(&path).unwrap().1.interface
+    };
+    let baseline = hash(&document);
+    for (pointer, value) in [
+        ("/component/gui_metadata/icon", json!("other.svg")),
+        ("/component/gui_metadata/dimensions/width", json!(120)),
+        ("/component/gui_metadata/dimensions/height", json!(60)),
+        ("/component/gui_metadata/ports/0/id", json!("renamed")),
+        ("/component/gui_metadata/ports/0/type", json!("power")),
+        ("/component/gui_metadata/ports/0/location/x", json!(5)),
+        ("/component/gui_metadata/ports/0/location/y", json!(15)),
+        ("/component/parameter_definition/0/key", json!("p_title")),
+        (
+            "/component/parameter_definition/0/description",
+            json!("Title"),
+        ),
+        ("/component/parameter_definition/0/default", json!("\"B\"")),
+        (
+            "/component/parameter_definition/1/constraint",
+            json!({"type": "min", "min": 0, "inclusive": true}),
+        ),
+        (
+            "/component/parameter_definition/0",
+            json!({
+                "key": "p_label", "type": "integer", "description": "Label", "default": "1",
+                "constraint": {"type": "none"}
+            }),
+        ),
+        ("/component/variable_definition/0/key", json!("v_current")),
+        (
+            "/component/variable_definition/0/description",
+            json!("Current"),
+        ),
+        (
+            "/component/variable_definition/0/default",
+            json!("\"ready\""),
+        ),
+    ] {
+        let mut changed = document.clone();
+        *changed.pointer_mut(pointer).unwrap() = value;
+        assert_ne!(hash(&changed), baseline, "{pointer}");
+    }
+    for pointer in [
+        "/component/gui_metadata/ports",
+        "/component/parameter_definition",
+        "/component/variable_definition",
+    ] {
+        let mut reordered = document.clone();
+        reordered
+            .pointer_mut(pointer)
+            .unwrap()
+            .as_array_mut()
+            .unwrap()
+            .reverse();
+        assert_ne!(hash(&reordered), baseline, "{pointer}");
+    }
+}
+
+#[test]
+fn component_interface_excludes_internals_and_matches_normalized_saved_ports() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("normalized.hxc");
+    let mut component = minimal_component();
+    component.gui_metadata.ports = vec![Port {
+        id: port_key!("output").into(),
+        port_type: PortType::Output,
+        location: PortLocation {
+            x: u16::MAX,
+            y: u16::MAX,
+        },
+    }];
+    let baseline = component_interface_hash(&component, &path).unwrap();
+    let saved = write_component_file_with_hashes(component, &path).unwrap();
+    let (mut normalized, loaded) = read_component_file_with_hashes(&path).unwrap();
+    assert_eq!(saved, loaded);
+    assert_eq!(saved.interface, baseline);
+    assert_eq!(
+        normalized.gui_metadata.ports[0].location,
+        PortLocation { x: 100, y: 50 }
+    );
+    assert_eq!(
+        component_interface_hash(&normalized, &path).unwrap(),
+        baseline
+    );
+
+    normalized.metadata.display_name = "Changed name".into();
+    normalized.translations = common::populated_translations();
+    normalized
+        .foreground_decorations
+        .push(common::foreground_decoration());
+    normalized
+        .background_decorations
+        .push(common::background_decoration());
+    normalized.connections = common::connections();
+    let changed = write_component_file_with_hashes(normalized, &path).unwrap();
+    assert_eq!(changed.interface, baseline);
+    assert_ne!(changed.whole_file, saved.whole_file);
+}
+
+#[test]
+fn component_hash_apis_preserve_file_and_schema_errors() {
+    common::assert_read_only_file_preserved(|path| {
+        write_component_file_with_hashes(minimal_component(), path).map(|_| ())
+    });
+    let directory = TestDirectory::new();
+    let path = directory.path.join("invalid.hxc");
+    for bytes in [b"{".as_slice(), b"\xff", b"{\"file-version\":\"unknown\"}"] {
+        fs::write(&path, bytes).unwrap();
+        assert_eq!(
+            read_component_file_with_hashes(&path).unwrap_err(),
+            read_component_file(&path).unwrap_err(),
+        );
+    }
 }
 
 #[test]

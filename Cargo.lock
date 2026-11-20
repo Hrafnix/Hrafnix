@@ -357,6 +357,7 @@ dependencies = [
 name = "hrafnix_files"
 version = "0.1.0"
 dependencies = [
+ "blake3",
  "camino",
  "hotpath",
  "hrafnix_common",

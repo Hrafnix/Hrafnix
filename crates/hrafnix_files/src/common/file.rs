@@ -18,6 +18,13 @@ const MAX_FILE_SIZE: u64 = 256 * 1024 * 1024;
 /// Removes a single leading UTF-8 BOM after decoding. Reports invalid UTF-8 by
 /// its original byte position, separately from I/O errors.
 pub(crate) fn read_file_to_string(path: &Utf8Path) -> Result<String, Message> {
+    read_file_to_string_with_hash(path).map(|(contents, _)| contents)
+}
+
+/// Reads bounded UTF-8 contents and hashes the exact bytes before removing a BOM.
+pub(crate) fn read_file_to_string_with_hash(
+    path: &Utf8Path,
+) -> Result<(String, blake3::Hash), Message> {
     let metadata = metadata(path).map_err(|error| file_io_error(path, &error))?;
     if !metadata.is_file() {
         return Err(Message::new_with_params(
@@ -69,6 +76,7 @@ pub(crate) fn read_file_to_string(path: &Utf8Path) -> Result<String, Message> {
         ));
     }
 
+    let hash = blake3::hash(&bytes);
     let mut contents = String::from_utf8(bytes).map_err(|error| {
         let error = error.utf8_error();
         let mut params = HashMap::from([
@@ -95,7 +103,7 @@ pub(crate) fn read_file_to_string(path: &Utf8Path) -> Result<String, Message> {
     if contents.starts_with('\u{feff}') {
         contents.remove(0);
     }
-    Ok(contents)
+    Ok((contents, hash))
 }
 
 /// Atomically replaces `path` with the exact UTF-8 bytes of `contents`.

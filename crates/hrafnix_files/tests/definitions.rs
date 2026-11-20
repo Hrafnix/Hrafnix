@@ -19,8 +19,14 @@ use hrafnix_datastore::definition::{
     VariableObjectDefinition,
 };
 use hrafnix_files::{
-    component::{read_component_file, write_component_file},
-    model::{read_model_file, write_model_file},
+    component::{
+        read_component_file, read_component_file_with_hashes, write_component_file,
+        write_component_file_with_hashes,
+    },
+    model::{
+        read_model_file, read_model_file_with_hashes, write_model_file,
+        write_model_file_with_hashes,
+    },
 };
 use hrafnix_keys::{ParameterKey, StoreKey, VariableKey};
 use hrafnix_message::message::Message;
@@ -280,13 +286,17 @@ fn document(root: &str) -> Value {
 /// Reads and writes through the public file API and compares the entire file data.
 fn round_trip(root: &str, path: &Utf8Path) {
     if root == "model" {
-        let model = read_model_file(path).unwrap();
-        write_model_file(model.clone(), path).unwrap();
+        let (model, original_hashes) = read_model_file_with_hashes(path).unwrap();
+        let saved = write_model_file_with_hashes(model.clone(), path).unwrap();
         assert_eq!(read_model_file(path).unwrap(), model);
+        assert_eq!(saved.interface, original_hashes.interface);
+        assert_eq!(read_model_file_with_hashes(path).unwrap().1, saved);
     } else {
-        let component = read_component_file(path).unwrap();
-        write_component_file(component.clone(), path).unwrap();
+        let (component, original_hashes) = read_component_file_with_hashes(path).unwrap();
+        let saved = write_component_file_with_hashes(component.clone(), path).unwrap();
         assert_eq!(read_component_file(path).unwrap(), component);
+        assert_eq!(saved.interface, original_hashes.interface);
+        assert_eq!(read_component_file_with_hashes(path).unwrap().1, saved);
     }
 }
 

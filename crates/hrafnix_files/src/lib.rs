@@ -64,6 +64,13 @@
 //! Writers consume the file data and atomically replace the destination with
 //! pretty-printed JSON, without a final newline. Reads and writes are limited to
 //! 256 MiB.
+//!
+//! The `read_*_with_hashes` and `write_*_with_hashes` functions additionally return
+//! [`hashes::FileHashes`]: an exact-byte BLAKE3 hash of the whole file and a
+//! versioned, formatting-independent hash of its public interface. Interface
+//! hashes include parameter/variable definitions and component GUI metadata,
+//! but exclude internal contents. See [`hashes`] for the complete contract.
+//! Hashes are not embedded in the JSON or cached in the mutable file data.
 
 // Test code favors clarity and brevity over the strictness we require of library code:
 // panicking helpers (`unwrap`/`expect`/indexing/`panic!`) and approximate float comparisons
@@ -111,6 +118,8 @@ pub mod frozen_global;
 pub mod frozen_parameter;
 /// Geometry and styling values shared by graphical elements.
 pub mod graphics;
+/// BLAKE3 file fingerprints and versioned public-interface hashing.
+pub mod hashes;
 /// Metadata shared by model and component files.
 pub mod metadata_general;
 /// Drawing dimensions, icons, and port locations associated with components.
