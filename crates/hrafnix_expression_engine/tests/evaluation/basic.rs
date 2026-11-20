@@ -131,14 +131,14 @@ fn test_basic_data_choice_identifier_comparison() {
                 parameter_key!("p_equal").into(),
                 ItemFrozen::Boolean(BooleanFrozen::new_with_value(
                     BooleanDefinition::new("Choice equals itself"),
-                    "g_choice == g_choice".into(),
+                    "g_choice == g_choice",
                 )),
             ),
             (
                 parameter_key!("p_not_equal").into(),
                 ItemFrozen::Boolean(BooleanFrozen::new_with_value(
                     BooleanDefinition::new("Choice does not differ from itself"),
-                    "g_choice != g_choice".into(),
+                    "g_choice != g_choice",
                 )),
             ),
         ]),

@@ -31,10 +31,13 @@ impl ChoiceFrozen {
 
     /// Creates a new `ChoiceFrozen` instance with a specified value.
     #[must_use]
-    pub fn new_with_value(definition: ChoiceDefinition, value: ShareableString) -> Self {
+    pub fn new_with_value<S: Into<ShareableString>>(
+        definition: ChoiceDefinition,
+        value: S,
+    ) -> Self {
         let mut s = Self {
             definition,
-            value,
+            value: value.into(),
             hash: [0u8; 32],
         };
         s.update_hash();

@@ -35,15 +35,15 @@ impl NumberWithUnitsFrozen {
 
     /// Creates a new `NumberWithUnitsFrozen` instance with a specified value.
     #[must_use]
-    pub fn new_with_value(
+    pub fn new_with_value<S1: Into<ShareableString>, S2: Into<ShareableString>>(
         definition: NumberWithUnitsDefinition,
-        value: ShareableString,
-        units: ShareableString,
+        value: S1,
+        units: S2,
     ) -> Self {
         let mut s = Self {
             definition,
-            value,
-            units,
+            value: value.into(),
+            units: units.into(),
             hash: [0u8; 32],
         };
         s.update_hash();
