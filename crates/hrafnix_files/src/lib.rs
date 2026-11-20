@@ -14,6 +14,17 @@
 //! signed 32-bit integer `x` and `y` drawing coordinates and retain their order.
 //! Connections have no style field. Endpoint references are stored without
 //! resolving the referenced components or ports.
+//! Model and component contents require a `components` array, including when
+//! empty. Each instance has a unique plain-string component `id`, a `position`
+//! in signed 32-bit drawing coordinates, `gui_metadata`, and an ordered
+//! `parameters` array with embedded definitions and frozen expression values.
+//! Its `source` is tagged with `"type": "file"` (string `path`
+//! and optional `package` object with required string `name` and
+//! `version`) or `"type": "builtin"` (string `name` and `version`). File sources
+//! have no standalone version; loose files omit the package. Source versions,
+//! names and paths are stored unchanged without resolution or
+//! verification. GUI metadata and parameters are saved snapshots, not loaded
+//! from the referenced source.
 //! Component contents also require a `gui_metadata` object with `dimensions`
 //! (`width` and `height` as unsigned 16-bit integers) and an `icon` path string.
 //! Icon paths are stored unchanged, without opening or resolving them.
@@ -36,6 +47,11 @@
 //! Each item has a unique plain-string `g_` key, a snake-case `type`, an embedded
 //! `definition`, and frozen value fields. Global settings preserve definition
 //! order, and values must match their embedded definitions.
+//! Frozen tables require a `parameter` string (empty for local rows) alongside
+//! their `rows`. Unit-aware tables also require a `units` array with exactly one
+//! string per defined column. Inside maps, table values are objects with
+//! `parameter` and `rows`, plus `units` for unit-aware tables; bare row arrays
+//! are not accepted.
 //! Every text decoration property is required and sits directly inside its
 //! text object. Background decoration kinds are plain strings such as
 //! `"Frame"`. Font sizes are plain integers in hundredths of a drawing unit
@@ -75,6 +91,8 @@
 mod common;
 /// Component definitions and behavior.
 pub mod component;
+/// Saved component instances and their unresolved source references.
+pub mod component_instance;
 /// Connections between component ports and their drawing paths.
 pub mod connection;
 /// Shared datastore definition codecs used by parameter and variable files.

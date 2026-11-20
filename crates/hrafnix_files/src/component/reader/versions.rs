@@ -1,6 +1,7 @@
 use crate::common::deserialize::deserialize_object;
 use crate::component::data::ComponentFile;
 use crate::component::reader::v1::ComponentReaderV1;
+use hrafnix_message::message::Message;
 use serde::Deserialize;
 
 /// Component data selected by the `file-version` tag.
@@ -16,10 +17,12 @@ pub(crate) enum ComponentReader {
     },
 }
 
-impl From<ComponentReader> for ComponentFile {
-    fn from(document: ComponentReader) -> Self {
+impl TryFrom<ComponentReader> for ComponentFile {
+    type Error = Message;
+
+    fn try_from(document: ComponentReader) -> Result<Self, Self::Error> {
         match document {
-            ComponentReader::V1 { component } => component.into(),
+            ComponentReader::V1 { component } => component.try_into(),
         }
     }
 }

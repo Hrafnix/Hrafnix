@@ -30,6 +30,7 @@ fn minimal_component() -> ComponentFile {
         },
         foreground_decorations: Vec::new(),
         background_decorations: Vec::new(),
+        components: Vec::new(),
         connections: Vec::new(),
         parameter_definition: ParameterObjectDefinition::default(),
         variable_definition: VariableObjectDefinition::default(),

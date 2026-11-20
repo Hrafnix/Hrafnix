@@ -28,6 +28,14 @@ pub(crate) fn deserialize_object<'de, T: Deserialize<'de>, D: Deserializer<'de>>
     })
 }
 
+/// Deserializes an optional object, rejecting positional arrays when present.
+pub(crate) fn deserialize_optional_object<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<T>, D::Error> {
+    Option::<RootObject<T>>::deserialize(deserializer)
+        .map(|object| object.map(|object| object.document))
+}
+
 /// Deserializes an array of objects, rejecting positional arrays for its elements.
 pub(crate) fn deserialize_objects<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
     deserializer: D,

@@ -39,7 +39,7 @@ fn root_specific_entries(root: &str) -> &'static str {
 pub(super) fn contents(root: &str) -> String {
     let root_entries = root_specific_entries(root);
     format!(
-        "{{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}{root_entries}, \"foreground_decorations\": [], \"background_decorations\": [], \"connections\": [], \"parameter_definition\": [], \"variable_definition\": []}}"
+        "{{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}{root_entries}, \"foreground_decorations\": [], \"background_decorations\": [], \"components\": [], \"connections\": [], \"parameter_definition\": [], \"variable_definition\": []}}"
     )
 }
 
@@ -243,7 +243,7 @@ pub(super) fn assert_root_structure(root: &str, read: fn(&Utf8Path) -> Result<()
     let invalid_bodies = [
         format!("[{METADATA}]"),
         format!(
-            "{{\"metadata\":[\"\", \"\", \"\", 0, 0],\"translations\":{TRANSLATIONS}{root_entries},\"foreground_decorations\":[],\"background_decorations\":[],\"connections\":[],\"parameter_definition\":[],\"variable_definition\":[]}}"
+            "{{\"metadata\":[\"\", \"\", \"\", 0, 0],\"translations\":{TRANSLATIONS}{root_entries},\"foreground_decorations\":[],\"background_decorations\":[],\"components\":[],\"connections\":[],\"parameter_definition\":[],\"variable_definition\":[]}}"
         ),
         "[[\"\", \"\", \"\", 0, 0]]".to_owned(),
         "[]".to_owned(),
@@ -613,7 +613,7 @@ pub(super) fn assert_document_variants(root: &str, read: fn(&Utf8Path) -> Result
     let directory = TestDirectory::new();
     let path = directory.path.join("variants.json");
     let contents = format!(
-        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}},\"translations\":{TRANSLATIONS}{root_entries},\"foreground_decorations\":[],\"background_decorations\":[],\"connections\":[],\"parameter_definition\":[],\"variable_definition\":[]}}"
+        "{{\"metadata\":{{\"display-name\":\"Example\",\"description\":\"An example {root}.\",\"author\":\"Hrafnix\",\"minimum-version-major\":1,\"minimum-version-minor\":2}},\"translations\":{TRANSLATIONS}{root_entries},\"foreground_decorations\":[],\"background_decorations\":[],\"components\":[],\"connections\":[],\"parameter_definition\":[],\"variable_definition\":[]}}"
     );
     let escaped_root = root.replace('o', "\\u006f");
     for document in [
@@ -761,10 +761,10 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         format!("{{\"file-version\":\"1\",\"{root}\":{contents},\"{root}\":{contents}}}"),
         format!("{{\"file-version\":\"1\",\"{root}\":{{}}}}"),
         format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA},\"translations\":{TRANSLATIONS}{root_entries},\"foreground_decorations\":[],\"background_decorations\":[],\"connections\":[],\"parameter_definition\":[],\"variable_definition\":[]}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"metadata\":{METADATA},\"translations\":{TRANSLATIONS}{root_entries},\"foreground_decorations\":[],\"background_decorations\":[],\"components\":[],\"connections\":[],\"parameter_definition\":[],\"variable_definition\":[]}}}}"
         ),
         format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"translations\":{TRANSLATIONS}{root_entries},\"foreground_decorations\":[],\"background_decorations\":[],\"connections\":[],\"parameter_definition\":[],\"variable_definition\":[],\"file-version\":\"1\"}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{METADATA},\"translations\":{TRANSLATIONS}{root_entries},\"foreground_decorations\":[],\"background_decorations\":[],\"components\":[],\"connections\":[],\"parameter_definition\":[],\"variable_definition\":[],\"file-version\":\"1\"}}}}"
         ),
     ];
     for version in [
@@ -792,6 +792,7 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
     for field in [
         "foreground_decorations",
         "background_decorations",
+        "components",
         "connections",
         "parameter_definition",
         "variable_definition",
@@ -852,7 +853,7 @@ pub(super) fn assert_document_schema(root: &str, read: fn(&Utf8Path) -> Result<(
         METADATA.replace('}', ", \"unknown\": true}"),
     ] {
         invalid_documents.push(format!(
-            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata},\"translations\":{TRANSLATIONS}{root_entries},\"foreground_decorations\":[],\"background_decorations\":[],\"connections\":[],\"parameter_definition\":[],\"variable_definition\":[]}}}}"
+            "{{\"file-version\":\"1\",\"{root}\":{{\"metadata\":{metadata},\"translations\":{TRANSLATIONS}{root_entries},\"foreground_decorations\":[],\"background_decorations\":[],\"components\":[],\"connections\":[],\"parameter_definition\":[],\"variable_definition\":[]}}}}"
         ));
     }
     for document in invalid_documents {

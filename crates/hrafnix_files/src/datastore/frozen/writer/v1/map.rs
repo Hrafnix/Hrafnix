@@ -13,8 +13,15 @@ use std::collections::BTreeMap;
 enum MapItemValueWriterV1 {
     /// Unevaluated scalar expression.
     Expression(#[serde(serialize_with = "serialize_shareable_string")] ShareableString),
-    /// Row-major table cell expressions.
-    Table(#[serde(serialize_with = "serialize_table_rows")] Vec<Vec<ShareableString>>),
+    /// Table reference and row-major cell expressions.
+    Table {
+        /// Unevaluated table reference, or an empty string for local rows.
+        #[serde(serialize_with = "serialize_shareable_string")]
+        parameter: ShareableString,
+        /// Row-major cell expressions in definition column order.
+        #[serde(serialize_with = "serialize_table_rows")]
+        rows: Vec<Vec<ShareableString>>,
+    },
     /// Numeric expression with its selected units.
     NumberWithUnits {
         /// Current unevaluated numeric expression.
@@ -26,6 +33,9 @@ enum MapItemValueWriterV1 {
     },
     /// Table cell expressions with units stored once per column.
     TableWithUnits {
+        /// Unevaluated table reference, or an empty string for local rows.
+        #[serde(serialize_with = "serialize_shareable_string")]
+        parameter: ShareableString,
         /// Selected unit strings in definition column order.
         #[serde(serialize_with = "serialize_shareable_strings")]
         units: Vec<ShareableString>,
@@ -48,8 +58,12 @@ impl From<&MapItemFrozen> for MapItemValueWriterV1 {
                 units: value.units(),
             },
             MapItemFrozen::String(value) => Self::Expression(value.value()),
-            MapItemFrozen::Table(value) => Self::Table(value.rows().to_vec()),
+            MapItemFrozen::Table(value) => Self::Table {
+                parameter: value.parameter().clone(),
+                rows: value.rows().to_vec(),
+            },
             MapItemFrozen::TableWithUnits(value) => Self::TableWithUnits {
+                parameter: value.parameter().clone(),
                 units: value.units().to_vec(),
                 rows: value.rows().to_vec(),
             },
@@ -143,7 +157,7 @@ mod tests {
                 "first": [
                     "sample",
                     {"value": "12 m", "units": "length_meter"},
-                    {"units": ["length_meter"], "rows": [["12 m"]]}
+                    {"parameter": "", "units": ["length_meter"], "rows": [["12 m"]]}
                 ]
             }
         });

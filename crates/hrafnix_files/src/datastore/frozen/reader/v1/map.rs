@@ -19,8 +19,13 @@ use std::collections::BTreeMap;
 enum MapItemValueReaderV1 {
     /// Unevaluated scalar expression.
     Expression(String),
-    /// Row-major table cell expressions.
-    Table(Vec<Vec<String>>),
+    /// Table reference and row-major cell expressions.
+    Table {
+        /// Unevaluated table reference, or an empty string for local rows.
+        parameter: String,
+        /// Row-major cell expressions in definition column order.
+        rows: Vec<Vec<String>>,
+    },
     /// Numeric expression with its selected units.
     NumberWithUnits {
         /// Current unevaluated numeric expression.
@@ -30,6 +35,8 @@ enum MapItemValueReaderV1 {
     },
     /// Table cell expressions with units stored once per column.
     TableWithUnits {
+        /// Unevaluated table reference, or an empty string for local rows.
+        parameter: String,
         /// Selected unit strings in definition column order.
         units: Vec<String>,
         /// Row-major cell expressions in definition column order.
@@ -67,17 +74,31 @@ impl MapItemValueReaderV1 {
             (MapItemDefinition::String(definition), Self::Expression(value)) => {
                 MapItemFrozen::String(StringFrozen::new_with_value(definition.clone(), value))
             }
-            (MapItemDefinition::Table(definition), Self::Table(rows)) => MapItemFrozen::Table(
-                TableFrozen::new_from_rows(definition.clone(), into_rows(rows)),
-            ),
+            (MapItemDefinition::Table(definition), Self::Table { parameter, rows }) => {
+                MapItemFrozen::Table(TableFrozen::new_from_rows_with_parameter(
+                    definition.clone(),
+                    into_rows(rows),
+                    parameter,
+                ))
+            }
             (
                 MapItemDefinition::TableWithUnits(definition),
-                Self::TableWithUnits { units, rows },
-            ) => MapItemFrozen::TableWithUnits(TableWithUnitsFrozen::new_from_rows(
-                definition.clone(),
-                into_rows(rows),
-                units.into_iter().map(ShareableString::from).collect(),
-            )),
+                Self::TableWithUnits {
+                    parameter,
+                    units,
+                    rows,
+                },
+            ) => {
+                if units.len() != definition.count() {
+                    return Err(map_value_error());
+                }
+                MapItemFrozen::TableWithUnits(TableWithUnitsFrozen::new_from_rows_with_parameter(
+                    definition.clone(),
+                    into_rows(rows),
+                    units.into_iter().map(ShareableString::from).collect(),
+                    parameter,
+                ))
+            }
             (MapItemDefinition::Unit(definition), Self::Expression(value)) => {
                 MapItemFrozen::Unit(UnitFrozen::new_with_value(definition.clone(), value))
             }
@@ -204,7 +225,7 @@ mod tests {
                 "first": [
                     "sample",
                     {"value": "12 m", "units": "length_meter"},
-                    {"units": ["length_meter"], "rows": [["12 m"]]}
+                    {"parameter": "", "units": ["length_meter"], "rows": [["12 m"]]}
                 ]
             }
         }))

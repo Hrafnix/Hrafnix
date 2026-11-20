@@ -1,4 +1,4 @@
-use crate::common::serialize::serialize_shareable_strings;
+use crate::common::serialize::{serialize_shareable_string, serialize_shareable_strings};
 use crate::datastore::definition::writer::common::table::serialize_table_rows;
 use crate::datastore::definition::writer::table_with_units::TableWithUnitsDefinitionWriterV1;
 use hrafnix_datastore::frozen::TableWithUnitsFrozen;
@@ -10,6 +10,9 @@ use serde::Serialize;
 pub(crate) struct TableWithUnitsWriterV1 {
     /// Table metadata, ordered unit-aware columns, and default rows.
     definition: TableWithUnitsDefinitionWriterV1,
+    /// Unevaluated table reference, or an empty string for local rows.
+    #[serde(serialize_with = "serialize_shareable_string")]
+    parameter: ShareableString,
     /// Selected unit strings in definition column order.
     #[serde(serialize_with = "serialize_shareable_strings")]
     units: Vec<ShareableString>,
@@ -22,6 +25,7 @@ impl From<&TableWithUnitsFrozen> for TableWithUnitsWriterV1 {
     fn from(table: &TableWithUnitsFrozen) -> Self {
         Self {
             definition: table.definition().into(),
+            parameter: table.parameter().clone(),
             units: table.units().to_vec(),
             rows: table.rows().to_vec(),
         }

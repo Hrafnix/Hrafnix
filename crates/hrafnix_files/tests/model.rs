@@ -28,6 +28,7 @@ fn minimal_model() -> ModelFile {
         foreground_decorations: Vec::new(),
         background_decorations: Vec::new(),
         global_settings: GlobalObjectFrozen::new(GlobalObjectDefinition::default()),
+        components: Vec::new(),
         connections: Vec::new(),
         parameter_definition: ParameterObjectDefinition::default(),
         variable_definition: VariableObjectDefinition::default(),
@@ -126,7 +127,7 @@ fn unknown_content_is_rejected_instead_of_being_dropped() {
     fs::write(
         &path,
         format!(
-            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}, \"foreground_decorations\": [], \"background_decorations\": [], \"global_settings\": [], \"connections\": [], \"parameter_definition\": [], \"variable_definition\": [], \"unknown\": {{}}}}}}"
+            "{{\"file-version\": \"1\", \"model\": {{\"metadata\": {METADATA}, \"translations\": {TRANSLATIONS}, \"foreground_decorations\": [], \"background_decorations\": [], \"global_settings\": [], \"components\": [], \"connections\": [], \"parameter_definition\": [], \"variable_definition\": [], \"unknown\": {{}}}}}}"
         ),
     )
     .unwrap();
@@ -318,7 +319,7 @@ fn global_map_settings_round_trip_and_propagate_value_schema_errors() {
     for value in [
         json!({"first": []}),
         json!({"first": ["sample", "extra"]}),
-        json!({"first": [[["table instead of string"]]]}),
+        json!({"first": [{"parameter": "", "rows": [["table instead of string"]]}]}),
     ] {
         *document
             .pointer_mut("/model/global_settings/0/value")

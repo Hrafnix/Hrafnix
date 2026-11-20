@@ -1,3 +1,4 @@
+use crate::common::serialize::serialize_shareable_string;
 use crate::datastore::definition::writer::common::table::serialize_table_rows;
 use crate::datastore::definition::writer::table::TableDefinitionWriterV1;
 use hrafnix_datastore::frozen::TableFrozen;
@@ -9,6 +10,9 @@ use serde::Serialize;
 pub(crate) struct TableWriterV1 {
     /// Table metadata, ordered columns, and default rows.
     definition: TableDefinitionWriterV1,
+    /// Unevaluated table reference, or an empty string for local rows.
+    #[serde(serialize_with = "serialize_shareable_string")]
+    parameter: ShareableString,
     /// Row-major cell expressions in definition column order.
     #[serde(serialize_with = "serialize_table_rows")]
     rows: Vec<Vec<ShareableString>>,
@@ -18,6 +22,7 @@ impl From<&TableFrozen> for TableWriterV1 {
     fn from(table: &TableFrozen) -> Self {
         Self {
             definition: table.definition().into(),
+            parameter: table.parameter().clone(),
             rows: table.rows().to_vec(),
         }
     }

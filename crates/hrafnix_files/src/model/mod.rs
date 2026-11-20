@@ -20,7 +20,7 @@ pub(crate) mod writer;
 ///
 /// Returns a localized error if the file cannot be read, exceeds the size limit,
 /// contains invalid UTF-8, does not match a supported model JSON format, or has
-/// global values that do not match their embedded definitions.
+/// global or instance parameter values that do not match their embedded definitions.
 pub fn read_model_file(path: &Utf8Path) -> Result<ModelFile, Message> {
     let model_string = read_file_to_string(path)?;
 

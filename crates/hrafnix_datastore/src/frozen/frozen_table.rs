@@ -37,7 +37,20 @@ impl TableFrozen {
     /// Rows are padded with empty strings or truncated to the definition's column count.
     #[must_use]
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
-    pub fn new_from_rows(definition: TableDefinition, mut rows: Vec<Vec<ShareableString>>) -> Self {
+    pub fn new_from_rows(definition: TableDefinition, rows: Vec<Vec<ShareableString>>) -> Self {
+        Self::new_from_rows_with_parameter(definition, rows, "")
+    }
+
+    /// Creates a table with rows and an unevaluated parameter reference.
+    ///
+    /// Rows are padded with empty strings or truncated to the definition's column count.
+    #[must_use]
+    #[cfg_attr(feature = "hotpath", hotpath::measure)]
+    pub fn new_from_rows_with_parameter<S: Into<ShareableString>>(
+        definition: TableDefinition,
+        mut rows: Vec<Vec<ShareableString>>,
+        parameter: S,
+    ) -> Self {
         let column_count = definition.count();
         for row in &mut rows {
             row.resize(column_count, ShareableString::default());
@@ -45,7 +58,7 @@ impl TableFrozen {
         let mut s = Self {
             definition,
             rows,
-            parameter: ShareableString::new(""),
+            parameter: parameter.into(),
             hash: [0u8; 32],
         };
         s.update_hash();

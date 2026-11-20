@@ -2,6 +2,29 @@ use hrafnix_datastore::prelude::*;
 use hrafnix_units::UnitId;
 
 #[test]
+fn table_with_units_from_rows_preserves_parameter_reference() {
+    let definition = TableWithUnitsDefinition::new(
+        "Table",
+        vec![(
+            store_key!("value"),
+            NumberWithUnitsDefinition::new("Value", UnitId::Length_Meter),
+        )],
+    );
+    let rows = vec![vec!["7".into(), "discarded".into()], vec![]];
+    let units = vec!["length_centimeter".into()];
+    let mut editable =
+        TableWithUnitsFrozen::new_from_rows(definition.clone(), rows.clone(), units.clone()).thaw();
+    editable.set_parameter("p_source");
+
+    let table =
+        TableWithUnitsFrozen::new_from_rows_with_parameter(definition, rows, units, "p_source");
+
+    assert_eq!(table.parameter(), "p_source");
+    assert_eq!(table, editable.freeze());
+    assert_eq!(table.thaw().freeze(), table);
+}
+
+#[test]
 fn table_with_units_frozen_from_rows_normalizes_row_widths() {
     let rows = vec![
         vec![],

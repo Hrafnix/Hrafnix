@@ -1,4 +1,5 @@
 use crate::component::data::ComponentFile;
+use crate::component_instance::writer::{ComponentInstanceWriter, serialize_component_instances};
 use crate::connection::writer::ConnectionWriter;
 use crate::decoration_background::writer::BackgroundDecorationWriter;
 use crate::decoration_foreground::writer::ForegroundDecorationWriter;
@@ -34,6 +35,9 @@ struct ComponentDataWriter {
     foreground_decorations: Vec<ForegroundDecorationWriter>,
     /// Decorations drawn behind component contents.
     background_decorations: Vec<BackgroundDecorationWriter>,
+    /// Ordered saved nested instances with unique identifiers.
+    #[serde(serialize_with = "serialize_component_instances")]
+    components: Vec<ComponentInstanceWriter>,
     /// Connections between component ports within the component.
     connections: Vec<ConnectionWriter>,
     /// Source language and translated text used by the component.
@@ -62,6 +66,7 @@ impl From<ComponentFile> for ComponentWriter {
                     .map(Into::into)
                     .collect(),
                 translations: TranslationsWriter::from(&component.translations),
+                components: component.components.iter().map(Into::into).collect(),
                 connections: component.connections.iter().map(Into::into).collect(),
             },
         }

@@ -11,6 +11,8 @@ pub(crate) struct TableReaderV1 {
     /// Table metadata, ordered columns, and default rows.
     #[serde(deserialize_with = "deserialize_object")]
     definition: TableDefinitionReaderV1,
+    /// Unevaluated table reference, or an empty string for local rows.
+    parameter: String,
     /// Row-major cell expressions in definition column order.
     rows: Vec<Vec<String>>,
 }
@@ -22,6 +24,6 @@ impl From<TableReaderV1> for TableFrozen {
             .into_iter()
             .map(|row| row.into_iter().map(ShareableString::from).collect())
             .collect();
-        TableFrozen::new_from_rows(table.definition.into(), rows)
+        TableFrozen::new_from_rows_with_parameter(table.definition.into(), rows, table.parameter)
     }
 }
