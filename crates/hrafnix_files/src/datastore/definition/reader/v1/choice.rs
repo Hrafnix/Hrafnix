@@ -6,7 +6,7 @@ use serde::Deserialize;
 /// Version-1 choice item.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct ChoiceItemReaderV1 {
+pub(crate) struct ChoiceItemDefinitionReaderV1 {
     /// Validated choice identifier.
     #[serde(deserialize_with = "deserialize_store_key")]
     id: StoreKey,
@@ -17,18 +17,18 @@ pub(crate) struct ChoiceItemReaderV1 {
 /// Version-1 choice definition.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct ChoiceReaderV1 {
+pub(crate) struct ChoiceDefinitionReaderV1 {
     /// Item description.
     description: String,
     /// Default expression.
     default: String,
     /// Ordered choices; the datastore definition normalizes duplicate IDs.
     #[serde(deserialize_with = "deserialize_objects")]
-    items: Vec<ChoiceItemReaderV1>,
+    items: Vec<ChoiceItemDefinitionReaderV1>,
 }
 
-impl From<ChoiceReaderV1> for ChoiceDefinition {
-    fn from(choice: ChoiceReaderV1) -> Self {
+impl From<ChoiceDefinitionReaderV1> for ChoiceDefinition {
+    fn from(choice: ChoiceDefinitionReaderV1) -> Self {
         let items = choice
             .items
             .into_iter()
@@ -55,7 +55,7 @@ mod tests {
                 {"id": "fast", "description": "Also fast"}
             ]
         });
-        let reader = serde_json::from_value::<RootObject<ChoiceReaderV1>>(value).unwrap();
+        let reader = serde_json::from_value::<RootObject<ChoiceDefinitionReaderV1>>(value).unwrap();
         let choice = ChoiceDefinition::from(reader.document);
         assert_eq!(choice.ids(), vec!["slow", "fast"]);
         assert_eq!(choice.descriptions(), vec!["Slow", "Also fast"]);

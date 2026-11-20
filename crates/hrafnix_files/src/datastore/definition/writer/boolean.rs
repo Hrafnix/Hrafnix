@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// Version-1 boolean expression and labels.
 #[derive(Debug, Serialize)]
-pub(crate) struct BooleanWriterV1 {
+pub(crate) struct BooleanDefinitionWriterV1 {
     /// Item description.
     #[serde(serialize_with = "serialize_shareable_string")]
     description: ShareableString,
@@ -20,7 +20,7 @@ pub(crate) struct BooleanWriterV1 {
     false_description: ShareableString,
 }
 
-impl From<&BooleanDefinition> for BooleanWriterV1 {
+impl From<&BooleanDefinition> for BooleanDefinitionWriterV1 {
     fn from(boolean: &BooleanDefinition) -> Self {
         Self {
             description: boolean.description(),

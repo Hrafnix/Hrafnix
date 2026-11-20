@@ -4,7 +4,7 @@ use serde::Deserialize;
 /// File expression and dialog options.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct FileReaderV1 {
+pub(crate) struct FileDefinitionReaderV1 {
     /// Item description.
     description: String,
     /// Default expression.
@@ -15,8 +15,8 @@ pub(crate) struct FileReaderV1 {
     is_input: bool,
 }
 
-impl From<FileReaderV1> for FileDefinition {
-    fn from(file: FileReaderV1) -> Self {
+impl From<FileDefinitionReaderV1> for FileDefinition {
+    fn from(file: FileDefinitionReaderV1) -> Self {
         FileDefinition::new_with_default(
             file.description,
             file.extension_filter,

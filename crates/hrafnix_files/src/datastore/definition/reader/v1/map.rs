@@ -9,9 +9,11 @@ use crate::common::deserialize::{
     deserialize_unique_objects,
 };
 use crate::datastore::definition::reader::v1::{
-    boolean::BooleanReaderV1, choice::ChoiceReaderV1, file::FileReaderV1, integer::IntegerReaderV1,
-    number::NumberReaderV1, number_with_units::NumberWithUnitReaderV1, string::StringReaderV1,
-    table::TableReaderV1, table_with_units::TableWithUnitsReaderV1, unit::UnitReaderV1,
+    boolean::BooleanDefinitionReaderV1, choice::ChoiceDefinitionReaderV1,
+    file::FileDefinitionReaderV1, integer::IntegerDefinitionReaderV1,
+    number::NumberDefinitionReaderV1, number_with_units::NumberWithUnitDefinitionReaderV1,
+    string::StringDefinitionReaderV1, table::TableDefinitionReaderV1,
+    table_with_units::TableWithUnitsDefinitionReaderV1, unit::UnitDefinitionReaderV1,
 };
 use hrafnix_datastore::definition::{MapDefinition, MapItemDefault, MapItemDefinition};
 use hrafnix_keys::StoreKey;
@@ -21,16 +23,16 @@ use std::collections::BTreeMap;
 
 /// One named item in the ordered map entry schema.
 #[derive(Debug, Deserialize)]
-pub(crate) struct MapItemReaderV1 {
+pub(crate) struct MapItemDefinitionReaderV1 {
     /// Validated item identifier.
     #[serde(deserialize_with = "deserialize_store_key")]
     key: StoreKey,
     /// Tagged definition; each variant rejects unknown fields.
     #[serde(flatten)]
-    definition: MapItemDefinitionReaderV1,
+    definition: MapItemEnumDefinitionReaderV1,
 }
 
-impl UniqueKey for MapItemReaderV1 {
+impl UniqueKey for MapItemDefinitionReaderV1 {
     const KEY_NAME: &'static str = "map item key";
 
     fn unique_key(&self) -> &StoreKey {
@@ -41,48 +43,52 @@ impl UniqueKey for MapItemReaderV1 {
 /// Definitions supported inside a version-1 map entry.
 #[derive(Debug, Deserialize)]
 #[serde(remote = "Self", tag = "type", rename_all = "snake_case")]
-enum MapItemDefinitionReaderV1 {
+enum MapItemEnumDefinitionReaderV1 {
     /// Boolean expression.
-    Boolean(BooleanReaderV1),
+    Boolean(BooleanDefinitionReaderV1),
     /// Choice expression and choices.
-    Choice(ChoiceReaderV1),
+    Choice(ChoiceDefinitionReaderV1),
     /// File expression and dialog options.
-    File(FileReaderV1),
+    File(FileDefinitionReaderV1),
     /// Integer expression and bounds.
-    Integer(IntegerReaderV1),
+    Integer(IntegerDefinitionReaderV1),
     /// Numeric expression and bounds.
-    Number(NumberReaderV1),
+    Number(NumberDefinitionReaderV1),
     /// Numeric expression with units.
-    NumberWithUnits(NumberWithUnitReaderV1),
+    NumberWithUnits(NumberWithUnitDefinitionReaderV1),
     /// String expression.
-    String(StringReaderV1),
+    String(StringDefinitionReaderV1),
     /// Numeric table.
-    Table(TableReaderV1),
+    Table(TableDefinitionReaderV1),
     /// Numeric table with units.
-    TableWithUnits(TableWithUnitsReaderV1),
+    TableWithUnits(TableWithUnitsDefinitionReaderV1),
     /// Unit selection.
-    Unit(UnitReaderV1),
+    Unit(UnitDefinitionReaderV1),
 }
 
-impl<'de> Deserialize<'de> for MapItemDefinitionReaderV1 {
+impl<'de> Deserialize<'de> for MapItemEnumDefinitionReaderV1 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         Self::deserialize(StringTagDeserializer(deserializer))
     }
 }
 
-impl From<MapItemDefinitionReaderV1> for MapItemDefinition {
-    fn from(definition: MapItemDefinitionReaderV1) -> Self {
+impl From<MapItemEnumDefinitionReaderV1> for MapItemDefinition {
+    fn from(definition: MapItemEnumDefinitionReaderV1) -> Self {
         match definition {
-            MapItemDefinitionReaderV1::Boolean(item) => Self::Boolean(item.into()),
-            MapItemDefinitionReaderV1::Choice(item) => Self::Choice(item.into()),
-            MapItemDefinitionReaderV1::File(item) => Self::File(item.into()),
-            MapItemDefinitionReaderV1::Integer(item) => Self::Integer(item.into()),
-            MapItemDefinitionReaderV1::Number(item) => Self::Number(item.into()),
-            MapItemDefinitionReaderV1::NumberWithUnits(item) => Self::NumberWithUnits(item.into()),
-            MapItemDefinitionReaderV1::String(item) => Self::String(item.into()),
-            MapItemDefinitionReaderV1::Table(item) => Self::Table(item.into()),
-            MapItemDefinitionReaderV1::TableWithUnits(item) => Self::TableWithUnits(item.into()),
-            MapItemDefinitionReaderV1::Unit(item) => Self::Unit(item.into()),
+            MapItemEnumDefinitionReaderV1::Boolean(item) => Self::Boolean(item.into()),
+            MapItemEnumDefinitionReaderV1::Choice(item) => Self::Choice(item.into()),
+            MapItemEnumDefinitionReaderV1::File(item) => Self::File(item.into()),
+            MapItemEnumDefinitionReaderV1::Integer(item) => Self::Integer(item.into()),
+            MapItemEnumDefinitionReaderV1::Number(item) => Self::Number(item.into()),
+            MapItemEnumDefinitionReaderV1::NumberWithUnits(item) => {
+                Self::NumberWithUnits(item.into())
+            }
+            MapItemEnumDefinitionReaderV1::String(item) => Self::String(item.into()),
+            MapItemEnumDefinitionReaderV1::Table(item) => Self::Table(item.into()),
+            MapItemEnumDefinitionReaderV1::TableWithUnits(item) => {
+                Self::TableWithUnits(item.into())
+            }
+            MapItemEnumDefinitionReaderV1::Unit(item) => Self::Unit(item.into()),
         }
     }
 }
@@ -90,38 +96,39 @@ impl From<MapItemDefinitionReaderV1> for MapItemDefinition {
 /// Scalar expression or table rows for one item in a default entry.
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-enum MapItemDefaultReaderV1 {
+enum MapItemDefaultDefinitionReaderV1 {
     /// Scalar expression, including unit expressions.
     Scalar(String),
     /// Table cell expressions.
     Table(Vec<Vec<String>>),
 }
 
-impl From<MapItemDefaultReaderV1> for MapItemDefault {
-    fn from(default: MapItemDefaultReaderV1) -> Self {
+impl From<MapItemDefaultDefinitionReaderV1> for MapItemDefault {
+    fn from(default: MapItemDefaultDefinitionReaderV1) -> Self {
         match default {
-            MapItemDefaultReaderV1::Scalar(value) => Self::scalar(value),
-            MapItemDefaultReaderV1::Table(rows) => Self::table(rows),
+            MapItemDefaultDefinitionReaderV1::Scalar(value) => Self::scalar(value),
+            MapItemDefaultDefinitionReaderV1::Table(rows) => Self::table(rows),
         }
     }
 }
 
 /// Default entries with validated, unique store keys.
 #[derive(Debug)]
-struct MapDefaultsReaderV1 {
+struct MapDefaultsDefinitionReaderV1 {
     /// Ordered item defaults for each named entry.
-    entries: BTreeMap<StoreKey, Vec<MapItemDefaultReaderV1>>,
+    entries: BTreeMap<StoreKey, Vec<MapItemDefaultDefinitionReaderV1>>,
 }
 
-impl<'de> Deserialize<'de> for MapDefaultsReaderV1 {
+impl<'de> Deserialize<'de> for MapDefaultsDefinitionReaderV1 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let entries = deserialize_entries::<Vec<MapItemDefaultReaderV1>, D>(deserializer)?
-            .into_iter()
-            .map(|(key, values)| {
-                let key = deserialize_store_key(StringDeserializer::<D::Error>::new(key))?;
-                Ok((key, values))
-            })
-            .collect::<Result<_, D::Error>>()?;
+        let entries =
+            deserialize_entries::<Vec<MapItemDefaultDefinitionReaderV1>, D>(deserializer)?
+                .into_iter()
+                .map(|(key, values)| {
+                    let key = deserialize_store_key(StringDeserializer::<D::Error>::new(key))?;
+                    Ok((key, values))
+                })
+                .collect::<Result<_, D::Error>>()?;
         Ok(Self { entries })
     }
 }
@@ -129,20 +136,20 @@ impl<'de> Deserialize<'de> for MapDefaultsReaderV1 {
 /// Version-1 map definition.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct MapReaderV1 {
+pub(crate) struct MapDefinitionReaderV1 {
     /// Item description.
     description: String,
     /// Ordered entry schema with unique item keys.
     #[serde(deserialize_with = "deserialize_unique_objects")]
-    items: Vec<MapItemReaderV1>,
+    items: Vec<MapItemDefinitionReaderV1>,
     /// Required nullable default entries. Each entry may omit trailing items, which then
     /// inherit their item definition's default.
     #[serde(deserialize_with = "Option::deserialize")]
-    default: Option<MapDefaultsReaderV1>,
+    default: Option<MapDefaultsDefinitionReaderV1>,
 }
 
-impl From<MapReaderV1> for MapDefinition {
-    fn from(map: MapReaderV1) -> Self {
+impl From<MapDefinitionReaderV1> for MapDefinition {
+    fn from(map: MapDefinitionReaderV1) -> Self {
         let items: Vec<_> = map
             .items
             .into_iter()
@@ -180,7 +187,7 @@ mod tests {
     }
 
     fn read_map(value: Value) -> MapDefinition {
-        serde_json::from_value::<RootObject<MapReaderV1>>(value)
+        serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value)
             .expect("valid map definition")
             .document
             .into()
@@ -377,26 +384,26 @@ mod tests {
             let mut value = map_json(&Value::Null);
             value.as_object_mut().unwrap().remove(field);
             assert!(
-                serde_json::from_value::<RootObject<MapReaderV1>>(value).is_err(),
+                serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value).is_err(),
                 "{field}"
             );
         }
         let mut value = map_json(&Value::Null);
         value["unexpected"] = json!(true);
-        assert!(serde_json::from_value::<RootObject<MapReaderV1>>(value).is_err());
+        assert!(serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value).is_err());
 
         for field in ["key", "type", "description", "default"] {
             let mut value = map_json(&Value::Null);
             value["items"][0].as_object_mut().unwrap().remove(field);
             assert!(
-                serde_json::from_value::<RootObject<MapReaderV1>>(value).is_err(),
+                serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value).is_err(),
                 "{field}"
             );
         }
         for index in 0..3 {
             let mut value = map_json(&Value::Null);
             value["items"][index]["unexpected"] = json!(true);
-            assert!(serde_json::from_value::<RootObject<MapReaderV1>>(value).is_err());
+            assert!(serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value).is_err());
         }
     }
 
@@ -416,7 +423,7 @@ mod tests {
         ] {
             let mut value = map_json(&Value::Null);
             value["items"][0] = item;
-            assert!(serde_json::from_value::<RootObject<MapReaderV1>>(value).is_err());
+            assert!(serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value).is_err());
         }
     }
 
@@ -433,7 +440,10 @@ mod tests {
             json!({"first": [[1]]}),
             json!({"first": [[["1", false]]]}),
         ] {
-            assert!(serde_json::from_value::<RootObject<MapReaderV1>>(map_json(&default)).is_err());
+            assert!(
+                serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(map_json(&default))
+                    .is_err()
+            );
         }
     }
 
@@ -441,7 +451,7 @@ mod tests {
     fn rejects_duplicate_item_keys() {
         let mut value = map_json(&Value::Null);
         value["items"][2]["key"] = json!("z");
-        let error = serde_json::from_value::<RootObject<MapReaderV1>>(value)
+        let error = serde_json::from_value::<RootObject<MapDefinitionReaderV1>>(value)
             .expect_err("duplicate item key must be rejected");
         assert!(
             error.to_string().contains("duplicate map item key `z`"),
@@ -518,7 +528,7 @@ mod tests {
             r#"{"description":"","items":[{"key":"a","type":"string","description":"","default":"","default":""}],"default":null}"#,
         ] {
             assert!(
-                serde_json::from_str::<RootObject<MapReaderV1>>(text).is_err(),
+                serde_json::from_str::<RootObject<MapDefinitionReaderV1>>(text).is_err(),
                 "{text}"
             );
         }

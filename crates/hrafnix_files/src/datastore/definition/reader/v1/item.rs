@@ -1,9 +1,11 @@
 use super::{
-    boolean::BooleanReaderV1, choice::ChoiceReaderV1, file::FileReaderV1, folder::FolderReaderV1,
-    integer::IntegerReaderV1, map::MapReaderV1, number::NumberReaderV1,
-    number_with_units::NumberWithUnitReaderV1, separator::SeparatorReaderV1,
-    string::StringReaderV1, tab::TabReaderV1, table::TableReaderV1,
-    table_with_units::TableWithUnitsReaderV1, unit::UnitReaderV1,
+    boolean::BooleanDefinitionReaderV1, choice::ChoiceDefinitionReaderV1,
+    file::FileDefinitionReaderV1, folder::FolderDefinitionReaderV1,
+    integer::IntegerDefinitionReaderV1, map::MapDefinitionReaderV1,
+    number::NumberDefinitionReaderV1, number_with_units::NumberWithUnitDefinitionReaderV1,
+    separator::SeparatorDefinitionReaderV1, string::StringDefinitionReaderV1,
+    tab::TabDefinitionReaderV1, table::TableDefinitionReaderV1,
+    table_with_units::TableWithUnitsDefinitionReaderV1, unit::UnitDefinitionReaderV1,
 };
 use crate::common::deserialize::StringTagDeserializer;
 use hrafnix_datastore::definition::ItemDefinitionType;
@@ -14,33 +16,33 @@ use serde::{Deserialize, Deserializer};
 #[serde(remote = "Self", tag = "type", rename_all = "snake_case")]
 pub(crate) enum ItemDefinitionReaderV1 {
     /// Boolean expression and state labels.
-    Boolean(BooleanReaderV1),
+    Boolean(BooleanDefinitionReaderV1),
     /// Choice expression and choices.
-    Choice(ChoiceReaderV1),
+    Choice(ChoiceDefinitionReaderV1),
     /// File expression and dialog options.
-    File(FileReaderV1),
+    File(FileDefinitionReaderV1),
     /// Folder expression and archive option.
-    Folder(FolderReaderV1),
+    Folder(FolderDefinitionReaderV1),
     /// Integer expression and bounds.
-    Integer(IntegerReaderV1),
+    Integer(IntegerDefinitionReaderV1),
     /// Ordered map schema and default entries.
-    Map(MapReaderV1),
+    Map(MapDefinitionReaderV1),
     /// Numeric expression and bounds.
-    Number(NumberReaderV1),
+    Number(NumberDefinitionReaderV1),
     /// Numeric expression with units.
-    NumberWithUnits(NumberWithUnitReaderV1),
+    NumberWithUnits(NumberWithUnitDefinitionReaderV1),
     /// String expression.
-    String(StringReaderV1),
+    String(StringDefinitionReaderV1),
     /// Numeric table.
-    Table(TableReaderV1),
+    Table(TableDefinitionReaderV1),
     /// Numeric table with units.
-    TableWithUnits(TableWithUnitsReaderV1),
+    TableWithUnits(TableWithUnitsDefinitionReaderV1),
     /// Unit selection.
-    Unit(UnitReaderV1),
+    Unit(UnitDefinitionReaderV1),
     /// Tab label.
-    Tab(TabReaderV1),
+    Tab(TabDefinitionReaderV1),
     /// Separator label.
-    Separator(SeparatorReaderV1),
+    Separator(SeparatorDefinitionReaderV1),
 }
 
 impl<'de> Deserialize<'de> for ItemDefinitionReaderV1 {

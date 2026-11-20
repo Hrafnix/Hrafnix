@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// Version-1 string expression and description.
 #[derive(Debug, Serialize)]
-pub(crate) struct StringWriterV1 {
+pub(crate) struct StringDefinitionWriterV1 {
     /// Item description.
     #[serde(serialize_with = "serialize_shareable_string")]
     description: ShareableString,
@@ -14,7 +14,7 @@ pub(crate) struct StringWriterV1 {
     default: ShareableString,
 }
 
-impl From<&StringDefinition> for StringWriterV1 {
+impl From<&StringDefinition> for StringDefinitionWriterV1 {
     fn from(string: &StringDefinition) -> Self {
         Self {
             description: string.description(),

@@ -10,7 +10,7 @@ use serde::{Deserialize, Deserializer};
     rename_all = "snake_case",
     deny_unknown_fields
 )]
-pub(crate) enum ConstraintIntReaderV1 {
+pub(crate) enum ConstraintIntDefinitionReaderV1 {
     /// No bounds.
     None {},
     /// Lower bound.
@@ -40,19 +40,19 @@ pub(crate) enum ConstraintIntReaderV1 {
     },
 }
 
-impl<'de> Deserialize<'de> for ConstraintIntReaderV1 {
+impl<'de> Deserialize<'de> for ConstraintIntDefinitionReaderV1 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         Self::deserialize(StringTagDeserializer(deserializer))
     }
 }
 
-impl From<ConstraintIntReaderV1> for IntegerConstraint {
-    fn from(constraint: ConstraintIntReaderV1) -> Self {
+impl From<ConstraintIntDefinitionReaderV1> for IntegerConstraint {
+    fn from(constraint: ConstraintIntDefinitionReaderV1) -> Self {
         match constraint {
-            ConstraintIntReaderV1::None {} => Self::none(),
-            ConstraintIntReaderV1::Min { min, inclusive } => Self::min(min, inclusive),
-            ConstraintIntReaderV1::Max { max, inclusive } => Self::max(max, inclusive),
-            ConstraintIntReaderV1::Range {
+            ConstraintIntDefinitionReaderV1::None {} => Self::none(),
+            ConstraintIntDefinitionReaderV1::Min { min, inclusive } => Self::min(min, inclusive),
+            ConstraintIntDefinitionReaderV1::Max { max, inclusive } => Self::max(max, inclusive),
+            ConstraintIntDefinitionReaderV1::Range {
                 min,
                 max,
                 min_inclusive,
@@ -70,7 +70,7 @@ impl From<ConstraintIntReaderV1> for IntegerConstraint {
     rename_all = "snake_case",
     deny_unknown_fields
 )]
-pub(crate) enum ConstraintNumberReaderV1 {
+pub(crate) enum ConstraintNumberDefinitionReaderV1 {
     /// No bounds.
     None {},
     /// Lower bound.
@@ -100,19 +100,19 @@ pub(crate) enum ConstraintNumberReaderV1 {
     },
 }
 
-impl<'de> Deserialize<'de> for ConstraintNumberReaderV1 {
+impl<'de> Deserialize<'de> for ConstraintNumberDefinitionReaderV1 {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         Self::deserialize(StringTagDeserializer(deserializer))
     }
 }
 
-impl From<ConstraintNumberReaderV1> for NumberConstraint {
-    fn from(constraint: ConstraintNumberReaderV1) -> Self {
+impl From<ConstraintNumberDefinitionReaderV1> for NumberConstraint {
+    fn from(constraint: ConstraintNumberDefinitionReaderV1) -> Self {
         match constraint {
-            ConstraintNumberReaderV1::None {} => Self::none(),
-            ConstraintNumberReaderV1::Min { min, inclusive } => Self::min(min, inclusive),
-            ConstraintNumberReaderV1::Max { max, inclusive } => Self::max(max, inclusive),
-            ConstraintNumberReaderV1::Range {
+            ConstraintNumberDefinitionReaderV1::None {} => Self::none(),
+            ConstraintNumberDefinitionReaderV1::Min { min, inclusive } => Self::min(min, inclusive),
+            ConstraintNumberDefinitionReaderV1::Max { max, inclusive } => Self::max(max, inclusive),
+            ConstraintNumberDefinitionReaderV1::Range {
                 min,
                 max,
                 min_inclusive,

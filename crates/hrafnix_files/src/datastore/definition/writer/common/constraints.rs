@@ -8,7 +8,7 @@ use serde::Serialize;
     tag = "type",
     rename_all = "snake_case"
 )]
-pub(crate) enum ConstraintIntWriterV1 {
+pub(crate) enum ConstraintIntDefinitionWriterV1 {
     /// No bounds.
     None,
     /// Lower bound.
@@ -45,7 +45,7 @@ pub(crate) enum ConstraintIntWriterV1 {
     tag = "type",
     rename_all = "snake_case"
 )]
-pub(crate) enum ConstraintNumberWriterV1 {
+pub(crate) enum ConstraintNumberDefinitionWriterV1 {
     /// No bounds.
     None,
     /// Lower bound.

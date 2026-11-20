@@ -5,13 +5,13 @@ use serde::Serialize;
 
 /// Version-1 tab label.
 #[derive(Debug, Serialize)]
-pub(crate) struct TabWriterV1 {
+pub(crate) struct TabDefinitionWriterV1 {
     /// Item description.
     #[serde(serialize_with = "serialize_shareable_string")]
     description: ShareableString,
 }
 
-impl From<&TabDefinition> for TabWriterV1 {
+impl From<&TabDefinition> for TabDefinitionWriterV1 {
     fn from(tab: &TabDefinition) -> Self {
         Self {
             description: tab.description(),

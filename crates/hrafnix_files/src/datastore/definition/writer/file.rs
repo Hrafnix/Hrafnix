@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// Version-1 file expression and dialog options.
 #[derive(Debug, Serialize)]
-pub(crate) struct FileWriterV1 {
+pub(crate) struct FileDefinitionWriterV1 {
     /// Item description.
     #[serde(serialize_with = "serialize_shareable_string")]
     description: ShareableString,
@@ -19,7 +19,7 @@ pub(crate) struct FileWriterV1 {
     is_input: bool,
 }
 
-impl From<&FileDefinition> for FileWriterV1 {
+impl From<&FileDefinition> for FileDefinitionWriterV1 {
     fn from(file: &FileDefinition) -> Self {
         Self {
             description: file.description(),

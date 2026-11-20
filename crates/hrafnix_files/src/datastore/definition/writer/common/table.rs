@@ -5,7 +5,7 @@ use serde::{Serialize, Serializer};
 /// Version-1 adjacent-row requirement names.
 #[derive(Debug, Serialize)]
 #[serde(remote = "TableColumnRequirement", rename_all = "snake_case")]
-pub(crate) enum RequirementWriterV1 {
+pub(crate) enum RequirementDefinitionWriterV1 {
     /// No relationship required between rows.
     None,
     /// Each value is at least the preceding value.

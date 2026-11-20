@@ -5,7 +5,7 @@ use serde::Serialize;
 
 /// Version-1 folder expression and archive option.
 #[derive(Debug, Serialize)]
-pub(crate) struct FolderWriterV1 {
+pub(crate) struct FolderDefinitionWriterV1 {
     /// Item description.
     #[serde(serialize_with = "serialize_shareable_string")]
     description: ShareableString,
@@ -16,7 +16,7 @@ pub(crate) struct FolderWriterV1 {
     is_input: bool,
 }
 
-impl From<&FolderDefinition> for FolderWriterV1 {
+impl From<&FolderDefinition> for FolderDefinitionWriterV1 {
     fn from(folder: &FolderDefinition) -> Self {
         Self {
             description: folder.description(),

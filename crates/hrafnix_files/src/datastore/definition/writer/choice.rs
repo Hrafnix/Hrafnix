@@ -6,7 +6,7 @@ use serde::Serialize;
 
 /// Version-1 choice identifier and label.
 #[derive(Debug, Serialize)]
-pub(crate) struct ChoiceItemWriterV1 {
+pub(crate) struct ChoiceItemDefinitionWriterV1 {
     /// Plain-string choice identifier.
     #[serde(serialize_with = "serialize_store_key")]
     id: StoreKey,
@@ -15,7 +15,7 @@ pub(crate) struct ChoiceItemWriterV1 {
     description: ShareableString,
 }
 
-impl From<&ChoiceItemDefinition> for ChoiceItemWriterV1 {
+impl From<&ChoiceItemDefinition> for ChoiceItemDefinitionWriterV1 {
     fn from(item: &ChoiceItemDefinition) -> Self {
         Self {
             id: item.id(),
@@ -26,7 +26,7 @@ impl From<&ChoiceItemDefinition> for ChoiceItemWriterV1 {
 
 /// Version-1 choice expression and ordered choices.
 #[derive(Debug, Serialize)]
-pub(crate) struct ChoiceWriterV1 {
+pub(crate) struct ChoiceDefinitionWriterV1 {
     /// Item description.
     #[serde(serialize_with = "serialize_shareable_string")]
     description: ShareableString,
@@ -34,10 +34,10 @@ pub(crate) struct ChoiceWriterV1 {
     #[serde(serialize_with = "serialize_shareable_string")]
     default: ShareableString,
     /// Choice items.
-    items: Vec<ChoiceItemWriterV1>,
+    items: Vec<ChoiceItemDefinitionWriterV1>,
 }
 
-impl From<&ChoiceDefinition> for ChoiceWriterV1 {
+impl From<&ChoiceDefinition> for ChoiceDefinitionWriterV1 {
     fn from(choice: &ChoiceDefinition) -> Self {
         Self {
             description: choice.description(),
