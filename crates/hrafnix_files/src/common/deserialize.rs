@@ -1,4 +1,4 @@
-use hrafnix_keys::{ComponentKey, ParameterKey, PortKey, StoreKey, VariableKey};
+use hrafnix_keys::{ComponentKey, GlobalKey, ParameterKey, PortKey, StoreKey, VariableKey};
 use serde::de::value::{MapAccessDeserializer, StrDeserializer, StringDeserializer};
 use serde::de::{DeserializeSeed, Error, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
@@ -118,6 +118,19 @@ pub(crate) fn deserialize_store_key<'de, D: Deserializer<'de>>(
     StoreKey::new(key.as_str().into()).map_err(|error| {
         serde::de::Error::custom(format!(
             "invalid store key `{key}`: {}",
+            error.translate_data().message_key().as_str(),
+        ))
+    })
+}
+
+/// Deserializes a plain string through the shared global-key validator.
+pub(crate) fn deserialize_global_key<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<GlobalKey, D::Error> {
+    let key = String::deserialize(deserializer)?;
+    GlobalKey::new(key.as_str().into()).map_err(|error| {
+        serde::de::Error::custom(format!(
+            "invalid global key `{key}`: {}",
             error.translate_data().message_key().as_str(),
         ))
     })

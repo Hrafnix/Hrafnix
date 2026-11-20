@@ -83,6 +83,10 @@ pub mod decoration_foreground;
 pub mod definition_parameter;
 /// Ordered variable-definition codecs.
 pub mod definition_variable;
+/// Frozen global-value codecs.
+pub mod frozen_global;
+/// Frozen parameter-value codecs.
+pub mod frozen_parameter;
 /// Geometry and styling values shared by graphical elements.
 pub mod graphics;
 /// Metadata shared by model and component files.

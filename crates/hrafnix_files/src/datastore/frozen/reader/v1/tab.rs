@@ -1,0 +1,19 @@
+use crate::common::deserialize::deserialize_object;
+use crate::datastore::definition::reader::v1::tab::TabDefinitionReaderV1;
+use hrafnix_datastore::frozen::TabFrozen;
+use serde::Deserialize;
+
+/// Version-1 frozen tab, which has metadata but no value.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct TabReaderV1 {
+    /// Tab label.
+    #[serde(deserialize_with = "deserialize_object")]
+    definition: TabDefinitionReaderV1,
+}
+
+impl From<TabReaderV1> for TabFrozen {
+    fn from(tab: TabReaderV1) -> Self {
+        TabFrozen::new(tab.definition.into())
+    }
+}
