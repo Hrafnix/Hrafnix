@@ -45,7 +45,8 @@ impl SharedStringTranslationMap {
 
     /// Returns the translation for the given key and language if it exists.
     /// Will use the fallback language if the specified language is not found.
-    /// If parameters are provided, they will be used to replace placeholders in the translation.
+    /// If parameters are provided, they will be used to replace placeholders
+    /// in the translation in a single pass.
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
     pub fn get_translation<K, L>(
         &self,
@@ -57,6 +58,7 @@ impl SharedStringTranslationMap {
         K: AsRef<str>,
         L: AsRef<str>,
     {
+        // Look up the translation for the given key and language, falling back to the default language if necessary.
         let translation;
         {
             let read_lock = self.data.read();
@@ -67,16 +69,45 @@ impl SharedStringTranslationMap {
                     .cloned()
             })?;
         }
-        if let Some(params) = params {
-            let mut result = translation.as_str().to_string();
-            for (param_key, param_value) in params {
-                let placeholder = format!("%{{{}}}", param_key.as_str());
-                result = result.replace(&placeholder, param_value.as_str());
+
+        // If no parameters are provided, return the translation as is.
+        let Some(params) = params.filter(|p| !p.is_empty()) else {
+            return Some(translation);
+        };
+
+        let mut remaining = translation.as_str();
+        let mut rendered = String::with_capacity(remaining.len());
+        let mut replaced = false;
+
+        // Scan left to right for `%{param_name}` placeholders without re-scanning replacements.
+        while let Some((before_open, after_open)) = remaining.split_once("%{") {
+            let Some((param_name, after_close)) = after_open.split_once('}') else {
+                // Unclosed `"%{"` with no matching `'}'`: stop and keep `remaining` verbatim.
+                break;
+            };
+
+            rendered.push_str(before_open);
+            if let Some(param_value) = params.get(param_name) {
+                // Found a matching parameter: replace the placeholder with its value.
+                rendered.push_str(param_value.as_str());
+                replaced = true;
+            } else {
+                // Unknown placeholder: preserve the original `%{param_name}` text.
+                rendered.push_str("%{");
+                rendered.push_str(param_name);
+                rendered.push('}');
             }
-            Some(self.store.launder(result))
-        } else {
-            Some(translation)
+            remaining = after_close;
         }
+
+        // If no replacements were made, return the original translation to avoid unnecessary string allocation.
+        if !replaced {
+            return Some(translation);
+        }
+
+        // Append any trailing text after the last placeholder (or unclosed `"%{"`).
+        rendered.push_str(remaining);
+        Some(self.store.launder(rendered))
     }
 
     /// Returns the number of translation keys in the map.
@@ -300,6 +331,76 @@ mod tests {
             .get_translation("greeting", "en", Some(&params))
             .unwrap();
         assert_eq!(translation.as_str(), "Hello, Junie!");
+    }
+
+    #[test]
+    fn test_translation_with_repeated_and_unknown_params() {
+        let map = SharedStringTranslationMap::new();
+        map.set_translation("greeting", "en", "%{name}%{name} / %{unknown} / %{}");
+        let params = HashMap::from([
+            (map.store.launder("name"), map.store.launder("Junie")),
+            (map.store.launder(""), map.store.launder("empty")),
+        ]);
+
+        assert_eq!(
+            map.get_translation("greeting", "fr", Some(&params))
+                .unwrap()
+                .as_str(),
+            "JunieJunie / %{unknown} / empty"
+        );
+    }
+
+    #[test]
+    fn test_translation_param_values_are_literal() {
+        let map = SharedStringTranslationMap::new();
+        map.set_translation("message", "en", "%{first} / %{second}");
+        let params = HashMap::from([
+            (map.store.launder("first"), map.store.launder("%{second}")),
+            (map.store.launder("second"), map.store.launder("%{first}")),
+        ]);
+
+        assert_eq!(
+            map.get_translation("message", "en", Some(&params))
+                .unwrap()
+                .as_str(),
+            "%{second} / %{first}"
+        );
+    }
+
+    #[test]
+    fn test_translation_placeholder_boundaries() {
+        let map = SharedStringTranslationMap::new();
+        let params = HashMap::from([
+            (map.store.launder("name"), map.store.launder("Junie")),
+            (map.store.launder("\u{540d}"), map.store.launder("\u{96ea}")),
+        ]);
+
+        for (input, expected) in [
+            ("", ""),
+            ("plain % text {name}", "plain % text {name}"),
+            ("%{name} tail %{unfinished", "Junie tail %{unfinished"),
+            ("%%{name}}", "%Junie}"),
+            ("%{unknown %{name}}", "%{unknown %{name}}"),
+            ("\u{00e9}%{\u{540d}}\u{00e9}", "\u{00e9}\u{96ea}\u{00e9}"),
+        ] {
+            map.set_translation("message", "en", input);
+            assert_eq!(
+                map.get_translation("message", "en", Some(&params))
+                    .unwrap()
+                    .as_str(),
+                expected
+            );
+            assert_eq!(
+                map.get_translation("message", "en", Some(&HashMap::new()))
+                    .unwrap()
+                    .as_str(),
+                input
+            );
+            assert_eq!(
+                map.get_translation("message", "en", None).unwrap().as_str(),
+                input
+            );
+        }
     }
 
     #[test]
