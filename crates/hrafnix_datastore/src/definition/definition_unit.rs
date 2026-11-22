@@ -12,16 +12,21 @@ pub struct UnitDefinition {
     unit_family: UnitFamilyId,
     /// Default value for this choice parameter.
     default_value: ShareableString,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
 }
 
 impl UnitDefinition {
     /// Creates a new `UnitDefinition` with the specified choices.
     pub fn new<S: Into<ShareableString>>(description: S, unit_family: UnitFamilyId) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             unit_family,
             default_value: ShareableString::default(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new `UnitDefinition` with the specified choices and default value.
@@ -30,11 +35,33 @@ impl UnitDefinition {
         unit_family: UnitFamilyId,
         default_value: S2,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             unit_family,
             default_value: default_value.into(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
+    }
+
+    /// Computes and stores the BLAKE3 hash of this definition.
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"UnitDefinition");
+        h.update(&self.description.current_blake3_hash());
+        h.update(&[self.unit_family.to_u8()]);
+        h.update(&self.default_value.current_blake3_hash());
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
     }
 
     /// Returns a reference to the unit family.
@@ -85,6 +112,7 @@ impl UnitDefinition {
             description: store.launder(&self.description),
             unit_family: self.unit_family,
             default_value: store.launder(&self.default_value),
+            hash: self.hash,
         }
     }
 

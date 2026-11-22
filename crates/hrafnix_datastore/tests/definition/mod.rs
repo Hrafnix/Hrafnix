@@ -5,6 +5,7 @@ mod definition_file;
 mod definition_folder;
 mod definition_global_builder;
 mod definition_global_object;
+mod definition_hash;
 mod definition_integer;
 mod definition_map;
 mod definition_merge_compatible;

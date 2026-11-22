@@ -19,6 +19,20 @@ pub enum TableColumnRequirement {
     Constant,
 }
 
+impl TableColumnRequirement {
+    /// Returns a stable discriminant byte for BLAKE3 hashing.
+    pub(crate) const fn hash_discriminant(self) -> u8 {
+        match self {
+            Self::None => 0,
+            Self::ConstantOrIncreasing => 1,
+            Self::Increasing => 2,
+            Self::ConstantOrDecreasing => 3,
+            Self::Decreasing => 4,
+            Self::Constant => 5,
+        }
+    }
+}
+
 impl std::fmt::Display for TableColumnRequirement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
@@ -170,6 +184,42 @@ impl NumberConstraint {
                 min_inclusive,
                 max_inclusive,
             },
+        }
+    }
+
+    /// Feeds this constraint into a BLAKE3 hasher.
+    pub(crate) fn update_hasher(&self, h: &mut blake3::Hasher) {
+        /// Canonicalizes `-0.0` to `+0.0` so equal floats produce identical hash bytes.
+        const fn canonical_f64_bytes(value: f64) -> [u8; 8] {
+            let normalized = if value == 0.0 { 0.0_f64 } else { value };
+            normalized.to_le_bytes()
+        }
+
+        match self.constraint_enum {
+            NumberConstraintEnum::None => {
+                h.update(&[0x00]);
+            }
+            NumberConstraintEnum::Min { min, inclusive } => {
+                h.update(&[0x01]);
+                h.update(&canonical_f64_bytes(min));
+                h.update(&[u8::from(inclusive)]);
+            }
+            NumberConstraintEnum::Max { max, inclusive } => {
+                h.update(&[0x02]);
+                h.update(&canonical_f64_bytes(max));
+                h.update(&[u8::from(inclusive)]);
+            }
+            NumberConstraintEnum::Range {
+                min,
+                max,
+                min_inclusive,
+                max_inclusive,
+            } => {
+                h.update(&[0x03]);
+                h.update(&canonical_f64_bytes(min));
+                h.update(&canonical_f64_bytes(max));
+                h.update(&[u8::from(min_inclusive), u8::from(max_inclusive)]);
+            }
         }
     }
 }

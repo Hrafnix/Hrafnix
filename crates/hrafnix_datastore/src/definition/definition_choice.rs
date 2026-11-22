@@ -10,15 +10,38 @@ pub struct ChoiceItemDefinition {
     id: StoreKey,
     /// Human-readable label for this choice item.
     description: ShareableString,
+    /// Pre-computed BLAKE3 hash of this choice item definition.
+    hash: [u8; 32],
 }
 
 impl ChoiceItemDefinition {
     /// Creates a new `ChoiceItemDefinition` with the specified value and description.
     pub fn new<K: Into<StoreKey>, S: Into<ShareableString>>(id: K, description: S) -> Self {
-        Self {
+        let mut s = Self {
             id: id.into(),
             description: description.into(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
+    }
+
+    /// Computes and stores the BLAKE3 hash of this choice item definition.
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"ChoiceItemDefinition");
+        h.update(&self.id.current_blake3_hash());
+        h.update(&self.description.current_blake3_hash());
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the choice item definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
     }
 
     /// Returns the ID of the choice item.
@@ -45,6 +68,7 @@ impl ChoiceItemDefinition {
         Self {
             id: self.id.launder(store),
             description: store.launder(&self.description),
+            hash: self.hash,
         }
     }
 }
@@ -58,6 +82,8 @@ pub struct ChoiceDefinition {
     choices: Vec<ChoiceItemDefinition>,
     /// Default value for this choice parameter.
     default_value: ShareableString,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
 }
 
 impl ChoiceDefinition {
@@ -74,11 +100,14 @@ impl ChoiceDefinition {
         choices.retain(|choice| ids.insert(choice.id.clone()));
         choices.reverse();
 
-        Self {
+        let mut s = Self {
             description: description.into(),
             choices,
             default_value: ShareableString::default(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new `ChoiceDefinition` with the specified choices and default value.
@@ -95,11 +124,40 @@ impl ChoiceDefinition {
         choices.retain(|choice| ids.insert(choice.id.clone()));
         choices.reverse();
 
-        Self {
+        let mut s = Self {
             description: description.into(),
             choices,
             default_value: default_value.into(),
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
+    }
+
+    /// Computes and stores the BLAKE3 hash of this definition.
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"ChoiceDefinition");
+        h.update(&self.description.current_blake3_hash());
+        h.update(
+            &u64::try_from(self.choices.len())
+                .unwrap_or(u64::MAX)
+                .to_le_bytes(),
+        );
+        for choice in &self.choices {
+            h.update(&choice.hash());
         }
+        h.update(&self.default_value.current_blake3_hash());
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
     }
 
     /// Returns a reference to the list of choices.
@@ -140,6 +198,7 @@ impl ChoiceDefinition {
                 .map(|choice| choice.launder(store))
                 .collect(),
             default_value: store.launder(&self.default_value),
+            hash: self.hash,
         }
     }
 

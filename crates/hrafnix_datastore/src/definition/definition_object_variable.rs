@@ -298,23 +298,59 @@ impl VariableObjectDefinitionBuilder {
     /// Builds the `VariableObjectDefinition`.
     #[must_use]
     pub fn finish(self) -> VariableObjectDefinition {
-        VariableObjectDefinition {
+        let mut s = VariableObjectDefinition {
             ordered_keys: self.ordered_keys,
             items: Arc::new(self.items),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 }
 
 /// Definition for an object, which is a collection of named variables.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone)]
 pub struct VariableObjectDefinition {
     /// Keys in insertion order, used to preserve deterministic iteration.
     ordered_keys: Vec<VariableKey>,
     /// Map of item definitions keyed by their variable key.
     items: Arc<BTreeMap<VariableKey, ItemDefinitionType>>,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
+}
+
+impl Default for VariableObjectDefinition {
+    fn default() -> Self {
+        Self::builder().finish()
+    }
 }
 
 impl VariableObjectDefinition {
+    /// Computes and stores the BLAKE3 hash of this definition.
+    #[cfg_attr(feature = "hotpath", hotpath::measure)]
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"VariableObjectDefinition");
+        h.update(
+            &u64::try_from(self.ordered_keys.len())
+                .unwrap_or(u64::MAX)
+                .to_le_bytes(),
+        );
+        for (key, item) in self.iter() {
+            h.update(&key.current_blake3_hash());
+            h.update(&item.hash());
+        }
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
+    }
     /// Returns a new `VariableObjectDefinitionBuilder`.
     #[must_use]
     pub const fn builder() -> VariableObjectDefinitionBuilder {
@@ -384,7 +420,16 @@ impl VariableObjectDefinition {
                     .map(|(k, v)| (k.launder(store), v.launder(store)))
                     .collect(),
             ),
+            hash: self.hash,
         }
+    }
+}
+
+impl PartialEq for VariableObjectDefinition {
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+            && self.ordered_keys == other.ordered_keys
+            && self.items == other.items
     }
 }
 

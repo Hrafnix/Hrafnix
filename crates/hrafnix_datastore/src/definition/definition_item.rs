@@ -125,6 +125,27 @@ impl From<SeparatorDefinition> for ItemDefinitionType {
 }
 
 impl ItemDefinitionType {
+    /// Returns the pre-calculated BLAKE3 hash of the item definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        match self {
+            Self::Boolean(def) => def.hash(),
+            Self::Choice(def) => def.hash(),
+            Self::File(def) => def.hash(),
+            Self::Folder(def) => def.hash(),
+            Self::Integer(def) => def.hash(),
+            Self::Map(def) => def.hash(),
+            Self::Number(def) => def.hash(),
+            Self::NumberWithUnits(def) => def.hash(),
+            Self::String(def) => def.hash(),
+            Self::Table(def) => def.hash(),
+            Self::TableWithUnits(def) => def.hash(),
+            Self::Unit(def) => def.hash(),
+            Self::Tab(def) => def.hash(),
+            Self::Separator(def) => def.hash(),
+        }
+    }
+
     /// Returns a new `ItemDefinitionType` with strings laundered through the provided store.
     #[must_use]
     pub fn launder(&self, store: &SharedStringStore) -> Self {

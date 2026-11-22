@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 /// Definition for a table, which is a collection of named number columns.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct TableDefinition {
     /// Human-readable description of this table parameter.
     description: ShareableString,
@@ -18,6 +18,8 @@ pub struct TableDefinition {
     column_requirements: Arc<BTreeMap<StoreKey, TableColumnRequirement>>,
     /// Optional default row data.
     default_table: Option<Vec<Vec<ShareableString>>>,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
 }
 
 impl TableDefinition {
@@ -61,13 +63,16 @@ impl TableDefinition {
             }
             items.insert(key, v);
         }
-        Self {
+        let mut s = Self {
             description: description.into(),
             ordered_keys,
             columns: Arc::new(items),
             column_requirements: Arc::new(column_requirements),
             default_table: None,
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new `TableDefinition` with a default table.
@@ -115,7 +120,57 @@ impl TableDefinition {
                 })
                 .collect(),
         );
+        definition.update_hash();
         definition
+    }
+
+    /// Computes and stores the BLAKE3 hash of this definition.
+    #[cfg_attr(feature = "hotpath", hotpath::measure)]
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"TableDefinition");
+        h.update(&self.description.current_blake3_hash());
+        h.update(
+            &u64::try_from(self.ordered_keys.len())
+                .unwrap_or(u64::MAX)
+                .to_le_bytes(),
+        );
+        for (key, column) in self.iter() {
+            h.update(&key.current_blake3_hash());
+            h.update(&column.hash());
+            let requirement = self
+                .column_requirements
+                .get(key)
+                .copied()
+                .unwrap_or(TableColumnRequirement::None);
+            h.update(&[requirement.hash_discriminant()]);
+        }
+
+        match &self.default_table {
+            None => {
+                h.update(&[0x00]);
+            }
+            Some(rows) => {
+                h.update(&[0x01]);
+                h.update(&u64::try_from(rows.len()).unwrap_or(u64::MAX).to_le_bytes());
+                for row in rows {
+                    h.update(&u64::try_from(row.len()).unwrap_or(u64::MAX).to_le_bytes());
+                    for cell in row {
+                        h.update(&cell.current_blake3_hash());
+                    }
+                }
+            }
+        }
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
     }
 
     /// Returns the description of the table.
@@ -258,6 +313,7 @@ impl TableDefinition {
                     .map(|row| row.iter().map(|cell| store.launder(cell)).collect())
                     .collect()
             }),
+            hash: self.hash,
         }
     }
 
@@ -270,6 +326,17 @@ impl TableDefinition {
     pub fn is_merge_compatible(&self, other: &Self) -> bool {
         self.ordered_keys == other.ordered_keys
             && self.column_requirements == other.column_requirements
+    }
+}
+
+impl PartialEq for TableDefinition {
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+            && self.description == other.description
+            && self.ordered_keys == other.ordered_keys
+            && self.columns == other.columns
+            && self.column_requirements == other.column_requirements
+            && self.default_table == other.default_table
     }
 }
 

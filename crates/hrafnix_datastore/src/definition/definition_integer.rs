@@ -95,6 +95,36 @@ impl IntegerConstraint {
             },
         }
     }
+
+    /// Feeds this constraint into a BLAKE3 hasher.
+    pub(crate) fn update_hasher(&self, h: &mut blake3::Hasher) {
+        match self.constraint_enum {
+            IntegerConstraintEnum::None => {
+                h.update(&[0x00]);
+            }
+            IntegerConstraintEnum::Min { min, inclusive } => {
+                h.update(&[0x01]);
+                h.update(&min.to_le_bytes());
+                h.update(&[u8::from(inclusive)]);
+            }
+            IntegerConstraintEnum::Max { max, inclusive } => {
+                h.update(&[0x02]);
+                h.update(&max.to_le_bytes());
+                h.update(&[u8::from(inclusive)]);
+            }
+            IntegerConstraintEnum::Range {
+                min,
+                max,
+                min_inclusive,
+                max_inclusive,
+            } => {
+                h.update(&[0x03]);
+                h.update(&min.to_le_bytes());
+                h.update(&max.to_le_bytes());
+                h.update(&[u8::from(min_inclusive), u8::from(max_inclusive)]);
+            }
+        }
+    }
 }
 
 /// Definition for an integer-based parameter.
@@ -106,16 +136,21 @@ pub struct IntegerDefinition {
     constraint: IntegerConstraint,
     /// Default value for this integer parameter.
     default_value: ShareableString,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
 }
 
 impl IntegerDefinition {
     /// Creates a new integer-based `IntegerDefinition`.
     pub fn new<S1: Into<ShareableString>>(description: S1) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             constraint: IntegerConstraint::none(),
             default_value: ShareableString::default(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new integer-based `IntegerDefinition` with a default value.
@@ -123,11 +158,14 @@ impl IntegerDefinition {
         description: S1,
         default_value: S2,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             constraint: IntegerConstraint::none(),
             default_value: default_value.into(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new integer-based `IntegerDefinition`.
@@ -135,11 +173,14 @@ impl IntegerDefinition {
         description: S,
         constraint: IntegerConstraint,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             constraint,
             default_value: ShareableString::default(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new integer-based `IntegerDefinition` with a default value.
@@ -148,11 +189,33 @@ impl IntegerDefinition {
         constraint: IntegerConstraint,
         default_value: S2,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             constraint,
             default_value: default_value.into(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
+    }
+
+    /// Computes and stores the BLAKE3 hash of this definition.
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"IntegerDefinition");
+        h.update(&self.description.current_blake3_hash());
+        self.constraint.update_hasher(&mut h);
+        h.update(&self.default_value.current_blake3_hash());
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
     }
 
     /// Returns the constraint.
@@ -174,6 +237,7 @@ impl IntegerDefinition {
             description: store.launder(&self.description),
             constraint: self.constraint.clone(),
             default_value: store.launder(&self.default_value),
+            hash: self.hash,
         }
     }
 
