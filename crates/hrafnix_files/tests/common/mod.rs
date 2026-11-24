@@ -1,6 +1,7 @@
 //! Shared support for file integration tests.
 
 use camino::{Utf8Path, Utf8PathBuf};
+use hrafnix_files::component::data::ComponentFile;
 use hrafnix_files::connection::data::{Connection, ConnectionLine};
 use hrafnix_files::decoration_background::data::{BackgroundDecoration, BackgroundDecorationKind};
 use hrafnix_files::decoration_foreground::data::{
@@ -19,6 +20,15 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Maximum supported file size, in bytes (256 MiB).
 const MAX_FILE_SIZE: u64 = 256 * 1024 * 1024;
+
+/// Compares persisted component content while allowing runtime read provenance to differ.
+#[allow(dead_code)]
+pub(crate) fn assert_component_content_eq_ref(expected: &ComponentFile, mut actual: ComponentFile) {
+    actual.source = expected.source.clone();
+    actual.file_hash = expected.file_hash;
+    actual.interface_hash = expected.interface_hash;
+    assert_eq!(&actual, expected);
+}
 
 /// Valid version 1 metadata entry.
 pub(super) const METADATA: &str = "{\"display-name\": \"\", \"description\": \"\", \"author\": \"\", \"minimum-version-major\": 0, \"minimum-version-minor\": 0}";

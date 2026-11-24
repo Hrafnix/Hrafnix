@@ -1,12 +1,11 @@
 use crate::graphics::data::Position;
 use crate::metadata_gui::data::GuiMetadata;
-use camino::Utf8PathBuf;
+pub use crate::source::data::{ComponentSource, PackageReference};
 use hrafnix_datastore::frozen::ParameterObjectFrozen;
 use hrafnix_keys::ComponentKey;
-use hrafnix_shareable_string::ShareableString;
 
 /// A saved instance of a file-defined or built-in component.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct ComponentInstance {
     /// Identifier unique within the containing model or component.
     pub id: ComponentKey,
@@ -18,32 +17,17 @@ pub struct ComponentInstance {
     pub gui_metadata: GuiMetadata,
     /// Ordered parameter definitions and current unevaluated expressions.
     pub parameters: ParameterObjectFrozen,
+    /// BLAKE3 hash of the saved source, GUI, and parameter interface.
+    pub interface_hash: [u8; 32],
 }
 
-/// Provenance of a component instance, stored without resolving its source.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ComponentSource {
-    /// A component definition stored in a file.
-    File {
-        /// Optional package and its version containing the component file.
-        package: Option<PackageReference>,
-        /// Component path stored unchanged.
-        path: Utf8PathBuf,
-    },
-    /// A component definition supplied by the application.
-    Builtin {
-        /// Built-in component name, such as `builtin.clock`.
-        name: ShareableString,
-        /// Built-in component version.
-        version: ShareableString,
-    },
-}
-
-/// An unresolved reference to a specific package version.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PackageReference {
-    /// Package name, such as `hrafnix.sensors`.
-    pub name: ShareableString,
-    /// Package version.
-    pub version: ShareableString,
+impl PartialEq for ComponentInstance {
+    fn eq(&self, other: &Self) -> bool {
+        self.interface_hash == other.interface_hash
+            && self.id == other.id
+            && self.source == other.source
+            && self.position == other.position
+            && self.gui_metadata == other.gui_metadata
+            && self.parameters == other.parameters
+    }
 }

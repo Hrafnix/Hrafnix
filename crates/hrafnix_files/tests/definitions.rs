@@ -284,9 +284,12 @@ fn round_trip(root: &str, path: &Utf8Path) {
         write_model_file(model.clone(), path).unwrap();
         assert_eq!(read_model_file(path).unwrap(), model);
     } else {
-        let component = read_component_file(path).unwrap();
+        let component = read_component_file(path, None).unwrap();
         write_component_file(component.clone(), path).unwrap();
-        assert_eq!(read_component_file(path).unwrap(), component);
+        common::assert_component_content_eq_ref(
+            &component,
+            read_component_file(path, None).unwrap(),
+        );
     }
 }
 
@@ -314,11 +317,14 @@ fn assert_definitions_round_trip(path: &Utf8Path, definitions: &[ItemDefinitionT
             write_model_file(model.clone(), path).unwrap();
             assert_eq!(read_model_file(path).unwrap(), model);
         } else {
-            let mut component = read_component_file(path).unwrap();
+            let mut component = read_component_file(path, None).unwrap();
             component.parameter_definition = parameters.finish();
             component.variable_definition = variables.finish();
             write_component_file(component.clone(), path).unwrap();
-            assert_eq!(read_component_file(path).unwrap(), component);
+            common::assert_component_content_eq_ref(
+                &component,
+                read_component_file(path, None).unwrap(),
+            );
         }
     }
 }
@@ -328,7 +334,7 @@ fn read(root: &str, path: &Utf8Path) -> Result<(), Message> {
     if root == "model" {
         read_model_file(path).map(|_| ())
     } else {
-        read_component_file(path).map(|_| ())
+        read_component_file(path, None).map(|_| ())
     }
 }
 
@@ -365,7 +371,7 @@ fn all_definition_types_round_trip_in_file_order() {
             assert_eq!(model.parameter_definition, parameters);
             assert_eq!(model.variable_definition, variables);
         } else {
-            let component = read_component_file(&path).unwrap();
+            let component = read_component_file(&path, None).unwrap();
             assert_eq!(component.parameter_definition, parameters);
             assert_eq!(component.variable_definition, variables);
         }

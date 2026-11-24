@@ -8,7 +8,7 @@ use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDef
 use hrafnix_datastore::frozen::GlobalObjectFrozen;
 
 /// Represents User Model data from a Hrafnix model file.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct ModelFile {
     /// Descriptive information about the model.
     pub metadata: MetadataFile,
@@ -28,4 +28,20 @@ pub struct ModelFile {
     pub parameter_definition: ParameterObjectDefinition,
     /// Ordered variable definitions, including defaults and descriptions.
     pub variable_definition: VariableObjectDefinition,
+    /// BLAKE3 hash of all validated model data.
+    pub file_hash: [u8; 32],
+}
+
+impl PartialEq for ModelFile {
+    fn eq(&self, other: &Self) -> bool {
+        self.metadata == other.metadata
+            && self.foreground_decorations == other.foreground_decorations
+            && self.background_decorations == other.background_decorations
+            && self.global_settings == other.global_settings
+            && self.components == other.components
+            && self.connections == other.connections
+            && self.translations == other.translations
+            && self.parameter_definition == other.parameter_definition
+            && self.variable_definition == other.variable_definition
+    }
 }

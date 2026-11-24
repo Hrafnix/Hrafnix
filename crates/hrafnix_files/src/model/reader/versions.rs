@@ -17,12 +17,11 @@ pub(crate) enum ModelReader {
     },
 }
 
-impl TryFrom<ModelReader> for ModelFile {
-    type Error = Message;
-
-    fn try_from(document: ModelReader) -> Result<Self, Self::Error> {
-        match document {
-            ModelReader::V1 { model } => model.try_into(),
+impl ModelReader {
+    /// Converts a versioned model reader and computes its data hash.
+    pub(crate) fn try_into_model_file(self) -> Result<ModelFile, Message> {
+        match self {
+            Self::V1 { model } => model.try_into_model_file(),
         }
     }
 }

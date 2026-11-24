@@ -1,14 +1,15 @@
-use crate::common::deserialize::{
-    StringTagDeserializer, deserialize_object, deserialize_optional_object,
-};
+use crate::common::deserialize::deserialize_object;
+use crate::common::hash::instance_interface_hash;
 use crate::common::validate::ensure_unique_keys;
-use crate::component_instance::data::{ComponentInstance, ComponentSource, PackageReference};
+use crate::component_instance::data::ComponentInstance;
 use crate::frozen_parameter::reader::v1::ParameterFrozenReaderV1;
 use crate::graphics::reader::v1::PositionReaderV1;
 use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
+use crate::source::reader::v1::ComponentSourceReaderV1;
+use hrafnix_datastore::frozen::ParameterObjectFrozen;
 use hrafnix_keys::ComponentKey;
 use hrafnix_message::message::Message;
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 
 /// Version 1 component instance with its saved GUI and parameter snapshot.
 #[derive(Debug, Deserialize)]
@@ -33,12 +34,19 @@ impl TryFrom<ComponentInstanceReaderV1> for ComponentInstance {
     type Error = Message;
 
     fn try_from(instance: ComponentInstanceReaderV1) -> Result<Self, Self::Error> {
+        let parameters: ParameterObjectFrozen = instance.parameters.try_into()?;
+        let source = instance.source.into();
+        let gui_metadata = instance.gui_metadata.try_into()?;
+        let interface_hash =
+            instance_interface_hash(&source, &gui_metadata, parameters.definition());
+
         Ok(Self {
             id: ComponentKey::new(instance.id.into())?,
-            source: instance.source.into(),
+            source,
             position: instance.position.into(),
-            gui_metadata: instance.gui_metadata.try_into()?,
-            parameters: instance.parameters.try_into()?,
+            gui_metadata,
+            parameters,
+            interface_hash,
         })
     }
 }
@@ -52,70 +60,4 @@ pub(crate) fn convert_component_instances(
         "files_duplicate_component_id",
     )?;
     instances.into_iter().map(TryInto::try_into).collect()
-}
-
-/// Version 1 source reference selected by a plain-string type tag.
-#[derive(Debug, Deserialize)]
-#[serde(
-    remote = "Self",
-    tag = "type",
-    rename_all = "snake_case",
-    deny_unknown_fields
-)]
-enum ComponentSourceReaderV1 {
-    /// Unresolved file reference.
-    File {
-        /// Optional object containing the package name and version.
-        #[serde(default, deserialize_with = "deserialize_optional_object")]
-        package: Option<PackageReferenceReaderV1>,
-        /// Unresolved component path.
-        path: String,
-    },
-    /// Unresolved built-in reference.
-    Builtin {
-        /// Built-in name.
-        name: String,
-        /// Built-in version.
-        version: String,
-    },
-}
-
-impl<'de> Deserialize<'de> for ComponentSourceReaderV1 {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        Self::deserialize(StringTagDeserializer(deserializer))
-    }
-}
-
-impl From<ComponentSourceReaderV1> for ComponentSource {
-    fn from(source: ComponentSourceReaderV1) -> Self {
-        match source {
-            ComponentSourceReaderV1::File { package, path } => Self::File {
-                package: package.map(Into::into),
-                path: path.into(),
-            },
-            ComponentSourceReaderV1::Builtin { name, version } => Self::Builtin {
-                name: name.into(),
-                version: version.into(),
-            },
-        }
-    }
-}
-
-/// Version 1 package reference with a required name and version.
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
-struct PackageReferenceReaderV1 {
-    /// Unresolved package name.
-    name: String,
-    /// Package version.
-    version: String,
-}
-
-impl From<PackageReferenceReaderV1> for PackageReference {
-    fn from(package: PackageReferenceReaderV1) -> Self {
-        Self {
-            name: package.name.into(),
-            version: package.version.into(),
-        }
-    }
 }

@@ -1,4 +1,5 @@
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
+use crate::common::hash::{component_file_hash, component_interface_hash};
 use crate::component::data::ComponentFile;
 use crate::component_instance::reader::v1::{
     ComponentInstanceReaderV1, convert_component_instances,
@@ -10,7 +11,9 @@ use crate::definition_parameter::reader::v1::ParameterDefinitionReaderV1;
 use crate::definition_variable::reader::v1::VariableDefinitionReaderV1;
 use crate::metadata_general::reader::v1::MetadataReaderV1;
 use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
+use crate::source::data::ComponentSource;
 use crate::translations::reader::v1::TranslationsReaderV1;
+use hrafnix_datastore::definition::ParameterObjectDefinition;
 use hrafnix_message::message::Message;
 use serde::Deserialize;
 
@@ -45,32 +48,50 @@ pub(crate) struct ComponentReaderV1 {
     translations: TranslationsReaderV1,
 }
 
-impl TryFrom<ComponentReaderV1> for ComponentFile {
-    type Error = Message;
+impl ComponentReaderV1 {
+    /// Converts a version 1 component reader into a component file.
+    ///
+    /// # Errors
+    ///
+    /// Returns a localized error if any of the contained data is invalid.
+    pub(crate) fn try_into_component_file(
+        self,
+        source: ComponentSource,
+    ) -> Result<ComponentFile, Message> {
+        let parameter_definition: ParameterObjectDefinition =
+            self.parameter_definition.try_into()?;
+        let metadata = self.metadata.into();
+        let gui_metadata = self.gui_metadata.try_into()?;
+        let interface_hash =
+            component_interface_hash(&metadata, &source, &gui_metadata, &parameter_definition);
 
-    fn try_from(component: ComponentReaderV1) -> Result<Self, Self::Error> {
-        Ok(Self {
-            metadata: component.metadata.into(),
-            gui_metadata: component.gui_metadata.try_into()?,
-            parameter_definition: component.parameter_definition.try_into()?,
-            variable_definition: component.variable_definition.try_into()?,
-            foreground_decorations: component
+        let mut component = ComponentFile {
+            metadata,
+            source,
+            gui_metadata,
+            parameter_definition,
+            variable_definition: self.variable_definition.try_into()?,
+            foreground_decorations: self
                 .foreground_decorations
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            background_decorations: component
+            background_decorations: self
                 .background_decorations
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            translations: component.translations.try_into()?,
-            components: convert_component_instances(component.components)?,
-            connections: component
+            translations: self.translations.try_into()?,
+            components: convert_component_instances(self.components)?,
+            connections: self
                 .connections
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<_, _>>()?,
-        })
+            file_hash: [0; 32],
+            interface_hash,
+        };
+        component.file_hash = component_file_hash(&component);
+        Ok(component)
     }
 }

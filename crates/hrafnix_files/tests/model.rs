@@ -32,6 +32,7 @@ fn minimal_model() -> ModelFile {
         connections: Vec::new(),
         parameter_definition: ParameterObjectDefinition::default(),
         variable_definition: VariableObjectDefinition::default(),
+        file_hash: [0; 32],
     }
 }
 
@@ -47,6 +48,18 @@ fn minimal_text() -> String {
 #[test]
 fn root_accepts_named_fields_and_rejects_positional_arrays() {
     common::assert_root_structure("model", |path| read_model_file(path).map(|_| ()));
+}
+
+#[test]
+fn reading_populates_file_hash() {
+    let path = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/minimal.hxm");
+    let model = read_model_file(&path).unwrap();
+
+    assert_ne!(model.file_hash, [0; 32]);
+    assert_ne!(
+        model.file_hash,
+        *blake3::hash(fs::read(&path).unwrap().as_slice()).as_bytes()
+    );
 }
 
 #[test]

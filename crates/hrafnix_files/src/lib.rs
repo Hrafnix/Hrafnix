@@ -64,6 +64,11 @@
 //! Writers consume the file data and atomically replace the destination with
 //! pretty-printed JSON, without a final newline. Reads and writes are limited to
 //! 256 MiB.
+//! Readers compute `file_hash` from all validated data using field-by-field
+//! BLAKE3 encoding, not from JSON bytes. Whitespace, object key order, and a
+//! leading BOM do not affect these hashes; ordered arrays retain their order.
+//! Component hashes include the loaded source provenance, like `interface_hash`.
+//! Hashes are read-time snapshots and are not serialized.
 
 // Test code favors clarity and brevity over the strictness we require of library code:
 // panicking helpers (`unwrap`/`expect`/indexing/`panic!`) and approximate float comparisons
@@ -117,5 +122,7 @@ pub mod metadata_general;
 pub mod metadata_gui;
 /// Simulation model definitions.
 pub mod model;
+/// Component source references and package provenance.
+pub mod source;
 /// Source languages and translated text shared by model and component files.
 pub mod translations;

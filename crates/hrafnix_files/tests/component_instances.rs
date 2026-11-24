@@ -117,7 +117,7 @@ fn read(root: &str, path: &Utf8Path) -> Result<Vec<ComponentInstance>, Message> 
     if root == "model" {
         read_model_file(path).map(|file| file.components)
     } else {
-        read_component_file(path).map(|file| file.components)
+        read_component_file(path, None).map(|file| file.components)
     }
 }
 
@@ -128,7 +128,7 @@ fn write(root: &str, instances: Vec<ComponentInstance>, path: &Utf8Path) -> Resu
         file.components = instances;
         write_model_file(file, path)
     } else {
-        let mut file = read_component_file(path)?;
+        let mut file = read_component_file(path, None)?;
         file.components = instances;
         write_component_file(file, path)
     }

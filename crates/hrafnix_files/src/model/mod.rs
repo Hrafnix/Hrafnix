@@ -27,7 +27,7 @@ pub fn read_model_file(path: &Utf8Path) -> Result<ModelFile, Message> {
 
     let model_deserialized: RootObject<ModelReader> =
         serde_json::from_str(&model_string).map_err(|error| json_error(path, error))?;
-    model_deserialized.document.try_into()
+    model_deserialized.document.try_into_model_file()
 }
 
 /// Writes a model file as pretty-printed JSON without a final newline.
