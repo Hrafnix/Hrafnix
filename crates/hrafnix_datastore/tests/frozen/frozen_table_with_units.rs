@@ -229,3 +229,29 @@ fn test_table_with_units_frozen_uses_definition_default_table() {
 
     assert_eq!(table.cell_by_index(0, 0).map(AsRef::as_ref), Some("12"));
 }
+
+#[test]
+fn table_with_units_frozen_hash_includes_parameter_reference() {
+    let definition = TableWithUnitsDefinition::new(
+        "Measurements",
+        vec![(
+            store_key!("length"),
+            NumberWithUnitsDefinition::new("Length", UnitId::Length_Meter),
+        )],
+    );
+    let rows = vec![vec!["12".into()]];
+    let units = vec!["length_meter".into()];
+    let local =
+        TableWithUnitsFrozen::new_from_rows(definition.clone(), rows.clone(), units.clone());
+    let referenced = TableWithUnitsFrozen::new_from_rows_with_parameter(
+        definition.clone(),
+        rows.clone(),
+        units.clone(),
+        "p_source",
+    );
+    let other_reference =
+        TableWithUnitsFrozen::new_from_rows_with_parameter(definition, rows, units, "p_other");
+
+    assert_ne!(local.hash(), referenced.hash());
+    assert_ne!(referenced.hash(), other_reference.hash());
+}

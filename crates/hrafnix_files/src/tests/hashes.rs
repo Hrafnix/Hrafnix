@@ -289,3 +289,119 @@ fn component_file_hash_includes_loaded_provenance() {
     .unwrap();
     assert_ne!(without_package.file_hash(), with_package.file_hash());
 }
+
+/// Builds frozen table, unit-table, and map items whose table references can be mutated.
+fn frozen_table_items(prefix: &str) -> Value {
+    json!([
+        {
+            "key": format!("{prefix}_table"),
+            "type": "table",
+            "definition": {
+                "description": "Table",
+                "columns": [
+                    {"key": "value", "description": "", "default": "", "constraint": {"type": "none"}, "requirement": "none"}
+                ],
+                "default": null
+            },
+            "parameter": "",
+            "rows": [["1"]]
+        },
+        {
+            "key": format!("{prefix}_table_units"),
+            "type": "table_with_units",
+            "definition": {
+                "description": "Units table",
+                "columns": [
+                    {"key": "distance", "description": "", "default": "", "constraint": {"type": "none"}, "requirement": "none", "preferred_unit": "length_meter"}
+                ],
+                "default": null
+            },
+            "parameter": "",
+            "units": ["length_meter"],
+            "rows": [["2"]]
+        },
+        {
+            "key": format!("{prefix}_map"),
+            "type": "map",
+            "definition": {
+                "description": "Map",
+                "items": [
+                    {
+                        "key": "table",
+                        "type": "table",
+                        "description": "Rows",
+                        "columns": [
+                            {"key": "value", "description": "", "default": "", "constraint": {"type": "none"}, "requirement": "none"}
+                        ],
+                        "default": null
+                    },
+                    {
+                        "key": "table_units",
+                        "type": "table_with_units",
+                        "description": "Distances",
+                        "columns": [
+                            {"key": "distance", "description": "", "default": "", "constraint": {"type": "none"}, "requirement": "none", "preferred_unit": "length_meter"}
+                        ],
+                        "default": null
+                    }
+                ],
+                "default": null
+            },
+            "value": {
+                "entry": [
+                    {"parameter": "", "rows": [["3"]]},
+                    {"parameter": "", "units": ["length_meter"], "rows": [["4"]]}
+                ]
+            }
+        }
+    ])
+}
+
+#[test]
+fn file_hashes_cover_table_parameter_references() {
+    for root in ["model", "component"] {
+        let directory = TestDirectory::new();
+        let path = directory.path.join("hash_table_refs.json");
+        let mut original = document(root);
+        original[root]["components"][0]["parameters"] = frozen_table_items("p");
+        let mut mutations = vec![
+            ("/components/0/parameters/0/parameter", json!("p_ref")),
+            ("/components/0/parameters/1/parameter", json!("p_units_ref")),
+            (
+                "/components/0/parameters/2/value/entry/0/parameter",
+                json!("p_map_ref"),
+            ),
+            (
+                "/components/0/parameters/2/value/entry/1/parameter",
+                json!("p_map_units_ref"),
+            ),
+        ];
+        if root == "model" {
+            original[root]["global_settings"] = frozen_table_items("g");
+            mutations.extend([
+                ("/global_settings/0/parameter", json!("g_ref")),
+                ("/global_settings/1/parameter", json!("g_units_ref")),
+                (
+                    "/global_settings/2/value/entry/0/parameter",
+                    json!("g_map_ref"),
+                ),
+                (
+                    "/global_settings/2/value/entry/1/parameter",
+                    json!("g_map_units_ref"),
+                ),
+            ]);
+        }
+
+        fs::write(&path, serde_json::to_string(&original).unwrap()).unwrap();
+        let expected = read_hashes(root, &path);
+
+        for (pointer, value) in mutations {
+            let mut changed = original.clone();
+            *changed[root].pointer_mut(pointer).unwrap() = value;
+            fs::write(&path, serde_json::to_string(&changed).unwrap()).unwrap();
+            let actual = read_hashes(root, &path);
+            assert_ne!(actual.0, expected.0, "{root}{pointer}");
+            assert_eq!(actual.1, expected.1, "{root}{pointer}");
+        }
+    }
+}

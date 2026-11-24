@@ -160,3 +160,19 @@ fn table_from_rows_preserves_parameter_reference() {
     assert_eq!(table, editable.freeze());
     assert_eq!(table.thaw().freeze(), table);
 }
+
+#[test]
+fn table_frozen_hash_includes_parameter_reference() {
+    let definition = TableDefinition::new(
+        "Table",
+        vec![(store_key!("value"), NumberDefinition::new("Value"))],
+    );
+    let rows = vec![vec!["7".into()]];
+    let local = TableFrozen::new_from_rows(definition.clone(), rows.clone());
+    let referenced =
+        TableFrozen::new_from_rows_with_parameter(definition.clone(), rows.clone(), "p_source");
+    let other_reference = TableFrozen::new_from_rows_with_parameter(definition, rows, "p_other");
+
+    assert_ne!(local.hash(), referenced.hash());
+    assert_ne!(referenced.hash(), other_reference.hash());
+}
