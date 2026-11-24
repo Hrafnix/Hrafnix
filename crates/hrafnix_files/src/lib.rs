@@ -28,6 +28,12 @@
 //! Component contents also require a `gui_metadata` object with `dimensions`
 //! (`width` and `height` as unsigned 16-bit integers) and an `icon` path string.
 //! Icon paths are stored unchanged, without opening or resolving them.
+//! GUI metadata requires a `rotation` in unsigned 16-bit integer clockwise degrees
+//! about the center of the icon bounds. Readers round to the nearest 90 degrees,
+//! with halfway values rounded clockwise and full turns wrapped to zero.
+//! Writers emit only 0, 90, 180, or 270. Dimensions and port locations remain
+//! unrotated; rotation applies to the icon and ports together and contributes
+//! to GUI interface hashes.
 //! GUI metadata also requires a `ports` array, including when empty. Each port
 //! has a plain-string `id` validated as a [`hrafnix_keys::PortKey`], a plain-string
 //! `type`, and a `location` object with unsigned
@@ -119,7 +125,7 @@ pub mod frozen_parameter;
 pub mod graphics;
 /// Metadata shared by model and component files.
 pub mod metadata_general;
-/// Drawing dimensions, icons, and port locations associated with components.
+/// Drawing dimensions, rotation, icons, and port locations associated with components.
 pub mod metadata_gui;
 /// Simulation model definitions.
 pub mod model;

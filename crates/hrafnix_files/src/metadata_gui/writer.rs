@@ -1,5 +1,5 @@
 use crate::common::serialize::serialize_port_key;
-use crate::graphics::writer::DimensionWriter;
+use crate::graphics::writer::{DimensionWriter, RotationWriter};
 use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
 use hrafnix_common::port::PortType;
 use hrafnix_keys::PortKey;
@@ -10,6 +10,8 @@ use serde::Serialize;
 pub(crate) struct GuiMetadataWriter {
     /// Dimensions in drawing coordinates.
     dimensions: DimensionWriter,
+    /// Clockwise quarter-turn rotation in integer degrees.
+    rotation: RotationWriter,
     /// Icon path stored unchanged.
     icon: String,
     /// Ports with locations capped to the icon's drawing dimensions.
@@ -21,6 +23,7 @@ impl From<&GuiMetadata> for GuiMetadataWriter {
         let dimensions = metadata.dimensions();
         Self {
             dimensions: DimensionWriter::from(&dimensions),
+            rotation: RotationWriter::from(&metadata.rotation()),
             icon: metadata.icon().as_str().to_owned(),
             ports: metadata
                 .ports()
@@ -116,7 +119,7 @@ impl From<&PortLocation> for PortLocationWriter {
 mod tests {
     use super::GuiMetadataWriter;
     use crate::common::deserialize::RootObject;
-    use crate::graphics::data::Dimension;
+    use crate::graphics::data::{Dimension, Rotation};
     use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
     use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
     use hrafnix_common::port::PortType;
@@ -126,19 +129,24 @@ mod tests {
     #[test]
     fn metadata_matches_the_nested_reader_schema() {
         for (width, height) in [(100, 50), (0, u16::MAX), (u16::MAX, 0)] {
-            for path in [
-                "",
-                "../icons/missing \u{3b1}.svg",
-                " leading and trailing spaces ",
-                r"C:\icons\missing.png",
+            for (path, rotation) in [
+                ("", Rotation::Degrees0),
+                ("../icons/missing \u{3b1}.svg", Rotation::Degrees90),
+                (" leading and trailing spaces ", Rotation::Degrees180),
+                (r"C:\icons\missing.png", Rotation::Degrees270),
             ] {
-                let metadata =
-                    GuiMetadata::new(Dimension::new(width, height), path.into(), Vec::new());
+                let metadata = GuiMetadata::new(
+                    Dimension::new(width, height),
+                    rotation,
+                    path.into(),
+                    Vec::new(),
+                );
                 let json = serde_json::to_string(&GuiMetadataWriter::from(&metadata)).unwrap();
                 assert_eq!(
                     serde_json::from_str::<Value>(&json).unwrap(),
                     json!({
                         "dimensions": {"width": width, "height": height},
+                        "rotation": rotation.degrees(),
                         "icon": path,
                         "ports": [],
                     }),
@@ -164,6 +172,7 @@ mod tests {
                 for (x, y) in [(0, 0), (width, height), (width, 0), (0, height)] {
                     let metadata = GuiMetadata::new(
                         Dimension::new(width, height),
+                        Rotation::Degrees90,
                         "icon.svg".into(),
                         vec![Port::new(
                             port_key!("temperature_out1").into(),
@@ -176,6 +185,7 @@ mod tests {
                         serde_json::from_str::<Value>(&text).unwrap(),
                         json!({
                             "dimensions": {"width": width, "height": height},
+                            "rotation": 90,
                             "icon": "icon.svg",
                             "ports": [{
                                 "id": "temperature_out1",
@@ -204,6 +214,7 @@ mod tests {
             ] {
                 let metadata = GuiMetadata::new(
                     Dimension::new(width, height),
+                    Rotation::Degrees270,
                     "".into(),
                     vec![Port::new(
                         port_key!("temperature").into(),
@@ -217,6 +228,7 @@ mod tests {
                     written,
                     json!({
                         "dimensions": {"width": width, "height": height},
+                        "rotation": 270,
                         "icon": "",
                         "ports": [{
                             "id": "temperature",

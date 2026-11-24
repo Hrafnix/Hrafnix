@@ -1,4 +1,4 @@
-use crate::graphics::data::{Dimension, FontSize, Position};
+use crate::graphics::data::{Dimension, FontSize, Position, Rotation};
 use serde::Serialize;
 
 /// The current JSON representation of a position.
@@ -33,6 +33,22 @@ impl From<&Dimension> for DimensionWriter {
         Self {
             width: dimensions.width(),
             height: dimensions.height(),
+        }
+    }
+}
+
+/// The current JSON representation of an integer quarter-turn rotation.
+#[derive(Debug, Serialize)]
+#[serde(transparent)]
+pub(crate) struct RotationWriter {
+    /// Clockwise rotation in degrees.
+    degrees: u16,
+}
+
+impl From<&Rotation> for RotationWriter {
+    fn from(rotation: &Rotation) -> Self {
+        Self {
+            degrees: rotation.degrees(),
         }
     }
 }

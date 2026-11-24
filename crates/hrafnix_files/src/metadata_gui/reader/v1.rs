@@ -2,7 +2,7 @@ use crate::common::deserialize::{
     deserialize_object, deserialize_objects, deserialize_unit_variant,
 };
 use crate::graphics::data::Dimension;
-use crate::graphics::reader::v1::DimensionReaderV1;
+use crate::graphics::reader::v1::{DimensionReaderV1, RotationReaderV1};
 use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
 use hrafnix_common::port::PortType;
 use hrafnix_keys::PortKey;
@@ -16,6 +16,8 @@ pub(crate) struct GuiMetadataReaderV1 {
     /// Dimensions in drawing coordinates.
     #[serde(deserialize_with = "deserialize_object")]
     dimensions: DimensionReaderV1,
+    /// Clockwise unsigned integer degrees, rounded to the nearest quarter turn.
+    rotation: RotationReaderV1,
     /// Icon path, stored unchanged rather than opened or resolved during file I/O.
     icon: String,
     /// Ports placed within the icon's drawing dimensions.
@@ -43,7 +45,12 @@ impl TryFrom<GuiMetadataReaderV1> for GuiMetadata {
                 ))
             })
             .collect::<Result<_, Message>>()?;
-        Ok(Self::new(dimensions, metadata.icon.into(), ports))
+        Ok(Self::new(
+            dimensions,
+            metadata.rotation.into(),
+            metadata.icon.into(),
+            ports,
+        ))
     }
 }
 
@@ -140,6 +147,7 @@ mod tests {
     fn metadata_json() -> Value {
         json!({
             "dimensions": {"width": 100, "height": 50},
+            "rotation": 0,
             "icon": "../icons/missing.svg",
             "ports": [],
         })
@@ -291,7 +299,7 @@ mod tests {
         }
         for coordinate in ["1e1", "1.0"] {
             let text = format!(
-                r#"{{"dimensions":{{"width":100,"height":50}},"icon":"","ports":[{{"id":"p","type":"input","location":{{"x":{coordinate},"y":0}}}}]}}"#,
+                r#"{{"dimensions":{{"width":100,"height":50}},"rotation":0,"icon":"","ports":[{{"id":"p","type":"input","location":{{"x":{coordinate},"y":0}}}}]}}"#,
             );
             assert!(serde_json::from_str::<RootObject<GuiMetadataReaderV1>>(&text).is_err());
         }
@@ -336,7 +344,7 @@ mod tests {
             r#"{"id":"p","type":"output","location":{"x":0,"y":0,"y":1}}"#,
         ] {
             let text = format!(
-                r#"{{"dimensions":{{"width":100,"height":50}},"icon":"","ports":[{port}]}}"#,
+                r#"{{"dimensions":{{"width":100,"height":50}},"rotation":0,"icon":"","ports":[{port}]}}"#,
             );
             assert!(serde_json::from_str::<RootObject<GuiMetadataReaderV1>>(&text).is_err());
         }
@@ -401,7 +409,7 @@ mod tests {
 
     #[test]
     fn fields_are_required_and_unknown_fields_are_rejected() {
-        for field in ["dimensions", "icon", "ports"] {
+        for field in ["dimensions", "rotation", "icon", "ports"] {
             let mut value = metadata_json();
             value.as_object_mut().unwrap().remove(field);
             assert!(read(&value).is_err(), "{value}");
@@ -422,7 +430,7 @@ mod tests {
     #[test]
     fn structs_require_json_objects() {
         for invalid in [
-            json!([{"width": 100, "height": 50}, "icon.svg", []]),
+            json!([{"width": 100, "height": 50}, 0, "icon.svg", []]),
             Value::Null,
             json!(false),
             json!(100),
@@ -446,11 +454,12 @@ mod tests {
     #[test]
     fn duplicate_fields_are_rejected() {
         for json in [
-            r#"{"dimensions":{"width":100,"height":50},"icon":"a.svg","icon":"b.svg","ports":[]}"#,
-            r#"{"dimensions":{"width":100,"height":50},"dimensions":{"width":1,"height":2},"icon":"","ports":[]}"#,
-            r#"{"dimensions":{"width":100,"width":1,"height":50},"icon":"","ports":[]}"#,
-            r#"{"dimensions":{"width":100,"height":50,"height":1},"icon":"","ports":[]}"#,
-            r#"{"dimensions":{"width":100,"height":50},"icon":"","ports":[],"ports":[]}"#,
+            r#"{"dimensions":{"width":100,"height":50},"rotation":0,"icon":"a.svg","icon":"b.svg","ports":[]}"#,
+            r#"{"dimensions":{"width":100,"height":50},"rotation":0,"dimensions":{"width":1,"height":2},"icon":"","ports":[]}"#,
+            r#"{"dimensions":{"width":100,"width":1,"height":50},"rotation":0,"icon":"","ports":[]}"#,
+            r#"{"dimensions":{"width":100,"height":50,"height":1},"rotation":0,"icon":"","ports":[]}"#,
+            r#"{"dimensions":{"width":100,"height":50},"rotation":0,"icon":"","ports":[],"ports":[]}"#,
+            r#"{"dimensions":{"width":100,"height":50},"rotation":0,"rotation":90,"icon":"","ports":[]}"#,
         ] {
             assert!(
                 serde_json::from_str::<RootObject<GuiMetadataReaderV1>>(json).is_err(),

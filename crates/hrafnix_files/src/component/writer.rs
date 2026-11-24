@@ -25,7 +25,7 @@ pub(crate) struct ComponentWriter {
 struct ComponentDataWriter {
     /// Descriptive information about the component.
     metadata: MetadataWriter,
-    /// Drawing dimensions and icon associated with the component.
+    /// Drawing dimensions, rotation, icon, and port locations associated with the component.
     gui_metadata: GuiMetadataWriter,
     /// Parameter definitions in datastore iteration order.
     parameter_definition: ParameterDefinitionWriter,

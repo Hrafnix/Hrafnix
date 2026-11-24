@@ -14,7 +14,7 @@ pub struct ComponentInstance {
     source: ComponentSource,
     /// Position in the containing drawing.
     position: Position,
-    /// Saved dimensions, icon, and icon-local port locations.
+    /// Saved dimensions, rotation, icon, and icon-local port locations.
     gui_metadata: GuiMetadata,
     /// Ordered parameter definitions and current unevaluated expressions.
     parameters: ParameterObjectFrozen,
@@ -62,7 +62,7 @@ impl ComponentInstance {
         self.position
     }
 
-    /// Returns the saved dimensions, icon, and icon-local port locations.
+    /// Returns the saved dimensions, rotation, icon, and icon-local port locations.
     #[must_use]
     pub const fn gui_metadata(&self) -> &GuiMetadata {
         &self.gui_metadata

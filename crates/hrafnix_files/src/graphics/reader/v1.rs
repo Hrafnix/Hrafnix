@@ -1,4 +1,4 @@
-use crate::graphics::data::{Dimension, FontSize, Position};
+use crate::graphics::data::{Dimension, FontSize, Position, Rotation};
 use serde::Deserialize;
 
 /// The version 1 JSON representation of a drawing position.
@@ -33,6 +33,25 @@ impl From<DimensionReaderV1> for Dimension {
     }
 }
 
+/// The version 1 JSON representation of an unsigned integer rotation.
+#[derive(Debug, Deserialize)]
+#[serde(transparent)]
+pub(crate) struct RotationReaderV1 {
+    /// Clockwise degrees, rounded to the nearest quarter turn during conversion.
+    degrees: u16,
+}
+
+impl From<RotationReaderV1> for Rotation {
+    fn from(rotation: RotationReaderV1) -> Self {
+        match rotation.degrees % 360 {
+            45..=134 => Self::Degrees90,
+            135..=224 => Self::Degrees180,
+            225..=314 => Self::Degrees270,
+            _ => Self::Degrees0,
+        }
+    }
+}
+
 /// The version 1 JSON representation of a font size in hundredths.
 #[derive(Debug, Deserialize)]
 #[serde(transparent)]
@@ -49,8 +68,56 @@ impl From<FontSizeReaderV1> for FontSize {
 
 #[cfg(test)]
 mod tests {
-    use super::FontSizeReaderV1;
-    use crate::graphics::data::FontSize;
+    use super::{FontSizeReaderV1, RotationReaderV1};
+    use crate::graphics::data::{FontSize, Rotation};
+
+    #[test]
+    fn rotations_are_plain_unsigned_integers() {
+        assert_eq!(Rotation::default(), Rotation::Degrees0);
+        for (json, expected) in [
+            ("0", Rotation::Degrees0),
+            ("90", Rotation::Degrees90),
+            ("180", Rotation::Degrees180),
+            ("270", Rotation::Degrees270),
+        ] {
+            let reader: RotationReaderV1 = serde_json::from_str(json).unwrap();
+            let rotation = Rotation::from(reader);
+            assert_eq!(rotation, expected);
+            assert_eq!(rotation.degrees().to_string(), json);
+        }
+
+        for json in [
+            "-90",
+            "65536",
+            "90.0",
+            "9e1",
+            "0.5",
+            "\"90\"",
+            "\"Degrees90\"",
+            "true",
+            "null",
+            "[90]",
+            r#"{"degrees": 90}"#,
+        ] {
+            assert!(
+                serde_json::from_str::<RotationReaderV1>(json).is_err(),
+                "{json}"
+            );
+        }
+    }
+
+    #[test]
+    fn all_unsigned_rotations_round_to_the_nearest_quarter_turn() {
+        for degrees in 0..=u16::MAX {
+            let reader: RotationReaderV1 = serde_json::from_str(&degrees.to_string()).unwrap();
+            let expected = ((u32::from(degrees) + 45) / 90 % 4) * 90;
+            assert_eq!(
+                u32::from(Rotation::from(reader).degrees()),
+                expected,
+                "{degrees}"
+            );
+        }
+    }
 
     #[test]
     fn hundredths_are_plain_integers() {

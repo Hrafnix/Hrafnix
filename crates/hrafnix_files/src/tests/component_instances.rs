@@ -6,7 +6,7 @@ use super::common::{self, TestDirectory};
 
 use crate::component::{data::ComponentFile, read_component_file, write_component_file};
 use crate::component_instance::data::{ComponentInstance, ComponentSource, PackageReference};
-use crate::graphics::data::Position;
+use crate::graphics::data::{Position, Rotation};
 use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
 use crate::model::{data::ModelFile, read_model_file, write_model_file};
 use camino::Utf8Path;
@@ -31,6 +31,7 @@ fn instances_json() -> Value {
             "position": {"x": 150, "y": 0},
             "gui_metadata": {
                 "dimensions": {"width": 120, "height": 60},
+                "rotation": 0,
                 "icon": "temperature-sensor.svg",
                 "ports": [{
                     "id": "temperature",
@@ -58,6 +59,7 @@ fn instances_json() -> Value {
             "position": {"x": 320, "y": 0},
             "gui_metadata": {
                 "dimensions": {"width": 120, "height": 60},
+                "rotation": 90,
                 "icon": "heater.svg",
                 "ports": [{
                     "id": "temperature_input",
@@ -82,6 +84,7 @@ fn instances_json() -> Value {
             "position": {"x": 0, "y": 0},
             "gui_metadata": {
                 "dimensions": {"width": 100, "height": 50},
+                "rotation": 180,
                 "icon": "",
                 "ports": [{
                     "id": "time",
@@ -211,6 +214,9 @@ fn example_instances_round_trip_with_sources_snapshots_and_order() {
         assert_eq!(instances[0].position(), Position::new(150, 0));
         assert_eq!(instances[1].position(), Position::new(320, 0));
         assert_eq!(instances[2].position(), Position::new(0, 0));
+        assert_eq!(instances[0].gui_metadata().rotation(), Rotation::Degrees0);
+        assert_eq!(instances[1].gui_metadata().rotation(), Rotation::Degrees90);
+        assert_eq!(instances[2].gui_metadata().rotation(), Rotation::Degrees180);
         let unit = UnitDefinition::new_with_default(
             "Unit",
             UnitFamilyId::Temperature,
@@ -254,6 +260,68 @@ fn example_instances_round_trip_with_sources_snapshots_and_order() {
         let written: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(written, document);
         assert_eq!(directory.entries(), ["instances.json"]);
+    }
+}
+
+#[test]
+fn gui_rotations_round_trip_without_changing_icon_local_geometry() {
+    let directory = TestDirectory::new();
+    let path = directory.path.join("rotations.json");
+    for root in ["model", "component"] {
+        let mut document = document(root, instances_json());
+        fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+        let original = read(root, &path).unwrap().remove(0);
+        for (degrees, rotation) in [
+            (0, Rotation::Degrees0),
+            (44, Rotation::Degrees0),
+            (45, Rotation::Degrees90),
+            (90, Rotation::Degrees90),
+            (134, Rotation::Degrees90),
+            (135, Rotation::Degrees180),
+            (180, Rotation::Degrees180),
+            (224, Rotation::Degrees180),
+            (225, Rotation::Degrees270),
+            (270, Rotation::Degrees270),
+            (314, Rotation::Degrees270),
+            (315, Rotation::Degrees0),
+            (360, Rotation::Degrees0),
+            (405, Rotation::Degrees90),
+            (u16::MAX, Rotation::Degrees0),
+        ] {
+            document[root]["components"][0]["gui_metadata"]["rotation"] = json!(degrees);
+            fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+            let instances = read(root, &path).unwrap();
+            let instance = &instances[0];
+            assert_eq!(instance.gui_metadata().rotation(), rotation);
+            assert_eq!(instance.position(), original.position());
+            assert_eq!(
+                instance.gui_metadata().dimensions(),
+                original.gui_metadata().dimensions(),
+            );
+            assert_eq!(
+                instance.gui_metadata().icon(),
+                original.gui_metadata().icon()
+            );
+            assert_eq!(
+                instance.gui_metadata().ports(),
+                original.gui_metadata().ports()
+            );
+            assert_eq!(
+                instance.interface_hash() == original.interface_hash(),
+                rotation == original.gui_metadata().rotation(),
+            );
+            assert_eq!(
+                instance == &original,
+                rotation == original.gui_metadata().rotation(),
+            );
+
+            write(root, instances.clone(), &path).unwrap();
+
+            assert_eq!(read(root, &path).unwrap(), instances);
+            let written: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+            document[root]["components"][0]["gui_metadata"]["rotation"] = json!(rotation.degrees());
+            assert_eq!(written, document);
+        }
     }
 }
 
@@ -325,6 +393,9 @@ fn components_arrays_and_all_instance_fields_are_required_and_strict() {
         let mut missing = document.clone();
         missing[root].as_object_mut().unwrap().remove("components");
         let mut invalid_documents = vec![missing];
+        let mut misplaced_rotation = document.clone();
+        misplaced_rotation[root]["components"][0]["rotation"] = json!(0);
+        invalid_documents.push(misplaced_rotation);
         for invalid in [
             Value::Null,
             json!(true),
@@ -458,6 +529,18 @@ fn identifiers_tags_source_fields_geometry_and_parameters_are_validated() {
             invalid_fields.push((pointer, invalid));
         }
     }
+    for invalid in [
+        json!(-90),
+        json!(65536),
+        json!(90.0),
+        json!("90"),
+        json!(true),
+        Value::Null,
+        json!([90]),
+        json!({"degrees": 90}),
+    ] {
+        invalid_fields.push(("/components/0/gui_metadata/rotation", invalid));
+    }
     for pointer in [
         "/components/0/gui_metadata/dimensions/width",
         "/components/0/gui_metadata/ports/0/location/x",
@@ -546,6 +629,7 @@ fn duplicate_fields_are_rejected_without_losing_raw_json_entries() {
             (format!("/{root}"), "components"),
             (format!("/{root}/components/0"), "id"),
             (format!("/{root}/components/0"), "source"),
+            (format!("/{root}/components/0/gui_metadata"), "rotation"),
             (format!("/{root}/components/0"), "parameters"),
             (format!("/{root}/components/0/source"), "type"),
             (format!("/{root}/components/0/source/package"), "name"),
@@ -683,6 +767,7 @@ fn instance_ports_are_capped_by_the_shared_gui_reader_and_writer() {
             instances[0].position(),
             GuiMetadata::new(
                 instances[0].gui_metadata().dimensions(),
+                instances[0].gui_metadata().rotation(),
                 instances[0].gui_metadata().icon().to_owned(),
                 ports,
             ),

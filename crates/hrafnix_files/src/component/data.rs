@@ -16,7 +16,7 @@ pub struct ComponentFile {
     metadata: MetadataFile,
     /// Unresolved provenance of the loaded component file.
     source: ComponentSource,
-    /// Drawing dimensions and icon associated with the component.
+    /// Drawing dimensions, rotation, icon, and port locations associated with the component.
     gui_metadata: GuiMetadata,
     /// Text and images drawn in front of the component's contents.
     foreground_decorations: Vec<ForegroundDecoration>,
@@ -86,7 +86,7 @@ impl ComponentFile {
         &self.source
     }
 
-    /// Returns the drawing dimensions and icon associated with the component.
+    /// Returns the drawing dimensions, rotation, icon, and port locations associated with the component.
     #[must_use]
     pub const fn gui_metadata(&self) -> &GuiMetadata {
         &self.gui_metadata

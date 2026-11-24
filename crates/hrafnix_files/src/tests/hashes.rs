@@ -43,7 +43,7 @@ fn document(root: &str) -> Value {
     data["components"] = json!([
         {"id": "first", "source": {"type": "builtin", "name": "clock", "version": "1"},
          "position": {"x": 7, "y": 8},
-         "gui_metadata": {"dimensions": {"width": 100, "height": 50}, "icon": "clock.svg",
+         "gui_metadata": {"dimensions": {"width": 100, "height": 50}, "rotation": 0, "icon": "clock.svg",
              "ports": [{"id": "time", "type": "output", "location": {"x": 10, "y": 20}}]},
          "parameters": [
              {"key": "p_first", "type": "number",
@@ -55,7 +55,7 @@ fn document(root: &str) -> Value {
         {"id": "second", "source": {"type": "file", "path": "sensor.hxc",
              "package": {"name": "sensors", "version": "1"}},
          "position": {"x": 9, "y": 10},
-         "gui_metadata": {"dimensions": {"width": 100, "height": 50}, "icon": "", "ports": []},
+         "gui_metadata": {"dimensions": {"width": 100, "height": 50}, "rotation": 90, "icon": "", "ports": []},
          "parameters": []}
     ]);
     data["connections"] = json!([
@@ -118,6 +118,36 @@ fn formatting_and_round_trips_preserve_file_hashes() {
 }
 
 #[test]
+fn rounded_rotations_have_the_same_hashes_as_canonical_angles() {
+    for root in ["model", "component"] {
+        let directory = TestDirectory::new();
+        let path = directory.path.join("rotations.json");
+        let mut document = document(root);
+        for (degrees, canonical) in [
+            (44, 0),
+            (45, 90),
+            (135, 180),
+            (225, 270),
+            (315, 0),
+            (65535, 0),
+        ] {
+            document[root]["components"][0]["gui_metadata"]["rotation"] = json!(degrees);
+            if root == "component" {
+                document[root]["gui_metadata"]["rotation"] = json!(degrees);
+            }
+            fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+            let rounded = read_hashes(root, &path);
+            document[root]["components"][0]["gui_metadata"]["rotation"] = json!(canonical);
+            if root == "component" {
+                document[root]["gui_metadata"]["rotation"] = json!(canonical);
+            }
+            fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+            assert_eq!(read_hashes(root, &path), rounded, "{root}: {degrees}");
+        }
+    }
+}
+
+#[test]
 fn file_hashes_cover_data_beyond_the_interface() {
     for root in ["model", "component"] {
         let directory = TestDirectory::new();
@@ -149,6 +179,9 @@ fn file_hashes_cover_data_beyond_the_interface() {
             ("/components/0/source/version", json!("2")),
             ("/components/0/position/x", json!(-7)),
             ("/components/0/position/y", json!(-8)),
+            ("/components/0/gui_metadata/rotation", json!(90)),
+            ("/components/0/gui_metadata/rotation", json!(180)),
+            ("/components/0/gui_metadata/rotation", json!(270)),
             ("/components/0/gui_metadata/icon", json!("other.svg")),
             ("/components/0/gui_metadata/dimensions/width", json!(101)),
             ("/components/0/gui_metadata/dimensions/height", json!(51)),
@@ -238,6 +271,9 @@ fn file_hashes_cover_interface_fields() {
         if root == "component" {
             mutations.extend([
                 ("/gui_metadata/icon", json!("other.svg")),
+                ("/gui_metadata/rotation", json!(90)),
+                ("/gui_metadata/rotation", json!(180)),
+                ("/gui_metadata/rotation", json!(270)),
                 ("/gui_metadata/dimensions/width", json!(101)),
                 ("/gui_metadata/dimensions/height", json!(51)),
                 (
