@@ -6,7 +6,7 @@
 use super::common::{self, TestDirectory};
 
 use crate::component::{data::ComponentFile, read_component_file, write_component_file};
-use crate::graphics::data::Dimension;
+use crate::graphics::data::{Dimension, Rotation};
 use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
 use crate::source::data::{ComponentSource, PackageReference};
 use camino::Utf8PathBuf;
@@ -28,6 +28,7 @@ fn minimal_component() -> ComponentFile {
         },
         GuiMetadata::new(
             Dimension::new(100, 50),
+            Rotation::Degrees0,
             "../icons/component.svg".into(),
             Vec::new(),
         ),
@@ -210,14 +211,15 @@ fn gui_metadata_is_required_and_validated() {
     for invalid in [
         Value::Null,
         json!([]),
-        json!([{"width": 100, "height": 50}, "icon.svg", []]),
+        json!([{"width": 100, "height": 50}, 0, "icon.svg", []]),
         json!({}),
-        json!({"dimensions": [100, 50], "icon": "icon.svg", "ports": []}),
-        json!({"dimensions": {"width": 100, "height": 50}, "ports": []}),
-        json!({"dimensions": {"width": 100, "height": 50}, "icon": false, "ports": []}),
-        json!({"dimensions": {"width": 100, "height": 50}, "icon": "", "ports": [], "extra": 1}),
-        json!({"dimensions": {"width": 100, "height": 50}, "icon": ""}),
-        json!({"dimensions": {"width": 100, "height": 50}, "icon": "", "ports": null}),
+        json!({"dimensions": [100, 50], "rotation": 0, "icon": "icon.svg", "ports": []}),
+        json!({"dimensions": {"width": 100, "height": 50}, "rotation": 0, "ports": []}),
+        json!({"dimensions": {"width": 100, "height": 50}, "rotation": 0, "icon": false, "ports": []}),
+        json!({"dimensions": {"width": 100, "height": 50}, "rotation": 0, "icon": "", "ports": [], "extra": 1}),
+        json!({"dimensions": {"width": 100, "height": 50}, "rotation": 0, "icon": ""}),
+        json!({"dimensions": {"width": 100, "height": 50}, "rotation": 0, "icon": "", "ports": null}),
+        json!({"dimensions": {"width": 100, "height": 50}, "icon": "", "ports": []}),
     ] {
         let mut invalid_document = document.clone();
         invalid_document["component"]["gui_metadata"] = invalid;
@@ -239,17 +241,22 @@ fn gui_metadata_is_required_and_validated() {
 fn component_gui_metadata_round_trips_through_disk() {
     let directory = TestDirectory::new();
     let path = directory.path.join("gui-metadata.hxc");
-    for icon in [
-        "",
-        "../icons/missing \u{3b1}.svg",
-        " leading and trailing spaces ",
-        r"C:\icons\missing.png",
+    for (icon, rotation) in [
+        ("", Rotation::Degrees0),
+        ("../icons/missing \u{3b1}.svg", Rotation::Degrees90),
+        (" leading and trailing spaces ", Rotation::Degrees180),
+        (r"C:\icons\missing.png", Rotation::Degrees270),
     ] {
         let base = minimal_component();
         let component = ComponentFile::new(
             base.metadata().clone(),
             base.source().clone(),
-            GuiMetadata::new(Dimension::new(0, u16::MAX), icon.into(), Vec::new()),
+            GuiMetadata::new(
+                Dimension::new(0, u16::MAX),
+                rotation,
+                icon.into(),
+                Vec::new(),
+            ),
             base.foreground_decorations().to_vec(),
             base.background_decorations().to_vec(),
             base.components().to_vec(),
@@ -268,6 +275,7 @@ fn component_gui_metadata_round_trips_through_disk() {
             document["component"]["gui_metadata"],
             json!({
                 "dimensions": {"width": 0, "height": u16::MAX},
+                "rotation": rotation.degrees(),
                 "icon": icon,
                 "ports": [],
             }),
@@ -285,6 +293,7 @@ fn component_ports_round_trip_inside_gui_metadata() {
         base.source().clone(),
         GuiMetadata::new(
             base.gui_metadata().dimensions(),
+            base.gui_metadata().rotation(),
             base.gui_metadata().icon().to_owned(),
             vec![
                 Port::new(
@@ -367,6 +376,7 @@ fn writing_caps_port_locations_when_replacing_existing_files() {
             base.source().clone(),
             GuiMetadata::new(
                 base.gui_metadata().dimensions(),
+                base.gui_metadata().rotation(),
                 base.gui_metadata().icon().to_owned(),
                 vec![Port::new(
                     port_key!("temperature").into(),
@@ -387,6 +397,7 @@ fn writing_caps_port_locations_when_replacing_existing_files() {
             base.source().clone(),
             GuiMetadata::new(
                 base.gui_metadata().dimensions(),
+                base.gui_metadata().rotation(),
                 base.gui_metadata().icon().to_owned(),
                 vec![Port::new(
                     port_key!("temperature").into(),

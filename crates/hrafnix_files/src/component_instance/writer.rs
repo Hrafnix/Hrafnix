@@ -19,7 +19,7 @@ pub(crate) struct ComponentInstanceWriter {
     source: ComponentSourceWriter,
     /// Position in the containing drawing.
     position: PositionWriter,
-    /// Saved dimensions, icon, and bounded port locations.
+    /// Saved dimensions, rotation, icon, and bounded port locations.
     gui_metadata: GuiMetadataWriter,
     /// Ordered parameter definitions and expressions.
     parameters: ParameterFrozenWriter,

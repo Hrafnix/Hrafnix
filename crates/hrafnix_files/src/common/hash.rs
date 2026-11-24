@@ -117,6 +117,7 @@ fn update_gui_metadata_hash(hasher: &mut blake3::Hasher, metadata: &GuiMetadata)
     hasher.update(b"GuiMetadata");
     hasher.update(&metadata.dimensions().width().to_le_bytes());
     hasher.update(&metadata.dimensions().height().to_le_bytes());
+    hasher.update(&metadata.rotation().degrees().to_le_bytes());
     update_string_hash(hasher, metadata.icon().as_str());
     update_length_hash(hasher, metadata.ports().len());
     for port in metadata.ports() {

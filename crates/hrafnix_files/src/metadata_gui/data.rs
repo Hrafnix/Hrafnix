@@ -1,13 +1,15 @@
-use crate::graphics::data::Dimension;
+use crate::graphics::data::{Dimension, Rotation};
 use camino::{Utf8Path, Utf8PathBuf};
 use hrafnix_common::port::PortType;
 use hrafnix_keys::PortKey;
 
-/// Drawing dimensions, icon, and port locations associated with a component.
+/// Drawing dimensions, rotation, icon, and port locations associated with a component.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GuiMetadata {
     /// Dimensions in drawing coordinates.
     dimensions: Dimension,
+    /// Clockwise rotation of the icon and ports about the center of their bounds.
+    rotation: Rotation,
     /// Icon path, stored unchanged rather than opened or resolved during file I/O.
     icon: Utf8PathBuf,
     /// Connections placed within the icon's drawing dimensions.
@@ -15,20 +17,32 @@ pub struct GuiMetadata {
 }
 
 impl GuiMetadata {
-    /// Creates new GUI metadata with the given dimensions, icon path, and ports.
+    /// Creates new GUI metadata with the given dimensions, rotation, icon path, and ports.
     #[must_use]
-    pub(crate) const fn new(dimensions: Dimension, icon: Utf8PathBuf, ports: Vec<Port>) -> Self {
+    pub(crate) const fn new(
+        dimensions: Dimension,
+        rotation: Rotation,
+        icon: Utf8PathBuf,
+        ports: Vec<Port>,
+    ) -> Self {
         Self {
             dimensions,
+            rotation,
             icon,
             ports,
         }
     }
 
-    /// Returns the dimensions in drawing coordinates.
+    /// Returns the unrotated dimensions in drawing coordinates.
     #[must_use]
     pub const fn dimensions(&self) -> Dimension {
         self.dimensions
+    }
+
+    /// Returns the clockwise rotation about the center of the unrotated icon bounds.
+    #[must_use]
+    pub const fn rotation(&self) -> Rotation {
+        self.rotation
     }
 
     /// Returns the icon path.

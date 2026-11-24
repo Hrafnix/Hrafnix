@@ -48,7 +48,7 @@ pub(super) const TRANSLATIONS: &str = "{\"language\": \"en\", \"translations\": 
 /// Required entries specific to components or models.
 fn root_specific_entries(root: &str) -> &'static str {
     if root == "component" {
-        ", \"gui_metadata\": {\"dimensions\": {\"width\": 100, \"height\": 50}, \"icon\": \"../icons/component.svg\", \"ports\": []}"
+        ", \"gui_metadata\": {\"dimensions\": {\"width\": 100, \"height\": 50}, \"rotation\": 0, \"icon\": \"../icons/component.svg\", \"ports\": []}"
     } else {
         ", \"global_settings\": []"
     }

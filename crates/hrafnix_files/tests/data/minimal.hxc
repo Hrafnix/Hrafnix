@@ -13,6 +13,7 @@
         "width": 100,
         "height": 50
       },
+      "rotation": 0,
       "icon": "../icons/component.svg",
       "ports": []
     },

@@ -21,7 +21,7 @@ pub(crate) struct ComponentInstanceReaderV1 {
     /// Position in the containing drawing.
     #[serde(deserialize_with = "deserialize_object")]
     position: PositionReaderV1,
-    /// Saved dimensions, icon path, and ports.
+    /// Saved dimensions, rotation, icon path, and ports.
     #[serde(deserialize_with = "deserialize_object")]
     gui_metadata: GuiMetadataReaderV1,
     /// Ordered frozen parameters with embedded definitions.

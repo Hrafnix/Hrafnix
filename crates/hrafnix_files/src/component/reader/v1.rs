@@ -22,7 +22,7 @@ pub(crate) struct ComponentReaderV1 {
     /// Descriptive information about the component.
     #[serde(deserialize_with = "deserialize_object")]
     metadata: MetadataReaderV1,
-    /// Drawing dimensions and icon associated with the component.
+    /// Drawing dimensions, rotation, icon, and port locations associated with the component.
     #[serde(deserialize_with = "deserialize_object")]
     gui_metadata: GuiMetadataReaderV1,
     /// Required to be ordered parameter-definition array.
