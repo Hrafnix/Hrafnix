@@ -26,13 +26,13 @@ impl TryFrom<ConnectionReaderV1> for Connection {
     type Error = Message;
 
     fn try_from(connection: ConnectionReaderV1) -> Result<Self, Self::Error> {
-        Ok(Self {
-            from_component: ComponentKey::new(connection.from_component.into())?,
-            from_port: PortKey::new(connection.from_port.into())?,
-            to_component: ComponentKey::new(connection.to_component.into())?,
-            to_port: PortKey::new(connection.to_port.into())?,
-            line: connection.line.into(),
-        })
+        Ok(Self::new(
+            ComponentKey::new(connection.from_component.into())?,
+            PortKey::new(connection.from_port.into())?,
+            ComponentKey::new(connection.to_component.into())?,
+            PortKey::new(connection.to_port.into())?,
+            connection.line.into(),
+        ))
     }
 }
 
@@ -47,9 +47,7 @@ struct ConnectionLineReaderV1 {
 
 impl From<ConnectionLineReaderV1> for ConnectionLine {
     fn from(line: ConnectionLineReaderV1) -> Self {
-        Self {
-            midpoints: line.midpoints.into_iter().map(Into::into).collect(),
-        }
+        Self::new(line.midpoints.into_iter().map(Into::into).collect())
     }
 }
 
@@ -88,13 +86,13 @@ mod tests {
             {"x": 210, "y": 25},
         ]);
         let connection = read(&value).unwrap();
-        assert_eq!(connection.from_component.as_str(), "simulation_clock");
-        assert_eq!(connection.from_port.as_str(), "time");
-        assert_eq!(connection.to_component.as_str(), "heater");
-        assert_eq!(connection.to_port.as_str(), "temperature_input");
+        assert_eq!(connection.from_component().as_str(), "simulation_clock");
+        assert_eq!(connection.from_port().as_str(), "time");
+        assert_eq!(connection.to_component().as_str(), "heater");
+        assert_eq!(connection.to_port().as_str(), "temperature_input");
         assert_eq!(
-            connection.line.midpoints,
-            vec![
+            connection.line().midpoints(),
+            &[
                 Position::new(210, 25),
                 Position::new(i32::MIN, i32::MAX),
                 Position::new(-10, 0),
@@ -102,7 +100,7 @@ mod tests {
             ],
         );
         value["line"]["midpoints"] = json!([]);
-        assert_eq!(read(&value).unwrap().line.midpoints, Vec::<Position>::new());
+        assert_eq!(read(&value).unwrap().line().midpoints(), &[]);
     }
 
     #[test]

@@ -27,12 +27,13 @@ pub(crate) struct ComponentInstanceWriter {
 
 impl From<&ComponentInstance> for ComponentInstanceWriter {
     fn from(instance: &ComponentInstance) -> Self {
+        let position = instance.position();
         Self {
-            id: instance.id.clone(),
-            source: ComponentSourceWriter::from(&instance.source),
-            position: PositionWriter::from(&instance.position),
-            gui_metadata: GuiMetadataWriter::from(&instance.gui_metadata),
-            parameters: ParameterFrozenWriter::from(&instance.parameters),
+            id: instance.id().clone(),
+            source: ComponentSourceWriter::from(instance.source()),
+            position: PositionWriter::from(&position),
+            gui_metadata: GuiMetadataWriter::from(instance.gui_metadata()),
+            parameters: ParameterFrozenWriter::from(instance.parameters()),
         }
     }
 }
@@ -40,7 +41,7 @@ impl From<&ComponentInstance> for ComponentInstanceWriter {
 /// Rejects instances that would be saved with repeated component identifiers.
 pub(crate) fn ensure_unique_component_ids(instances: &[ComponentInstance]) -> Result<(), Message> {
     ensure_unique_keys(
-        instances.iter().map(|instance| &instance.id),
+        instances.iter().map(ComponentInstance::id),
         "files_duplicate_component_id",
     )
 }

@@ -22,11 +22,13 @@ pub(crate) struct ForegroundDecorationWriter {
 
 impl From<&ForegroundDecoration> for ForegroundDecorationWriter {
     fn from(decoration: &ForegroundDecoration) -> Self {
+        let position = decoration.position();
+        let dimensions = decoration.dimensions();
         Self {
-            id: decoration.id.clone(),
-            position: PositionWriter::from(&decoration.position),
-            dimensions: DimensionWriter::from(&decoration.dimensions),
-            kind: ForegroundDecorationKindWriter::from(&decoration.kind),
+            id: decoration.id().clone(),
+            position: PositionWriter::from(&position),
+            dimensions: DimensionWriter::from(&dimensions),
+            kind: ForegroundDecorationKindWriter::from(decoration.kind()),
         }
     }
 }
@@ -60,9 +62,10 @@ struct TextDecorationWriter {
 
 impl From<&TextDecoration> for TextDecorationWriter {
     fn from(text: &TextDecoration) -> Self {
+        let font_size = text.font_size();
         Self {
-            text: text.text.clone(),
-            font_size: FontSizeWriter::from(&text.font_size),
+            text: text.text().clone(),
+            font_size: FontSizeWriter::from(&font_size),
         }
     }
 }
@@ -79,8 +82,8 @@ struct ImageDecorationWriter {
 impl From<&ImageDecoration> for ImageDecorationWriter {
     fn from(image: &ImageDecoration) -> Self {
         Self {
-            path: image.path.as_str().to_owned(),
-            fit: ImageFitWriter::from(image.fit),
+            path: image.path().as_str().to_owned(),
+            fit: ImageFitWriter::from(image.fit()),
         }
     }
 }
@@ -127,15 +130,15 @@ mod tests {
 
     #[test]
     fn text_matches_the_nested_reader_schema() {
-        let decoration = ForegroundDecoration {
-            id: "label".into(),
-            position: Position::new(-10, 20),
-            dimensions: Dimension::new(100, 50),
-            kind: ForegroundDecorationKind::Text(TextDecoration {
-                text: "Title \u{3b1}".into(),
-                font_size: FontSize::new(2050),
-            }),
-        };
+        let decoration = ForegroundDecoration::new(
+            "label".into(),
+            Position::new(-10, 20),
+            Dimension::new(100, 50),
+            ForegroundDecorationKind::Text(TextDecoration::new(
+                "Title \u{3b1}".into(),
+                FontSize::new(2050),
+            )),
+        );
         assert_round_trip(
             &decoration,
             &json!({
@@ -159,15 +162,15 @@ mod tests {
             (ImageFit::Cover, "Cover"),
             (ImageFit::Fill, "Fill"),
         ] {
-            let decoration = ForegroundDecoration {
-                id: "image".into(),
-                position: Position::new(-10, -20),
-                dimensions: Dimension::new(100, 50),
-                kind: ForegroundDecorationKind::Image(ImageDecoration {
-                    path: "../images/missing \u{3b1}.svg".into(),
+            let decoration = ForegroundDecoration::new(
+                "image".into(),
+                Position::new(-10, -20),
+                Dimension::new(100, 50),
+                ForegroundDecorationKind::Image(ImageDecoration::new(
+                    "../images/missing \u{3b1}.svg".into(),
                     fit,
-                }),
-            };
+                )),
+            );
             assert_round_trip(
                 &decoration,
                 &json!({

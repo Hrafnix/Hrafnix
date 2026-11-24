@@ -1,3 +1,4 @@
+use crate::common::hash::{component_file_hash, component_interface_hash};
 use crate::component_instance::data::ComponentInstance;
 use crate::connection::data::Connection;
 use crate::decoration_background::data::BackgroundDecoration;
@@ -12,34 +13,144 @@ use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDef
 #[derive(Debug, Clone)]
 pub struct ComponentFile {
     /// Descriptive information about the component.
-    pub metadata: MetadataFile,
+    metadata: MetadataFile,
     /// Unresolved provenance of the loaded component file.
-    pub source: ComponentSource,
+    source: ComponentSource,
     /// Drawing dimensions and icon associated with the component.
-    pub gui_metadata: GuiMetadata,
+    gui_metadata: GuiMetadata,
     /// Text and images drawn in front of the component's contents.
-    pub foreground_decorations: Vec<ForegroundDecoration>,
+    foreground_decorations: Vec<ForegroundDecoration>,
     /// Shapes drawn behind the component's contents.
-    pub background_decorations: Vec<BackgroundDecoration>,
+    background_decorations: Vec<BackgroundDecoration>,
     /// Ordered nested component instances with saved GUI and parameter snapshots.
-    pub components: Vec<ComponentInstance>,
+    components: Vec<ComponentInstance>,
     /// Connections between component ports within the component.
-    pub connections: Vec<Connection>,
+    connections: Vec<Connection>,
     /// Source language and translated text used by the component.
-    pub translations: TranslationsFile,
+    translations: TranslationsFile,
     /// Ordered parameter definitions, including defaults and descriptions.
-    pub parameter_definition: ParameterObjectDefinition,
+    parameter_definition: ParameterObjectDefinition,
     /// Ordered variable definitions, including defaults and descriptions.
-    pub variable_definition: VariableObjectDefinition,
+    variable_definition: VariableObjectDefinition,
     /// BLAKE3 hash of all validated component data, including source provenance.
-    pub file_hash: [u8; 32],
+    file_hash: [u8; 32],
     /// BLAKE3 hash of the component's metadata, source, GUI, and parameter interface.
-    pub interface_hash: [u8; 32],
+    interface_hash: [u8; 32],
+}
+
+impl ComponentFile {
+    /// Creates a new component file and computes its file and interface hashes.
+    #[must_use]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn new(
+        metadata: MetadataFile,
+        source: ComponentSource,
+        gui_metadata: GuiMetadata,
+        foreground_decorations: Vec<ForegroundDecoration>,
+        background_decorations: Vec<BackgroundDecoration>,
+        components: Vec<ComponentInstance>,
+        connections: Vec<Connection>,
+        translations: TranslationsFile,
+        parameter_definition: ParameterObjectDefinition,
+        variable_definition: VariableObjectDefinition,
+    ) -> Self {
+        let interface_hash =
+            component_interface_hash(&metadata, &source, &gui_metadata, &parameter_definition);
+        let mut component = Self {
+            metadata,
+            source,
+            gui_metadata,
+            foreground_decorations,
+            background_decorations,
+            components,
+            connections,
+            translations,
+            parameter_definition,
+            variable_definition,
+            file_hash: [0; 32],
+            interface_hash,
+        };
+        component.file_hash = component_file_hash(&component);
+        component
+    }
+
+    /// Returns descriptive information about the component.
+    #[must_use]
+    pub const fn metadata(&self) -> &MetadataFile {
+        &self.metadata
+    }
+
+    /// Returns the unresolved provenance of the loaded component file.
+    #[must_use]
+    pub const fn source(&self) -> &ComponentSource {
+        &self.source
+    }
+
+    /// Returns the drawing dimensions and icon associated with the component.
+    #[must_use]
+    pub const fn gui_metadata(&self) -> &GuiMetadata {
+        &self.gui_metadata
+    }
+
+    /// Returns the text and images drawn in front of the component's contents.
+    #[must_use]
+    pub fn foreground_decorations(&self) -> &[ForegroundDecoration] {
+        &self.foreground_decorations
+    }
+
+    /// Returns the shapes drawn behind the component's contents.
+    #[must_use]
+    pub fn background_decorations(&self) -> &[BackgroundDecoration] {
+        &self.background_decorations
+    }
+
+    /// Returns the ordered nested component instances with saved GUI and parameter snapshots.
+    #[must_use]
+    pub fn components(&self) -> &[ComponentInstance] {
+        &self.components
+    }
+
+    /// Returns the connections between component ports within the component.
+    #[must_use]
+    pub fn connections(&self) -> &[Connection] {
+        &self.connections
+    }
+
+    /// Returns the source language and translated text used by the component.
+    #[must_use]
+    pub const fn translations(&self) -> &TranslationsFile {
+        &self.translations
+    }
+
+    /// Returns the ordered parameter definitions, including defaults and descriptions.
+    #[must_use]
+    pub const fn parameter_definition(&self) -> &ParameterObjectDefinition {
+        &self.parameter_definition
+    }
+
+    /// Returns the ordered variable definitions, including defaults and descriptions.
+    #[must_use]
+    pub const fn variable_definition(&self) -> &VariableObjectDefinition {
+        &self.variable_definition
+    }
+
+    /// Returns the BLAKE3 hash of all validated component data, including source provenance.
+    #[must_use]
+    pub const fn file_hash(&self) -> [u8; 32] {
+        self.file_hash
+    }
+
+    /// Returns the BLAKE3 hash of the component's metadata, source, GUI, and parameter interface.
+    #[must_use]
+    pub const fn interface_hash(&self) -> [u8; 32] {
+        self.interface_hash
+    }
 }
 
 impl PartialEq for ComponentFile {
     fn eq(&self, other: &Self) -> bool {
-        self.interface_hash == other.interface_hash
+        self.file_hash == other.file_hash
+            && self.interface_hash == other.interface_hash
             && self.metadata == other.metadata
             && self.source == other.source
             && self.gui_metadata == other.gui_metadata

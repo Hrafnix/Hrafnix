@@ -25,11 +25,11 @@ pub(crate) struct MetadataWriter {
 impl From<&MetadataFile> for MetadataWriter {
     fn from(metadata: &MetadataFile) -> Self {
         Self {
-            display_name: metadata.display_name.clone(),
-            description: metadata.description.clone(),
-            author: metadata.author.clone(),
-            minimum_version_major: metadata.minimum_version_major,
-            minimum_version_minor: metadata.minimum_version_minor,
+            display_name: metadata.display_name().clone(),
+            description: metadata.description().clone(),
+            author: metadata.author().clone(),
+            minimum_version_major: metadata.minimum_version_major(),
+            minimum_version_minor: metadata.minimum_version_minor(),
         }
     }
 }

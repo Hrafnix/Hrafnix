@@ -1,3 +1,4 @@
+use crate::common::hash::instance_interface_hash;
 use crate::graphics::data::Position;
 use crate::metadata_gui::data::GuiMetadata;
 pub use crate::source::data::{ComponentSource, PackageReference};
@@ -8,17 +9,76 @@ use hrafnix_keys::ComponentKey;
 #[derive(Debug, Clone)]
 pub struct ComponentInstance {
     /// Identifier unique within the containing model or component.
-    pub id: ComponentKey,
+    id: ComponentKey,
     /// Unresolved reference to the instance's component definition.
-    pub source: ComponentSource,
+    source: ComponentSource,
     /// Position in the containing drawing.
-    pub position: Position,
+    position: Position,
     /// Saved dimensions, icon, and icon-local port locations.
-    pub gui_metadata: GuiMetadata,
+    gui_metadata: GuiMetadata,
     /// Ordered parameter definitions and current unevaluated expressions.
-    pub parameters: ParameterObjectFrozen,
+    parameters: ParameterObjectFrozen,
     /// BLAKE3 hash of the saved source, GUI, and parameter interface.
-    pub interface_hash: [u8; 32],
+    interface_hash: [u8; 32],
+}
+
+impl ComponentInstance {
+    /// Creates a new component instance and computes its interface hash.
+    #[must_use]
+    pub(crate) fn new(
+        id: ComponentKey,
+        source: ComponentSource,
+        position: Position,
+        gui_metadata: GuiMetadata,
+        parameters: ParameterObjectFrozen,
+    ) -> Self {
+        let interface_hash =
+            instance_interface_hash(&source, &gui_metadata, parameters.definition());
+        Self {
+            id,
+            source,
+            position,
+            gui_metadata,
+            parameters,
+            interface_hash,
+        }
+    }
+
+    /// Returns the identifier unique within the containing model or component.
+    #[must_use]
+    pub const fn id(&self) -> &ComponentKey {
+        &self.id
+    }
+
+    /// Returns the unresolved reference to the instance's component definition.
+    #[must_use]
+    pub const fn source(&self) -> &ComponentSource {
+        &self.source
+    }
+
+    /// Returns the position in the containing drawing.
+    #[must_use]
+    pub const fn position(&self) -> Position {
+        self.position
+    }
+
+    /// Returns the saved dimensions, icon, and icon-local port locations.
+    #[must_use]
+    pub const fn gui_metadata(&self) -> &GuiMetadata {
+        &self.gui_metadata
+    }
+
+    /// Returns the ordered parameter definitions and current unevaluated expressions.
+    #[must_use]
+    pub const fn parameters(&self) -> &ParameterObjectFrozen {
+        &self.parameters
+    }
+
+    /// Returns the BLAKE3 hash of the saved source, GUI, and parameter interface.
+    #[must_use]
+    pub const fn interface_hash(&self) -> [u8; 32] {
+        self.interface_hash
+    }
 }
 
 impl PartialEq for ComponentInstance {

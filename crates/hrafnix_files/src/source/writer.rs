@@ -56,8 +56,8 @@ pub(crate) struct PackageReferenceWriter {
 impl From<&PackageReference> for PackageReferenceWriter {
     fn from(package: &PackageReference) -> Self {
         Self {
-            name: package.name.clone(),
-            version: package.version.clone(),
+            name: package.name().clone(),
+            version: package.version().clone(),
         }
     }
 }

@@ -57,8 +57,9 @@
 //! `"Frame"`. Font sizes are plain integers in hundredths of a drawing unit
 //! (`1234` means `12.34`); decimal and exponent values are rejected.
 //!
-//! Decoration structs expose public fields, while the [`graphics`] value types
-//! (positions, dimensions, and font sizes) use constructors and accessors.
+//! File-data constructors are crate-private. Callers obtain data through the readers
+//! and inspect it through public getter accessors.
+//! [`source::data::PackageReference::new`] remains public for reader input.
 //!
 //! The public read and write functions live in [`model`] and [`component`].
 //! Writers consume the file data and atomically replace the destination with
@@ -126,3 +127,6 @@ pub mod model;
 pub mod source;
 /// Source languages and translated text shared by model and component files.
 pub mod translations;
+
+#[cfg(test)]
+mod tests;

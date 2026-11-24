@@ -20,11 +20,13 @@ pub(crate) struct BackgroundDecorationWriter {
 
 impl From<&BackgroundDecoration> for BackgroundDecorationWriter {
     fn from(decoration: &BackgroundDecoration) -> Self {
+        let position = decoration.position();
+        let dimensions = decoration.dimensions();
         Self {
-            id: decoration.id.clone(),
-            position: PositionWriter::from(&decoration.position),
-            dimensions: DimensionWriter::from(&decoration.dimensions),
-            kind: BackgroundDecorationKindWriter::from(&decoration.kind),
+            id: decoration.id().clone(),
+            position: PositionWriter::from(&position),
+            dimensions: DimensionWriter::from(&dimensions),
+            kind: BackgroundDecorationKindWriter::from(decoration.kind()),
         }
     }
 }
@@ -55,12 +57,12 @@ mod tests {
 
     #[test]
     fn serializes_frame_using_the_reader_schema() {
-        let decoration = BackgroundDecoration {
-            id: "shape \u{3b1}".into(),
-            position: Position::new(-10, 20),
-            dimensions: Dimension::new(100, 50),
-            kind: BackgroundDecorationKind::Frame,
-        };
+        let decoration = BackgroundDecoration::new(
+            "shape \u{3b1}".into(),
+            Position::new(-10, 20),
+            Dimension::new(100, 50),
+            BackgroundDecorationKind::Frame,
+        );
         let original = decoration.clone();
         let written = serde_json::to_value(BackgroundDecorationWriter::from(&decoration)).unwrap();
         assert_eq!(
@@ -80,12 +82,12 @@ mod tests {
 
     #[test]
     fn writes_geometry_at_both_numeric_bounds() {
-        let decoration = BackgroundDecoration {
-            id: "bounds".into(),
-            position: Position::new(i32::MIN, i32::MAX),
-            dimensions: Dimension::new(0, u16::MAX),
-            kind: BackgroundDecorationKind::Frame,
-        };
+        let decoration = BackgroundDecoration::new(
+            "bounds".into(),
+            Position::new(i32::MIN, i32::MAX),
+            Dimension::new(0, u16::MAX),
+            BackgroundDecorationKind::Frame,
+        );
         let written = serde_json::to_value(BackgroundDecorationWriter::from(&decoration)).unwrap();
         assert_eq!(written["position"], json!({"x": i32::MIN, "y": i32::MAX}));
         assert_eq!(

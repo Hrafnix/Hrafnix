@@ -1,12 +1,10 @@
 use crate::common::deserialize::deserialize_object;
-use crate::common::hash::instance_interface_hash;
 use crate::common::validate::ensure_unique_keys;
 use crate::component_instance::data::ComponentInstance;
 use crate::frozen_parameter::reader::v1::ParameterFrozenReaderV1;
 use crate::graphics::reader::v1::PositionReaderV1;
 use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
 use crate::source::reader::v1::ComponentSourceReaderV1;
-use hrafnix_datastore::frozen::ParameterObjectFrozen;
 use hrafnix_keys::ComponentKey;
 use hrafnix_message::message::Message;
 use serde::Deserialize;
@@ -34,20 +32,13 @@ impl TryFrom<ComponentInstanceReaderV1> for ComponentInstance {
     type Error = Message;
 
     fn try_from(instance: ComponentInstanceReaderV1) -> Result<Self, Self::Error> {
-        let parameters: ParameterObjectFrozen = instance.parameters.try_into()?;
-        let source = instance.source.into();
-        let gui_metadata = instance.gui_metadata.try_into()?;
-        let interface_hash =
-            instance_interface_hash(&source, &gui_metadata, parameters.definition());
-
-        Ok(Self {
-            id: ComponentKey::new(instance.id.into())?,
-            source,
-            position: instance.position.into(),
-            gui_metadata,
-            parameters,
-            interface_hash,
-        })
+        Ok(Self::new(
+            ComponentKey::new(instance.id.into())?,
+            instance.source.into(),
+            instance.position.into(),
+            instance.gui_metadata.try_into()?,
+            instance.parameters.try_into()?,
+        ))
     }
 }
 

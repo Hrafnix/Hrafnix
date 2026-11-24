@@ -61,9 +61,6 @@ pub(crate) struct PackageReferenceReaderV1 {
 
 impl From<PackageReferenceReaderV1> for PackageReference {
     fn from(package: PackageReferenceReaderV1) -> Self {
-        Self {
-            name: package.name.into(),
-            version: package.version.into(),
-        }
+        Self::new(package.name.into(), package.version.into())
     }
 }

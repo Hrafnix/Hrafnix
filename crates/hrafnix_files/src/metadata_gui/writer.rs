@@ -18,16 +18,17 @@ pub(crate) struct GuiMetadataWriter {
 
 impl From<&GuiMetadata> for GuiMetadataWriter {
     fn from(metadata: &GuiMetadata) -> Self {
+        let dimensions = metadata.dimensions();
         Self {
-            dimensions: DimensionWriter::from(&metadata.dimensions),
-            icon: metadata.icon.as_str().to_owned(),
+            dimensions: DimensionWriter::from(&dimensions),
+            icon: metadata.icon().as_str().to_owned(),
             ports: metadata
-                .ports
+                .ports()
                 .iter()
                 .map(|port| {
                     let mut port = PortWriter::from(port);
-                    port.location.x = port.location.x.min(metadata.dimensions.width());
-                    port.location.y = port.location.y.min(metadata.dimensions.height());
+                    port.location.x = port.location.x.min(dimensions.width());
+                    port.location.y = port.location.y.min(dimensions.height());
                     port
                 })
                 .collect(),
@@ -50,10 +51,11 @@ struct PortWriter {
 
 impl From<&Port> for PortWriter {
     fn from(port: &Port) -> Self {
+        let location = port.location();
         Self {
-            id: port.id.clone(),
-            port_type: port.port_type.into(),
-            location: PortLocationWriter::from(&port.location),
+            id: port.id().clone(),
+            port_type: port.port_type().into(),
+            location: PortLocationWriter::from(&location),
         }
     }
 }
@@ -104,8 +106,8 @@ struct PortLocationWriter {
 impl From<&PortLocation> for PortLocationWriter {
     fn from(location: &PortLocation) -> Self {
         Self {
-            x: location.x,
-            y: location.y,
+            x: location.x(),
+            y: location.y(),
         }
     }
 }
@@ -130,11 +132,8 @@ mod tests {
                 " leading and trailing spaces ",
                 r"C:\icons\missing.png",
             ] {
-                let metadata = GuiMetadata {
-                    dimensions: Dimension::new(width, height),
-                    icon: path.into(),
-                    ports: Vec::new(),
-                };
+                let metadata =
+                    GuiMetadata::new(Dimension::new(width, height), path.into(), Vec::new());
                 let json = serde_json::to_string(&GuiMetadataWriter::from(&metadata)).unwrap();
                 assert_eq!(
                     serde_json::from_str::<Value>(&json).unwrap(),
@@ -163,15 +162,15 @@ mod tests {
         ] {
             for (width, height) in [(100, 50), (0, 0), (0, u16::MAX), (u16::MAX, 0)] {
                 for (x, y) in [(0, 0), (width, height), (width, 0), (0, height)] {
-                    let metadata = GuiMetadata {
-                        dimensions: Dimension::new(width, height),
-                        icon: "icon.svg".into(),
-                        ports: vec![Port {
-                            id: port_key!("temperature_out1").into(),
+                    let metadata = GuiMetadata::new(
+                        Dimension::new(width, height),
+                        "icon.svg".into(),
+                        vec![Port::new(
+                            port_key!("temperature_out1").into(),
                             port_type,
-                            location: PortLocation { x, y },
-                        }],
-                    };
+                            PortLocation::new(x, y),
+                        )],
+                    );
                     let text = serde_json::to_string(&GuiMetadataWriter::from(&metadata)).unwrap();
                     assert_eq!(
                         serde_json::from_str::<Value>(&text).unwrap(),
@@ -203,15 +202,15 @@ mod tests {
                 (0, u16::MAX),
                 (u16::MAX, u16::MAX),
             ] {
-                let metadata = GuiMetadata {
-                    dimensions: Dimension::new(width, height),
-                    icon: "".into(),
-                    ports: vec![Port {
-                        id: port_key!("temperature").into(),
-                        port_type: PortType::Output,
-                        location: PortLocation { x, y },
-                    }],
-                };
+                let metadata = GuiMetadata::new(
+                    Dimension::new(width, height),
+                    "".into(),
+                    vec![Port::new(
+                        port_key!("temperature").into(),
+                        PortType::Output,
+                        PortLocation::new(x, y),
+                    )],
+                );
                 let original = metadata.clone();
                 let written = serde_json::to_value(GuiMetadataWriter::from(&metadata)).unwrap();
                 assert_eq!(

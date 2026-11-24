@@ -48,23 +48,23 @@ impl From<ModelFile> for ModelWriter {
         Self {
             file_version: "1".to_owned(),
             model: ModelDataWriter {
-                metadata: MetadataWriter::from(&model.metadata),
-                parameter_definition: ParameterDefinitionWriter::from(&model.parameter_definition),
-                variable_definition: VariableDefinitionWriter::from(&model.variable_definition),
+                metadata: MetadataWriter::from(model.metadata()),
+                parameter_definition: ParameterDefinitionWriter::from(model.parameter_definition()),
+                variable_definition: VariableDefinitionWriter::from(model.variable_definition()),
                 foreground_decorations: model
-                    .foreground_decorations
+                    .foreground_decorations()
                     .iter()
                     .map(Into::into)
                     .collect(),
                 background_decorations: model
-                    .background_decorations
+                    .background_decorations()
                     .iter()
                     .map(Into::into)
                     .collect(),
-                global_settings: GlobalFrozenWriter::from(&model.global_settings),
-                components: model.components.iter().map(Into::into).collect(),
-                translations: TranslationsWriter::from(&model.translations),
-                connections: model.connections.iter().map(Into::into).collect(),
+                global_settings: GlobalFrozenWriter::from(model.global_settings()),
+                components: model.components().iter().map(Into::into).collect(),
+                translations: TranslationsWriter::from(model.translations()),
+                connections: model.connections().iter().map(Into::into).collect(),
             },
         }
     }

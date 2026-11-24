@@ -1,15 +1,15 @@
-//! Shared support for file integration tests.
+//! Shared support for file regression tests.
 
-use camino::{Utf8Path, Utf8PathBuf};
-use hrafnix_files::component::data::ComponentFile;
-use hrafnix_files::connection::data::{Connection, ConnectionLine};
-use hrafnix_files::decoration_background::data::{BackgroundDecoration, BackgroundDecorationKind};
-use hrafnix_files::decoration_foreground::data::{
+use crate::component::data::ComponentFile;
+use crate::connection::data::{Connection, ConnectionLine};
+use crate::decoration_background::data::{BackgroundDecoration, BackgroundDecorationKind};
+use crate::decoration_foreground::data::{
     ForegroundDecoration, ForegroundDecorationKind, TextDecoration,
 };
-use hrafnix_files::graphics::data::{Dimension, FontSize, Position};
-use hrafnix_files::metadata_general::data::MetadataFile;
-use hrafnix_files::translations::data::TranslationsFile;
+use crate::graphics::data::{Dimension, FontSize, Position};
+use crate::metadata_general::data::MetadataFile;
+use crate::translations::data::TranslationsFile;
+use camino::{Utf8Path, Utf8PathBuf};
 use hrafnix_keys::{component_key, port_key};
 use hrafnix_message::message::Message;
 use serde_json::{Value, json};
@@ -23,11 +23,20 @@ const MAX_FILE_SIZE: u64 = 256 * 1024 * 1024;
 
 /// Compares persisted component content while allowing runtime read provenance to differ.
 #[allow(dead_code)]
-pub(crate) fn assert_component_content_eq_ref(expected: &ComponentFile, mut actual: ComponentFile) {
-    actual.source = expected.source.clone();
-    actual.file_hash = expected.file_hash;
-    actual.interface_hash = expected.interface_hash;
-    assert_eq!(&actual, expected);
+pub(crate) fn assert_component_content_eq_ref(expected: &ComponentFile, actual: &ComponentFile) {
+    let normalized = ComponentFile::new(
+        actual.metadata().clone(),
+        expected.source().clone(),
+        actual.gui_metadata().clone(),
+        actual.foreground_decorations().to_vec(),
+        actual.background_decorations().to_vec(),
+        actual.components().to_vec(),
+        actual.connections().to_vec(),
+        actual.translations().clone(),
+        actual.parameter_definition().clone(),
+        actual.variable_definition().clone(),
+    );
+    assert_eq!(&normalized, expected);
 }
 
 /// Valid version 1 metadata entry.
@@ -55,17 +64,14 @@ pub(super) fn contents(root: &str) -> String {
 
 /// Returns the translations stored in the `minimal` test data files.
 pub(super) fn translations() -> TranslationsFile {
-    TranslationsFile {
-        language: "en".into(),
-        translations: BTreeMap::new(),
-    }
+    TranslationsFile::new("en".into(), BTreeMap::new())
 }
 
 /// Returns translated text for document-level round trips.
 pub(super) fn populated_translations() -> TranslationsFile {
-    TranslationsFile {
-        language: "en".into(),
-        translations: [
+    TranslationsFile::new(
+        "en".into(),
+        [
             (
                 "Target temperature".into(),
                 [
@@ -79,30 +85,26 @@ pub(super) fn populated_translations() -> TranslationsFile {
             ("quoted \"key\"\n".into(), [("".into(), "".into())].into()),
         ]
         .into(),
-    }
+    )
 }
 
 /// Returns connections from the simulation clock and sensor to the heater.
 pub(super) fn connections() -> Vec<Connection> {
     vec![
-        Connection {
-            from_component: component_key!("simulation_clock").into(),
-            from_port: port_key!("time").into(),
-            to_component: component_key!("heater").into(),
-            to_port: port_key!("temperature_input").into(),
-            line: ConnectionLine {
-                midpoints: vec![Position::new(210, 25)],
-            },
-        },
-        Connection {
-            from_component: component_key!("temperature_sensor").into(),
-            from_port: port_key!("temperature").into(),
-            to_component: component_key!("heater").into(),
-            to_port: port_key!("temperature_input").into(),
-            line: ConnectionLine {
-                midpoints: vec![Position::new(295, 30)],
-            },
-        },
+        Connection::new(
+            component_key!("simulation_clock").into(),
+            port_key!("time").into(),
+            component_key!("heater").into(),
+            port_key!("temperature_input").into(),
+            ConnectionLine::new(vec![Position::new(210, 25)]),
+        ),
+        Connection::new(
+            component_key!("temperature_sensor").into(),
+            port_key!("temperature").into(),
+            component_key!("heater").into(),
+            port_key!("temperature_input").into(),
+            ConnectionLine::new(vec![Position::new(295, 30)]),
+        ),
     ]
 }
 
@@ -128,36 +130,33 @@ pub(super) fn connections_json() -> Value {
 
 /// Returns a text decoration for document-level round trips.
 pub(super) fn foreground_decoration() -> ForegroundDecoration {
-    ForegroundDecoration {
-        id: "label".into(),
-        position: Position::new(-10, 20),
-        dimensions: Dimension::new(100, 50),
-        kind: ForegroundDecorationKind::Text(TextDecoration {
-            text: "Title".into(),
-            font_size: FontSize::new(2050),
-        }),
-    }
+    ForegroundDecoration::new(
+        "label".into(),
+        Position::new(-10, 20),
+        Dimension::new(100, 50),
+        ForegroundDecorationKind::Text(TextDecoration::new("Title".into(), FontSize::new(2050))),
+    )
 }
 
 /// Returns a frame for document-level round trips.
 pub(super) fn background_decoration() -> BackgroundDecoration {
-    BackgroundDecoration {
-        id: "shape".into(),
-        position: Position::new(-20, -30),
-        dimensions: Dimension::new(120, 80),
-        kind: BackgroundDecorationKind::Frame,
-    }
+    BackgroundDecoration::new(
+        "shape".into(),
+        Position::new(-20, -30),
+        Dimension::new(120, 80),
+        BackgroundDecorationKind::Frame,
+    )
 }
 
 /// Returns the metadata stored in the `minimal` test data files for `kind`.
 pub(super) fn metadata(kind: &str) -> MetadataFile {
-    MetadataFile {
-        display_name: "Example".into(),
-        description: format!("An example {kind}.").into(),
-        author: "Hrafnix".into(),
-        minimum_version_major: 1,
-        minimum_version_minor: 2,
-    }
+    MetadataFile::new(
+        "Example".into(),
+        format!("An example {kind}.").into(),
+        "Hrafnix".into(),
+        1,
+        2,
+    )
 }
 
 /// An isolated directory removed when its test finishes.

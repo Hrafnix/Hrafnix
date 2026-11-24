@@ -36,7 +36,7 @@ pub fn read_model_file(path: &Utf8Path) -> Result<ModelFile, Message> {
 ///
 /// Returns a localized error if serialization or atomic file replacement fails.
 pub fn write_model_file(model_file: ModelFile, path: &Utf8Path) -> Result<(), Message> {
-    ensure_unique_component_ids(&model_file.components)?;
+    ensure_unique_component_ids(model_file.components())?;
     let model_writer: ModelWriter = model_file.into();
 
     let model_serialized: String = serde_json::to_string_pretty(&model_writer)

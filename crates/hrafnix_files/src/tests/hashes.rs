@@ -2,23 +2,21 @@
 
 #![allow(clippy::indexing_slicing, clippy::unwrap_used)]
 
-#[allow(dead_code)]
-mod common;
+use super::common::{self, TestDirectory};
 
+use crate::component::{read_component_file, write_component_file};
+use crate::model::{read_model_file, write_model_file};
 use camino::Utf8Path;
-use common::TestDirectory;
-use hrafnix_files::component::{read_component_file, write_component_file};
-use hrafnix_files::model::{read_model_file, write_model_file};
 use serde_json::{Value, json};
 use std::fs;
 
 /// Reads a semantic file hash and, for components, the interface hash.
 fn read_hashes(root: &str, path: &Utf8Path) -> ([u8; 32], Option<[u8; 32]>) {
     if root == "model" {
-        (read_model_file(path).unwrap().file_hash, None)
+        (read_model_file(path).unwrap().file_hash(), None)
     } else {
         let component = read_component_file(path, None).unwrap();
-        (component.file_hash, Some(component.interface_hash))
+        (component.file_hash(), Some(component.interface_hash()))
     }
 }
 
@@ -283,11 +281,11 @@ fn component_file_hash_includes_loaded_provenance() {
     let without_package = read_component_file(&first, None).unwrap();
     let with_package = read_component_file(
         &first,
-        Some(hrafnix_files::source::data::PackageReference {
-            name: "package".into(),
-            version: "1".into(),
-        }),
+        Some(crate::source::data::PackageReference::new(
+            "package".into(),
+            "1".into(),
+        )),
     )
     .unwrap();
-    assert_ne!(without_package.file_hash, with_package.file_hash);
+    assert_ne!(without_package.file_hash(), with_package.file_hash());
 }

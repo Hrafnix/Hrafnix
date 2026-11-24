@@ -46,7 +46,7 @@ pub fn read_component_file(
 ///
 /// Returns a localized error if serialization or atomic file replacement fails.
 pub fn write_component_file(component_file: ComponentFile, path: &Utf8Path) -> Result<(), Message> {
-    ensure_unique_component_ids(&component_file.components)?;
+    ensure_unique_component_ids(component_file.components())?;
     let component_writer: ComponentWriter = component_file.into();
 
     let component_serialized: String = serde_json::to_string_pretty(&component_writer)

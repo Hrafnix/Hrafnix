@@ -2,14 +2,13 @@
 
 #![allow(clippy::expect_used, clippy::indexing_slicing, clippy::unwrap_used)]
 
-#[allow(
-    dead_code,
-    reason = "Only document construction and temporary directories are needed here"
-)]
-mod common;
+use super::common::{self, TestDirectory};
 
+use crate::{
+    component::{read_component_file, write_component_file},
+    model::{read_model_file, write_model_file},
+};
 use camino::Utf8Path;
-use common::TestDirectory;
 use hrafnix_datastore::definition::{
     BooleanDefinition, ChoiceDefinition, ChoiceItemDefinition, FileDefinition, FolderDefinition,
     IntegerConstraint, IntegerDefinition, ItemDefinitionType, MapDefinition, MapItemDefault,
@@ -17,10 +16,6 @@ use hrafnix_datastore::definition::{
     ParameterObjectDefinition, SeparatorDefinition, StringDefinition, TabDefinition,
     TableColumnRequirement, TableDefinition, TableWithUnitsDefinition, UnitDefinition,
     VariableObjectDefinition,
-};
-use hrafnix_files::{
-    component::{read_component_file, write_component_file},
-    model::{read_model_file, write_model_file},
 };
 use hrafnix_keys::{ParameterKey, StoreKey, VariableKey};
 use hrafnix_message::message::Message;
@@ -288,7 +283,7 @@ fn round_trip(root: &str, path: &Utf8Path) {
         write_component_file(component.clone(), path).unwrap();
         common::assert_component_content_eq_ref(
             &component,
-            read_component_file(path, None).unwrap(),
+            &read_component_file(path, None).unwrap(),
         );
     }
 }
@@ -311,19 +306,38 @@ fn assert_definitions_round_trip(path: &Utf8Path, definitions: &[ItemDefinitionT
         fs::write(path, serde_json::to_string(&document(root)).unwrap()).unwrap();
 
         if root == "model" {
-            let mut model = read_model_file(path).unwrap();
-            model.parameter_definition = parameters.finish();
-            model.variable_definition = variables.finish();
+            let model = read_model_file(path).unwrap();
+            let model = crate::model::data::ModelFile::new(
+                model.metadata().clone(),
+                model.foreground_decorations().to_vec(),
+                model.background_decorations().to_vec(),
+                model.global_settings().clone(),
+                model.components().to_vec(),
+                model.connections().to_vec(),
+                model.translations().clone(),
+                parameters.finish(),
+                variables.finish(),
+            );
             write_model_file(model.clone(), path).unwrap();
             assert_eq!(read_model_file(path).unwrap(), model);
         } else {
-            let mut component = read_component_file(path, None).unwrap();
-            component.parameter_definition = parameters.finish();
-            component.variable_definition = variables.finish();
+            let component = read_component_file(path, None).unwrap();
+            let component = crate::component::data::ComponentFile::new(
+                component.metadata().clone(),
+                component.source().clone(),
+                component.gui_metadata().clone(),
+                component.foreground_decorations().to_vec(),
+                component.background_decorations().to_vec(),
+                component.components().to_vec(),
+                component.connections().to_vec(),
+                component.translations().clone(),
+                parameters.finish(),
+                variables.finish(),
+            );
             write_component_file(component.clone(), path).unwrap();
             common::assert_component_content_eq_ref(
                 &component,
-                read_component_file(path, None).unwrap(),
+                &read_component_file(path, None).unwrap(),
             );
         }
     }
@@ -368,12 +382,12 @@ fn all_definition_types_round_trip_in_file_order() {
 
         if root == "model" {
             let model = read_model_file(&path).unwrap();
-            assert_eq!(model.parameter_definition, parameters);
-            assert_eq!(model.variable_definition, variables);
+            assert_eq!(model.parameter_definition(), &parameters);
+            assert_eq!(model.variable_definition(), &variables);
         } else {
             let component = read_component_file(&path, None).unwrap();
-            assert_eq!(component.parameter_definition, parameters);
-            assert_eq!(component.variable_definition, variables);
+            assert_eq!(component.parameter_definition(), &parameters);
+            assert_eq!(component.variable_definition(), &variables);
         }
         round_trip(root, &path);
         let written: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();

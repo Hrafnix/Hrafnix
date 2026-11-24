@@ -2,23 +2,16 @@
 
 #![allow(clippy::indexing_slicing, clippy::unwrap_used)]
 
-#[allow(
-    dead_code,
-    reason = "Only document and temporary-directory helpers are used"
-)]
-mod common;
+use super::common::{self, TestDirectory};
 
+use crate::component::{data::ComponentFile, read_component_file, write_component_file};
+use crate::component_instance::data::{ComponentInstance, ComponentSource, PackageReference};
+use crate::graphics::data::Position;
+use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
+use crate::model::{data::ModelFile, read_model_file, write_model_file};
 use camino::Utf8Path;
-use common::TestDirectory;
 use hrafnix_datastore::definition::{NumberDefinition, ParameterObjectDefinition, UnitDefinition};
 use hrafnix_datastore::frozen::{ItemFrozen, NumberFrozen, ParameterObjectFrozen, UnitFrozen};
-use hrafnix_files::component::{read_component_file, write_component_file};
-use hrafnix_files::component_instance::data::{
-    ComponentInstance, ComponentSource, PackageReference,
-};
-use hrafnix_files::graphics::data::Position;
-use hrafnix_files::metadata_gui::data::PortLocation;
-use hrafnix_files::model::{read_model_file, write_model_file};
 use hrafnix_keys::parameter_key;
 use hrafnix_message::message::Message;
 use hrafnix_units::UnitFamilyId;
@@ -115,22 +108,43 @@ fn document(root: &str, instances: Value) -> Value {
 /// Reads saved instances through either public file API.
 fn read(root: &str, path: &Utf8Path) -> Result<Vec<ComponentInstance>, Message> {
     if root == "model" {
-        read_model_file(path).map(|file| file.components)
+        read_model_file(path).map(|file| file.components().to_vec())
     } else {
-        read_component_file(path, None).map(|file| file.components)
+        read_component_file(path, None).map(|file| file.components().to_vec())
     }
 }
 
 /// Replaces the instances in an existing document through its public writer.
 fn write(root: &str, instances: Vec<ComponentInstance>, path: &Utf8Path) -> Result<(), Message> {
     if root == "model" {
-        let mut file = read_model_file(path)?;
-        file.components = instances;
-        write_model_file(file, path)
+        let file = read_model_file(path)?;
+        let updated = ModelFile::new(
+            file.metadata().clone(),
+            file.foreground_decorations().to_vec(),
+            file.background_decorations().to_vec(),
+            file.global_settings().clone(),
+            instances,
+            file.connections().to_vec(),
+            file.translations().clone(),
+            file.parameter_definition().clone(),
+            file.variable_definition().clone(),
+        );
+        write_model_file(updated, path)
     } else {
-        let mut file = read_component_file(path, None)?;
-        file.components = instances;
-        write_component_file(file, path)
+        let file = read_component_file(path, None)?;
+        let updated = ComponentFile::new(
+            file.metadata().clone(),
+            file.source().clone(),
+            file.gui_metadata().clone(),
+            file.foreground_decorations().to_vec(),
+            file.background_decorations().to_vec(),
+            instances,
+            file.connections().to_vec(),
+            file.translations().clone(),
+            file.parameter_definition().clone(),
+            file.variable_definition().clone(),
+        );
+        write_component_file(updated, path)
     }
 }
 
@@ -169,45 +183,42 @@ fn example_instances_round_trip_with_sources_snapshots_and_order() {
         assert_eq!(
             instances
                 .iter()
-                .map(|instance| instance.id.as_str())
+                .map(|instance| instance.id().as_str())
                 .collect::<Vec<_>>(),
             ["temperature_sensor", "heater", "simulation_clock"]
         );
         assert_eq!(
-            instances[0].source,
-            ComponentSource::File {
-                package: Some(PackageReference {
-                    name: "hrafnix.sensors".into(),
-                    version: "1".into(),
-                }),
+            instances[0].source(),
+            &ComponentSource::File {
+                package: Some(PackageReference::new("hrafnix.sensors".into(), "1".into())),
                 path: "temperature_sensor.hxc".into(),
             }
         );
         assert_eq!(
-            instances[1].source,
-            ComponentSource::File {
+            instances[1].source(),
+            &ComponentSource::File {
                 package: None,
                 path: "heater.hxc".into(),
             }
         );
         assert_eq!(
-            instances[2].source,
-            ComponentSource::Builtin {
+            instances[2].source(),
+            &ComponentSource::Builtin {
                 name: "builtin.clock".into(),
                 version: "1".into(),
             }
         );
-        assert_eq!(instances[0].position, Position::new(150, 0));
-        assert_eq!(instances[1].position, Position::new(320, 0));
-        assert_eq!(instances[2].position, Position::new(0, 0));
+        assert_eq!(instances[0].position(), Position::new(150, 0));
+        assert_eq!(instances[1].position(), Position::new(320, 0));
+        assert_eq!(instances[2].position(), Position::new(0, 0));
         let unit = UnitDefinition::new_with_default(
             "Unit",
             UnitFamilyId::Temperature,
             "u_temperature_celsius",
         );
         assert_eq!(
-            instances[0].parameters,
-            ParameterObjectFrozen::new_with_items(
+            instances[0].parameters(),
+            &ParameterObjectFrozen::new_with_items(
                 ParameterObjectDefinition::builder()
                     .with(parameter_key!("p_unit"), unit.clone())
                     .finish(),
@@ -220,8 +231,8 @@ fn example_instances_round_trip_with_sources_snapshots_and_order() {
         );
         let power = NumberDefinition::new_with_default("Maximum power", "2000");
         assert_eq!(
-            instances[1].parameters,
-            ParameterObjectFrozen::new_with_items(
+            instances[1].parameters(),
+            &ParameterObjectFrozen::new_with_items(
                 ParameterObjectDefinition::builder()
                     .with(parameter_key!("p_maximum_power"), power.clone())
                     .finish(),
@@ -233,8 +244,8 @@ fn example_instances_round_trip_with_sources_snapshots_and_order() {
             .unwrap()
         );
         assert_eq!(
-            instances[2].parameters,
-            ParameterObjectFrozen::new(ParameterObjectDefinition::default())
+            instances[2].parameters(),
+            &ParameterObjectFrozen::new(ParameterObjectDefinition::default())
         );
 
         write(root, instances.clone(), &path).unwrap();
@@ -292,7 +303,7 @@ fn missing_or_null_packages_are_written_without_package_or_version_fields() {
             fs::write(&path, serde_json::to_string(&value).unwrap()).unwrap();
             let instances = read(root, &path).unwrap();
             assert!(matches!(
-                &instances[1].source,
+                instances[1].source(),
                 ComponentSource::File { package: None, .. }
             ));
 
@@ -626,10 +637,10 @@ fn snapshot_expressions_parameter_order_and_unresolved_provenance_are_preserved(
         ]);
         fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
         let instances = read(root, &path).unwrap();
-        assert_eq!(instances[0].position, Position::new(i32::MIN, i32::MAX));
+        assert_eq!(instances[0].position(), Position::new(i32::MIN, i32::MAX));
         assert_eq!(
             instances[0]
-                .parameters
+                .parameters()
                 .ordered_iter()
                 .map(|(key, _)| key.as_str())
                 .collect::<Vec<_>>(),
@@ -656,13 +667,27 @@ fn instance_ports_are_capped_by_the_shared_gui_reader_and_writer() {
         fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
         let mut instances = read(root, &path).unwrap();
         assert_eq!(
-            instances[0].gui_metadata.ports[0].location,
-            PortLocation { x: 120, y: 60 }
+            instances[0].gui_metadata().ports()[0].location(),
+            PortLocation::new(120, 60)
         );
-        instances[0].gui_metadata.ports[0].location = PortLocation {
-            x: u16::MAX,
-            y: u16::MAX,
-        };
+        let original_port = &instances[0].gui_metadata().ports()[0];
+        let mut ports = instances[0].gui_metadata().ports().to_vec();
+        ports[0] = Port::new(
+            original_port.id().clone(),
+            original_port.port_type(),
+            PortLocation::new(u16::MAX, u16::MAX),
+        );
+        instances[0] = ComponentInstance::new(
+            instances[0].id().clone(),
+            instances[0].source().clone(),
+            instances[0].position(),
+            GuiMetadata::new(
+                instances[0].gui_metadata().dimensions(),
+                instances[0].gui_metadata().icon().to_owned(),
+                ports,
+            ),
+            instances[0].parameters().clone(),
+        );
 
         write(root, instances, &path).unwrap();
 
@@ -682,7 +707,13 @@ fn writing_duplicate_instance_ids_preserves_the_existing_document() {
         let original = serde_json::to_string(&document(root, instances_json())).unwrap();
         fs::write(&path, &original).unwrap();
         let mut instances = read(root, &path).unwrap();
-        instances[2].id = instances[0].id.clone();
+        instances[2] = ComponentInstance::new(
+            instances[0].id().clone(),
+            instances[2].source().clone(),
+            instances[2].position(),
+            instances[2].gui_metadata().clone(),
+            instances[2].parameters().clone(),
+        );
 
         let error = write(root, instances, &path).unwrap_err();
 

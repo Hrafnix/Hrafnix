@@ -24,7 +24,27 @@ pub enum ComponentSource {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackageReference {
     /// Package name, such as `hrafnix.sensors`.
-    pub name: ShareableString,
+    name: ShareableString,
     /// Package version.
-    pub version: ShareableString,
+    version: ShareableString,
+}
+
+impl PackageReference {
+    /// Creates a new package reference with the given name and version.
+    #[must_use]
+    pub const fn new(name: ShareableString, version: ShareableString) -> Self {
+        Self { name, version }
+    }
+
+    /// Returns the package name.
+    #[must_use]
+    pub const fn name(&self) -> &ShareableString {
+        &self.name
+    }
+
+    /// Returns the package version.
+    #[must_use]
+    pub const fn version(&self) -> &ShareableString {
+        &self.version
+    }
 }

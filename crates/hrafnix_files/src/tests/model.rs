@@ -1,18 +1,17 @@
-//! Integration tests for model file conversion, reading, writing, and diagnostics.
+//! Tests for model file conversion, reading, writing, and diagnostics.
 
 // Panicking helpers are idiomatic in tests.
 #![allow(clippy::unwrap_used)]
 
-mod common;
+use super::common::{self, METADATA, TRANSLATIONS, TestDirectory};
 
+use crate::model::{data::ModelFile, read_model_file, write_model_file};
 use camino::Utf8PathBuf;
-use common::{METADATA, TRANSLATIONS, TestDirectory};
 use hrafnix_datastore::definition::{
     GlobalObjectDefinition, IntegerDefinition, ParameterObjectDefinition, StringDefinition,
     VariableObjectDefinition,
 };
 use hrafnix_datastore::frozen::{GlobalObjectFrozen, IntegerFrozen, ItemFrozen, StringFrozen};
-use hrafnix_files::model::{data::ModelFile, read_model_file, write_model_file};
 use hrafnix_keys::global_key;
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;
@@ -22,18 +21,17 @@ use std::fs;
 
 /// Returns the model stored in `tests/data/minimal.hxm`.
 fn minimal_model() -> ModelFile {
-    ModelFile {
-        metadata: common::metadata("model"),
-        translations: common::translations(),
-        foreground_decorations: Vec::new(),
-        background_decorations: Vec::new(),
-        global_settings: GlobalObjectFrozen::new(GlobalObjectDefinition::default()),
-        components: Vec::new(),
-        connections: Vec::new(),
-        parameter_definition: ParameterObjectDefinition::default(),
-        variable_definition: VariableObjectDefinition::default(),
-        file_hash: [0; 32],
-    }
+    ModelFile::new(
+        common::metadata("model"),
+        Vec::new(),
+        Vec::new(),
+        GlobalObjectFrozen::new(GlobalObjectDefinition::default()),
+        Vec::new(),
+        Vec::new(),
+        common::translations(),
+        ParameterObjectDefinition::default(),
+        VariableObjectDefinition::default(),
+    )
 }
 
 /// Returns the fixture text with LF line endings and no final newline.
@@ -55,9 +53,9 @@ fn reading_populates_file_hash() {
     let path = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/minimal.hxm");
     let model = read_model_file(&path).unwrap();
 
-    assert_ne!(model.file_hash, [0; 32]);
+    assert_ne!(model.file_hash(), [0; 32]);
     assert_ne!(
-        model.file_hash,
+        model.file_hash(),
         *blake3::hash(fs::read(&path).unwrap().as_slice()).as_bytes()
     );
 }
@@ -169,14 +167,13 @@ fn model_round_trips_through_the_writer_and_disk() {
 fn global_settings_round_trip_with_definitions_values_and_order() {
     let directory = TestDirectory::new();
     let path = directory.path.join("globals.hxm");
-    let mut model = minimal_model();
     let steps = IntegerDefinition::new_with_default("Simulation steps", "100");
     let label = StringDefinition::new_with_default("Run label", "\"Default\"");
     let definition = GlobalObjectDefinition::builder()
         .with(global_key!("g_steps"), steps.clone())
         .with(global_key!("g_label"), label.clone())
         .finish();
-    model.global_settings = GlobalObjectFrozen::new_with_items(
+    let global_settings = GlobalObjectFrozen::new_with_items(
         definition,
         BTreeMap::from([
             (
@@ -190,6 +187,17 @@ fn global_settings_round_trip_with_definitions_values_and_order() {
         ]),
     )
     .unwrap();
+    let model = ModelFile::new(
+        common::metadata("model"),
+        Vec::new(),
+        Vec::new(),
+        global_settings,
+        Vec::new(),
+        Vec::new(),
+        common::translations(),
+        ParameterObjectDefinition::default(),
+        VariableObjectDefinition::default(),
+    );
 
     write_model_file(model.clone(), &path).unwrap();
 
@@ -218,7 +226,7 @@ fn global_settings_round_trip_with_definitions_values_and_order() {
     let restored = read_model_file(&path).unwrap();
     assert_eq!(
         restored
-            .global_settings
+            .global_settings()
             .ordered_iter()
             .map(|(key, _)| key.as_str())
             .collect::<Vec<_>>(),
@@ -365,13 +373,17 @@ fn global_map_settings_round_trip_and_propagate_value_schema_errors() {
 fn model_decorations_round_trip_through_disk() {
     let directory = TestDirectory::new();
     let path = directory.path.join("decorations.hxm");
-    let mut model = minimal_model();
-    model
-        .foreground_decorations
-        .push(common::foreground_decoration());
-    model
-        .background_decorations
-        .push(common::background_decoration());
+    let model = ModelFile::new(
+        common::metadata("model"),
+        vec![common::foreground_decoration()],
+        vec![common::background_decoration()],
+        GlobalObjectFrozen::new(GlobalObjectDefinition::default()),
+        Vec::new(),
+        Vec::new(),
+        common::translations(),
+        ParameterObjectDefinition::default(),
+        VariableObjectDefinition::default(),
+    );
 
     write_model_file(model.clone(), &path).unwrap();
 
@@ -382,8 +394,17 @@ fn model_decorations_round_trip_through_disk() {
 fn model_connections_round_trip_through_disk_without_style() {
     let directory = TestDirectory::new();
     let path = directory.path.join("connections.hxm");
-    let mut model = minimal_model();
-    model.connections = common::connections();
+    let model = ModelFile::new(
+        common::metadata("model"),
+        Vec::new(),
+        Vec::new(),
+        GlobalObjectFrozen::new(GlobalObjectDefinition::default()),
+        Vec::new(),
+        common::connections(),
+        common::translations(),
+        ParameterObjectDefinition::default(),
+        VariableObjectDefinition::default(),
+    );
 
     write_model_file(model.clone(), &path).unwrap();
 
@@ -399,8 +420,17 @@ fn model_connections_round_trip_through_disk_without_style() {
 fn model_translations_round_trip_through_disk() {
     let directory = TestDirectory::new();
     let path = directory.path.join("translations.hxm");
-    let mut model = minimal_model();
-    model.translations = common::populated_translations();
+    let model = ModelFile::new(
+        common::metadata("model"),
+        Vec::new(),
+        Vec::new(),
+        GlobalObjectFrozen::new(GlobalObjectDefinition::default()),
+        Vec::new(),
+        Vec::new(),
+        common::populated_translations(),
+        ParameterObjectDefinition::default(),
+        VariableObjectDefinition::default(),
+    );
 
     write_model_file(model.clone(), &path).unwrap();
 

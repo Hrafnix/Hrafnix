@@ -1,5 +1,4 @@
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
-use crate::common::hash::model_file_hash;
 use crate::component_instance::reader::v1::{
     ComponentInstanceReaderV1, convert_component_instances,
 };
@@ -56,31 +55,25 @@ impl ModelReaderV1 {
     ///
     /// Returns a localized error if any contained data is invalid.
     pub(crate) fn try_into_model_file(self) -> Result<ModelFile, Message> {
-        let mut model = ModelFile {
-            metadata: self.metadata.into(),
-            parameter_definition: self.parameter_definition.try_into()?,
-            variable_definition: self.variable_definition.try_into()?,
-            foreground_decorations: self
-                .foreground_decorations
+        Ok(ModelFile::new(
+            self.metadata.into(),
+            self.foreground_decorations
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            background_decorations: self
-                .background_decorations
+            self.background_decorations
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            global_settings: self.global_settings.try_into()?,
-            components: convert_component_instances(self.components)?,
-            translations: self.translations.try_into()?,
-            connections: self
-                .connections
+            self.global_settings.try_into()?,
+            convert_component_instances(self.components)?,
+            self.connections
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<_, _>>()?,
-            file_hash: [0; 32],
-        };
-        model.file_hash = model_file_hash(&model);
-        Ok(model)
+            self.translations.try_into()?,
+            self.parameter_definition.try_into()?,
+            self.variable_definition.try_into()?,
+        ))
     }
 }

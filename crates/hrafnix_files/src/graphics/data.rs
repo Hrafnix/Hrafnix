@@ -14,7 +14,7 @@ pub struct Position {
 impl Position {
     /// Creates a new position with the given coordinates.
     #[must_use]
-    pub const fn new(x: i32, y: i32) -> Self {
+    pub(crate) const fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
 
@@ -55,7 +55,7 @@ pub struct Dimension {
 impl Dimension {
     /// Creates new dimensions with the given width and height.
     #[must_use]
-    pub const fn new(width: u16, height: u16) -> Self {
+    pub(crate) const fn new(width: u16, height: u16) -> Self {
         Self { width, height }
     }
 
@@ -92,7 +92,7 @@ pub struct FontSize {
 impl FontSize {
     /// Creates a new font size with the given size.
     #[must_use]
-    pub const fn new(size: u16) -> Self {
+    pub(crate) const fn new(size: u16) -> Self {
         Self { size }
     }
 

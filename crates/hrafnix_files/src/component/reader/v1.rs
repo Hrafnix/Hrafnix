@@ -1,5 +1,4 @@
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
-use crate::common::hash::{component_file_hash, component_interface_hash};
 use crate::component::data::ComponentFile;
 use crate::component_instance::reader::v1::{
     ComponentInstanceReaderV1, convert_component_instances,
@@ -13,7 +12,6 @@ use crate::metadata_general::reader::v1::MetadataReaderV1;
 use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
 use crate::source::data::ComponentSource;
 use crate::translations::reader::v1::TranslationsReaderV1;
-use hrafnix_datastore::definition::ParameterObjectDefinition;
 use hrafnix_message::message::Message;
 use serde::Deserialize;
 
@@ -58,40 +56,26 @@ impl ComponentReaderV1 {
         self,
         source: ComponentSource,
     ) -> Result<ComponentFile, Message> {
-        let parameter_definition: ParameterObjectDefinition =
-            self.parameter_definition.try_into()?;
-        let metadata = self.metadata.into();
-        let gui_metadata = self.gui_metadata.try_into()?;
-        let interface_hash =
-            component_interface_hash(&metadata, &source, &gui_metadata, &parameter_definition);
-
-        let mut component = ComponentFile {
-            metadata,
+        Ok(ComponentFile::new(
+            self.metadata.into(),
             source,
-            gui_metadata,
-            parameter_definition,
-            variable_definition: self.variable_definition.try_into()?,
-            foreground_decorations: self
-                .foreground_decorations
+            self.gui_metadata.try_into()?,
+            self.foreground_decorations
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            background_decorations: self
-                .background_decorations
+            self.background_decorations
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            translations: self.translations.try_into()?,
-            components: convert_component_instances(self.components)?,
-            connections: self
-                .connections
+            convert_component_instances(self.components)?,
+            self.connections
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<_, _>>()?,
-            file_hash: [0; 32],
-            interface_hash,
-        };
-        component.file_hash = component_file_hash(&component);
-        Ok(component)
+            self.translations.try_into()?,
+            self.parameter_definition.try_into()?,
+            self.variable_definition.try_into()?,
+        ))
     }
 }

@@ -5,20 +5,84 @@ use hrafnix_keys::{ComponentKey, PortKey};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Connection {
     /// Validated identifier of the source component.
-    pub from_component: ComponentKey,
+    from_component: ComponentKey,
     /// Validated identifier of the source port.
-    pub from_port: PortKey,
+    from_port: PortKey,
     /// Validated identifier of the destination component.
-    pub to_component: ComponentKey,
+    to_component: ComponentKey,
     /// Validated identifier of the destination port.
-    pub to_port: PortKey,
+    to_port: PortKey,
     /// Drawing path between the connected ports.
-    pub line: ConnectionLine,
+    line: ConnectionLine,
+}
+
+impl Connection {
+    /// Creates a new directed connection between two component ports.
+    #[must_use]
+    pub(crate) const fn new(
+        from_component: ComponentKey,
+        from_port: PortKey,
+        to_component: ComponentKey,
+        to_port: PortKey,
+        line: ConnectionLine,
+    ) -> Self {
+        Self {
+            from_component,
+            from_port,
+            to_component,
+            to_port,
+            line,
+        }
+    }
+
+    /// Returns the validated identifier of the source component.
+    #[must_use]
+    pub const fn from_component(&self) -> &ComponentKey {
+        &self.from_component
+    }
+
+    /// Returns the validated identifier of the source port.
+    #[must_use]
+    pub const fn from_port(&self) -> &PortKey {
+        &self.from_port
+    }
+
+    /// Returns the validated identifier of the destination component.
+    #[must_use]
+    pub const fn to_component(&self) -> &ComponentKey {
+        &self.to_component
+    }
+
+    /// Returns the validated identifier of the destination port.
+    #[must_use]
+    pub const fn to_port(&self) -> &PortKey {
+        &self.to_port
+    }
+
+    /// Returns the drawing path between the connected ports.
+    #[must_use]
+    pub const fn line(&self) -> &ConnectionLine {
+        &self.line
+    }
 }
 
 /// Intermediate points along a connection's drawing path.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConnectionLine {
     /// Ordered midpoints in signed 32-bit drawing coordinates.
-    pub midpoints: Vec<Position>,
+    midpoints: Vec<Position>,
+}
+
+impl ConnectionLine {
+    /// Creates a new connection line with the given ordered midpoints.
+    #[must_use]
+    pub(crate) const fn new(midpoints: Vec<Position>) -> Self {
+        Self { midpoints }
+    }
+
+    /// Returns the ordered midpoints along the connection's drawing path.
+    #[must_use]
+    pub fn midpoints(&self) -> &[Position] {
+        &self.midpoints
+    }
 }

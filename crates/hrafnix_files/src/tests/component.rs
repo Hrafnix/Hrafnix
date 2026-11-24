@@ -1,18 +1,17 @@
-//! Integration tests for component file conversion, reading, writing, and diagnostics.
+//! Tests for component file conversion, reading, writing, and diagnostics.
 
 // Panicking helpers are idiomatic in tests.
 #![allow(clippy::indexing_slicing, clippy::unwrap_used)]
 
-mod common;
+use super::common::{self, TestDirectory};
 
+use crate::component::{data::ComponentFile, read_component_file, write_component_file};
+use crate::graphics::data::Dimension;
+use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
+use crate::source::data::{ComponentSource, PackageReference};
 use camino::Utf8PathBuf;
-use common::TestDirectory;
 use hrafnix_common::port::PortType;
 use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
-use hrafnix_files::component::{data::ComponentFile, read_component_file, write_component_file};
-use hrafnix_files::graphics::data::Dimension;
-use hrafnix_files::metadata_gui::data::{GuiMetadata, Port, PortLocation};
-use hrafnix_files::source::data::{ComponentSource, PackageReference};
 use hrafnix_keys::port_key;
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;
@@ -21,27 +20,25 @@ use std::fs;
 
 /// Returns the component stored in `tests/data/minimal.hxc`.
 fn minimal_component() -> ComponentFile {
-    ComponentFile {
-        metadata: common::metadata("component"),
-        source: ComponentSource::File {
+    ComponentFile::new(
+        common::metadata("component"),
+        ComponentSource::File {
             package: None,
             path: "minimal.hxc".into(),
         },
-        translations: common::translations(),
-        gui_metadata: GuiMetadata {
-            dimensions: Dimension::new(100, 50),
-            icon: "../icons/component.svg".into(),
-            ports: Vec::new(),
-        },
-        foreground_decorations: Vec::new(),
-        background_decorations: Vec::new(),
-        components: Vec::new(),
-        connections: Vec::new(),
-        parameter_definition: ParameterObjectDefinition::default(),
-        variable_definition: VariableObjectDefinition::default(),
-        file_hash: [0; 32],
-        interface_hash: ParameterObjectDefinition::default().hash(),
-    }
+        GuiMetadata::new(
+            Dimension::new(100, 50),
+            "../icons/component.svg".into(),
+            Vec::new(),
+        ),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+        Vec::new(),
+        common::translations(),
+        ParameterObjectDefinition::default(),
+        VariableObjectDefinition::default(),
+    )
 }
 
 /// Returns the fixture text with LF line endings and no final newline.
@@ -62,10 +59,7 @@ fn root_accepts_named_fields_and_rejects_positional_arrays() {
 
 #[test]
 fn package_information_is_preserved_in_component_source() {
-    let package = PackageReference {
-        name: "hrafnix.components".into(),
-        version: "1.2.3".into(),
-    };
+    let package = PackageReference::new("hrafnix.components".into(), "1.2.3".into());
     let component = read_component_file(
         &Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/minimal.hxc"),
         Some(package.clone()),
@@ -73,8 +67,8 @@ fn package_information_is_preserved_in_component_source() {
     .unwrap();
 
     assert_eq!(
-        component.source,
-        ComponentSource::File {
+        component.source(),
+        &ComponentSource::File {
             package: Some(package),
             path: Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/minimal.hxc"),
         }
@@ -107,7 +101,7 @@ fn version_one_document_variants_preserve_metadata() {
     common::assert_document_variants("component", |path| {
         common::assert_component_content_eq_ref(
             &minimal_component(),
-            read_component_file(path, None)?,
+            &read_component_file(path, None)?,
         );
         Ok(())
     });
@@ -198,7 +192,7 @@ fn component_round_trips_through_the_writer_and_disk() {
     assert_eq!(fs::read_to_string(&destination).unwrap(), minimal_text());
     common::assert_component_content_eq_ref(
         &component,
-        read_component_file(&destination, None).unwrap(),
+        &read_component_file(&destination, None).unwrap(),
     );
 }
 
@@ -251,16 +245,23 @@ fn component_gui_metadata_round_trips_through_disk() {
         " leading and trailing spaces ",
         r"C:\icons\missing.png",
     ] {
-        let mut component = minimal_component();
-        component.gui_metadata = GuiMetadata {
-            dimensions: Dimension::new(0, u16::MAX),
-            icon: icon.into(),
-            ports: Vec::new(),
-        };
+        let base = minimal_component();
+        let component = ComponentFile::new(
+            base.metadata().clone(),
+            base.source().clone(),
+            GuiMetadata::new(Dimension::new(0, u16::MAX), icon.into(), Vec::new()),
+            base.foreground_decorations().to_vec(),
+            base.background_decorations().to_vec(),
+            base.components().to_vec(),
+            base.connections().to_vec(),
+            base.translations().clone(),
+            base.parameter_definition().clone(),
+            base.variable_definition().clone(),
+        );
         write_component_file(component.clone(), &path).unwrap();
         common::assert_component_content_eq_ref(
             &component,
-            read_component_file(&path, None).unwrap(),
+            &read_component_file(&path, None).unwrap(),
         );
         let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(
@@ -278,21 +279,36 @@ fn component_gui_metadata_round_trips_through_disk() {
 fn component_ports_round_trip_inside_gui_metadata() {
     let directory = TestDirectory::new();
     let path = directory.path.join("ports.hxc");
-    let mut component = minimal_component();
-    component.gui_metadata.ports = vec![
-        Port {
-            id: port_key!("temperature").into(),
-            port_type: PortType::Output,
-            location: PortLocation { x: 100, y: 25 },
-        },
-        Port {
-            id: port_key!("power").into(),
-            port_type: PortType::Power,
-            location: PortLocation { x: 0, y: 50 },
-        },
-    ];
+    let base = minimal_component();
+    let component = ComponentFile::new(
+        base.metadata().clone(),
+        base.source().clone(),
+        GuiMetadata::new(
+            base.gui_metadata().dimensions(),
+            base.gui_metadata().icon().to_owned(),
+            vec![
+                Port::new(
+                    port_key!("temperature").into(),
+                    PortType::Output,
+                    PortLocation::new(100, 25),
+                ),
+                Port::new(
+                    port_key!("power").into(),
+                    PortType::Power,
+                    PortLocation::new(0, 50),
+                ),
+            ],
+        ),
+        base.foreground_decorations().to_vec(),
+        base.background_decorations().to_vec(),
+        base.components().to_vec(),
+        base.connections().to_vec(),
+        base.translations().clone(),
+        base.parameter_definition().clone(),
+        base.variable_definition().clone(),
+    );
     write_component_file(component.clone(), &path).unwrap();
-    common::assert_component_content_eq_ref(&component, read_component_file(&path, None).unwrap());
+    common::assert_component_content_eq_ref(&component, &read_component_file(&path, None).unwrap());
     let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(
         document["component"]["gui_metadata"]["ports"],
@@ -318,20 +334,17 @@ fn reading_caps_ports_to_the_icon_bounds() {
         fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
         let component = read_component_file(&path, None).unwrap();
         assert_eq!(
-            component.gui_metadata.ports,
-            vec![Port {
-                id: port_key!("temperature").into(),
-                port_type: PortType::Output,
-                location: PortLocation {
-                    x: x.min(100),
-                    y: y.min(50),
-                },
-            }],
+            component.gui_metadata().ports(),
+            &[Port::new(
+                port_key!("temperature").into(),
+                PortType::Output,
+                PortLocation::new(x.min(100), y.min(50)),
+            )],
         );
         write_component_file(component.clone(), &path).unwrap();
         common::assert_component_content_eq_ref(
             &component,
-            read_component_file(&path, None).unwrap(),
+            &read_component_file(&path, None).unwrap(),
         );
         let written: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(
@@ -348,21 +361,51 @@ fn writing_caps_port_locations_when_replacing_existing_files() {
     let original = minimal_text();
     fs::write(&path, &original).unwrap();
     for (x, y) in [(101, 25), (100, 51), (u16::MAX, u16::MAX)] {
-        let mut component = minimal_component();
-        component.gui_metadata.ports.push(Port {
-            id: port_key!("temperature").into(),
-            port_type: PortType::Output,
-            location: PortLocation { x, y },
-        });
-        let mut expected = component.clone();
-        expected.gui_metadata.ports[0].location = PortLocation {
-            x: x.min(100),
-            y: y.min(50),
-        };
+        let base = minimal_component();
+        let component = ComponentFile::new(
+            base.metadata().clone(),
+            base.source().clone(),
+            GuiMetadata::new(
+                base.gui_metadata().dimensions(),
+                base.gui_metadata().icon().to_owned(),
+                vec![Port::new(
+                    port_key!("temperature").into(),
+                    PortType::Output,
+                    PortLocation::new(x, y),
+                )],
+            ),
+            base.foreground_decorations().to_vec(),
+            base.background_decorations().to_vec(),
+            base.components().to_vec(),
+            base.connections().to_vec(),
+            base.translations().clone(),
+            base.parameter_definition().clone(),
+            base.variable_definition().clone(),
+        );
+        let expected = ComponentFile::new(
+            base.metadata().clone(),
+            base.source().clone(),
+            GuiMetadata::new(
+                base.gui_metadata().dimensions(),
+                base.gui_metadata().icon().to_owned(),
+                vec![Port::new(
+                    port_key!("temperature").into(),
+                    PortType::Output,
+                    PortLocation::new(x.min(100), y.min(50)),
+                )],
+            ),
+            base.foreground_decorations().to_vec(),
+            base.background_decorations().to_vec(),
+            base.components().to_vec(),
+            base.connections().to_vec(),
+            base.translations().clone(),
+            base.parameter_definition().clone(),
+            base.variable_definition().clone(),
+        );
         write_component_file(component, &path).unwrap();
         common::assert_component_content_eq_ref(
             &expected,
-            read_component_file(&path, None).unwrap(),
+            &read_component_file(&path, None).unwrap(),
         );
         let written: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(
@@ -378,29 +421,46 @@ fn writing_caps_port_locations_when_replacing_existing_files() {
 fn component_decorations_round_trip_through_disk() {
     let directory = TestDirectory::new();
     let path = directory.path.join("decorations.hxc");
-    let mut component = minimal_component();
-    component
-        .foreground_decorations
-        .push(common::foreground_decoration());
-    component
-        .background_decorations
-        .push(common::background_decoration());
+    let base = minimal_component();
+    let component = ComponentFile::new(
+        base.metadata().clone(),
+        base.source().clone(),
+        base.gui_metadata().clone(),
+        vec![common::foreground_decoration()],
+        vec![common::background_decoration()],
+        base.components().to_vec(),
+        base.connections().to_vec(),
+        base.translations().clone(),
+        base.parameter_definition().clone(),
+        base.variable_definition().clone(),
+    );
 
     write_component_file(component.clone(), &path).unwrap();
 
-    common::assert_component_content_eq_ref(&component, read_component_file(&path, None).unwrap());
+    common::assert_component_content_eq_ref(&component, &read_component_file(&path, None).unwrap());
 }
 
 #[test]
 fn component_connections_round_trip_through_disk_without_style() {
     let directory = TestDirectory::new();
     let path = directory.path.join("connections.hxc");
-    let mut component = minimal_component();
-    component.connections = common::connections();
+    let base = minimal_component();
+    let component = ComponentFile::new(
+        base.metadata().clone(),
+        base.source().clone(),
+        base.gui_metadata().clone(),
+        base.foreground_decorations().to_vec(),
+        base.background_decorations().to_vec(),
+        base.components().to_vec(),
+        common::connections(),
+        base.translations().clone(),
+        base.parameter_definition().clone(),
+        base.variable_definition().clone(),
+    );
 
     write_component_file(component.clone(), &path).unwrap();
 
-    common::assert_component_content_eq_ref(&component, read_component_file(&path, None).unwrap());
+    common::assert_component_content_eq_ref(&component, &read_component_file(&path, None).unwrap());
     let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(
         document["component"]["connections"],
@@ -412,12 +472,23 @@ fn component_connections_round_trip_through_disk_without_style() {
 fn component_translations_round_trip_through_disk() {
     let directory = TestDirectory::new();
     let path = directory.path.join("translations.hxc");
-    let mut component = minimal_component();
-    component.translations = common::populated_translations();
+    let base = minimal_component();
+    let component = ComponentFile::new(
+        base.metadata().clone(),
+        base.source().clone(),
+        base.gui_metadata().clone(),
+        base.foreground_decorations().to_vec(),
+        base.background_decorations().to_vec(),
+        base.components().to_vec(),
+        base.connections().to_vec(),
+        common::populated_translations(),
+        base.parameter_definition().clone(),
+        base.variable_definition().clone(),
+    );
 
     write_component_file(component.clone(), &path).unwrap();
 
-    common::assert_component_content_eq_ref(&component, read_component_file(&path, None).unwrap());
+    common::assert_component_content_eq_ref(&component, &read_component_file(&path, None).unwrap());
     let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
     assert_eq!(
         document["component"]["translations"],
@@ -452,7 +523,7 @@ fn writing_replaces_an_existing_component_file() {
     assert_eq!(fs::read_to_string(&path).unwrap(), minimal_text());
     common::assert_component_content_eq_ref(
         &minimal_component(),
-        read_component_file(&path, None).unwrap(),
+        &read_component_file(&path, None).unwrap(),
     );
     assert_eq!(directory.entries(), ["existing.hxc"]);
 }
@@ -599,6 +670,6 @@ fn opening_existing_component_succeeds() {
 
     common::assert_component_content_eq_ref(
         &minimal_component(),
-        read_component_file(&path, None).unwrap(),
+        &read_component_file(&path, None).unwrap(),
     );
 }
