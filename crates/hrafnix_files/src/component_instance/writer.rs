@@ -1,12 +1,12 @@
-use crate::common::serialize::{serialize_component_key, serialize_shareable_string};
+use crate::common::serialize::serialize_component_key;
 use crate::common::validate::ensure_unique_keys;
-use crate::component_instance::data::{ComponentInstance, ComponentSource, PackageReference};
+use crate::component_instance::data::ComponentInstance;
 use crate::frozen_parameter::writer::ParameterFrozenWriter;
 use crate::graphics::writer::PositionWriter;
 use crate::metadata_gui::writer::GuiMetadataWriter;
+use crate::source::writer::ComponentSourceWriter;
 use hrafnix_keys::ComponentKey;
 use hrafnix_message::message::Message;
-use hrafnix_shareable_string::ShareableString;
 use serde::Serialize;
 
 /// Current JSON representation of a saved component instance.
@@ -27,12 +27,13 @@ pub(crate) struct ComponentInstanceWriter {
 
 impl From<&ComponentInstance> for ComponentInstanceWriter {
     fn from(instance: &ComponentInstance) -> Self {
+        let position = instance.position();
         Self {
-            id: instance.id.clone(),
-            source: ComponentSourceWriter::from(&instance.source),
-            position: PositionWriter::from(&instance.position),
-            gui_metadata: GuiMetadataWriter::from(&instance.gui_metadata),
-            parameters: ParameterFrozenWriter::from(&instance.parameters),
+            id: instance.id().clone(),
+            source: ComponentSourceWriter::from(instance.source()),
+            position: PositionWriter::from(&position),
+            gui_metadata: GuiMetadataWriter::from(instance.gui_metadata()),
+            parameters: ParameterFrozenWriter::from(instance.parameters()),
         }
     }
 }
@@ -40,66 +41,7 @@ impl From<&ComponentInstance> for ComponentInstanceWriter {
 /// Rejects instances that would be saved with repeated component identifiers.
 pub(crate) fn ensure_unique_component_ids(instances: &[ComponentInstance]) -> Result<(), Message> {
     ensure_unique_keys(
-        instances.iter().map(|instance| &instance.id),
+        instances.iter().map(ComponentInstance::id),
         "files_duplicate_component_id",
     )
-}
-
-/// Current JSON representation of an unresolved source reference.
-#[derive(Debug, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-enum ComponentSourceWriter {
-    /// File-defined component provenance.
-    File {
-        /// Package omitted for loose component files.
-        #[serde(skip_serializing_if = "Option::is_none")]
-        package: Option<PackageReferenceWriter>,
-        /// Unresolved component path.
-        #[serde(serialize_with = "serialize_shareable_string")]
-        path: ShareableString,
-    },
-    /// Built-in component provenance.
-    Builtin {
-        /// Built-in name.
-        #[serde(serialize_with = "serialize_shareable_string")]
-        name: ShareableString,
-        /// Built-in version.
-        #[serde(serialize_with = "serialize_shareable_string")]
-        version: ShareableString,
-    },
-}
-
-impl From<&ComponentSource> for ComponentSourceWriter {
-    fn from(source: &ComponentSource) -> Self {
-        match source {
-            ComponentSource::File { package, path } => Self::File {
-                package: package.as_ref().map(Into::into),
-                path: path.as_str().into(),
-            },
-            ComponentSource::Builtin { name, version } => Self::Builtin {
-                name: name.clone(),
-                version: version.clone(),
-            },
-        }
-    }
-}
-
-/// Current JSON representation of a package name and version.
-#[derive(Debug, Serialize)]
-struct PackageReferenceWriter {
-    /// Unresolved package name.
-    #[serde(serialize_with = "serialize_shareable_string")]
-    name: ShareableString,
-    /// Package version.
-    #[serde(serialize_with = "serialize_shareable_string")]
-    version: ShareableString,
-}
-
-impl From<&PackageReference> for PackageReferenceWriter {
-    fn from(package: &PackageReference) -> Self {
-        Self {
-            name: package.name.clone(),
-            version: package.version.clone(),
-        }
-    }
 }

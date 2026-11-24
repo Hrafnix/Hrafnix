@@ -26,11 +26,11 @@ pub(crate) struct ConnectionWriter {
 impl From<&Connection> for ConnectionWriter {
     fn from(connection: &Connection) -> Self {
         Self {
-            from_component: connection.from_component.clone(),
-            from_port: connection.from_port.clone(),
-            to_component: connection.to_component.clone(),
-            to_port: connection.to_port.clone(),
-            line: ConnectionLineWriter::from(&connection.line),
+            from_component: connection.from_component().clone(),
+            from_port: connection.from_port().clone(),
+            to_component: connection.to_component().clone(),
+            to_port: connection.to_port().clone(),
+            line: ConnectionLineWriter::from(connection.line()),
         }
     }
 }
@@ -45,7 +45,7 @@ struct ConnectionLineWriter {
 impl From<&ConnectionLine> for ConnectionLineWriter {
     fn from(line: &ConnectionLine) -> Self {
         Self {
-            midpoints: line.midpoints.iter().map(Into::into).collect(),
+            midpoints: line.midpoints().iter().map(Into::into).collect(),
         }
     }
 }
@@ -71,13 +71,13 @@ mod tests {
                 Position::new(i32::MAX, i32::MIN),
             ],
         ] {
-            let connection = Connection {
-                from_component: component_key!("simulation_clock").into(),
-                from_port: port_key!("time").into(),
-                to_component: component_key!("heater").into(),
-                to_port: port_key!("temperature_input").into(),
-                line: ConnectionLine { midpoints },
-            };
+            let connection = Connection::new(
+                component_key!("simulation_clock").into(),
+                port_key!("time").into(),
+                component_key!("heater").into(),
+                port_key!("temperature_input").into(),
+                ConnectionLine::new(midpoints),
+            );
             let original = connection.clone();
             let written = serde_json::to_value(ConnectionWriter::from(&connection)).unwrap();
             assert_eq!(
@@ -88,7 +88,7 @@ mod tests {
                     "to_component": "heater",
                     "to_port": "temperature_input",
                     "line": {
-                        "midpoints": connection.line.midpoints.iter()
+                        "midpoints": connection.line().midpoints().iter()
                             .map(|point| json!({"x": point.x(), "y": point.y()}))
                             .collect::<Vec<_>>(),
                     },

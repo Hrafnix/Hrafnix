@@ -38,8 +38,8 @@ fn serialize_translations<S: Serializer>(
 impl From<&TranslationsFile> for TranslationsWriter {
     fn from(translations: &TranslationsFile) -> Self {
         Self {
-            language: translations.language.clone(),
-            translations: translations.translations.clone(),
+            language: translations.language().clone(),
+            translations: translations.translations().clone(),
         }
     }
 }
@@ -73,12 +73,9 @@ mod tests {
                 ]
                 .into(),
             ] {
-                let data = TranslationsFile {
-                    language: language.into(),
-                    translations,
-                };
+                let data = TranslationsFile::new(language.into(), translations);
                 let json = serde_json::to_string(&TranslationsWriter::from(&data)).unwrap();
-                let expected = if data.translations.is_empty() {
+                let expected = if data.translations().is_empty() {
                     json!({})
                 } else {
                     json!({
@@ -103,9 +100,9 @@ mod tests {
 
     #[test]
     fn translation_keys_and_language_codes_are_written_in_sorted_order() {
-        let data = TranslationsFile {
-            language: "en".into(),
-            translations: [
+        let data = TranslationsFile::new(
+            "en".into(),
+            [
                 ("z".into(), [("fr".into(), "texte".into())].into()),
                 (
                     "a".into(),
@@ -113,7 +110,7 @@ mod tests {
                 ),
             ]
             .into(),
-        };
+        );
         assert_eq!(
             serde_json::to_string(&TranslationsWriter::from(&data)).unwrap(),
             r#"{"language":"en","translations":{"a":{"de":"Text","fr":"texte"},"z":{"fr":"texte"}}}"#,

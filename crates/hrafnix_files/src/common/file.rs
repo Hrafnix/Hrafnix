@@ -409,7 +409,8 @@ mod tests {
             ("text\u{feff}", "text\u{feff}"),
         ] {
             fs::write(&path, contents).unwrap();
-            assert_eq!(read_file_to_string(&path).unwrap(), expected);
+            let result = read_file_to_string(&path).unwrap();
+            assert_eq!(result, expected);
         }
     }
 
@@ -587,7 +588,8 @@ mod tests {
         contents.truncate(limit);
         write_string_to_file(&contents, &path).unwrap();
         assert_eq!(fs::metadata(&path).unwrap().len(), MAX_FILE_SIZE);
-        assert_eq!(read_file_to_string(&path).unwrap(), contents);
+        let result = read_file_to_string(&path).unwrap();
+        assert_eq!(result, contents);
         assert_eq!(directory.entries(), ["document.txt"]);
     }
 

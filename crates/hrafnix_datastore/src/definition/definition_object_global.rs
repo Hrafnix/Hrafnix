@@ -294,23 +294,59 @@ impl GlobalObjectDefinitionBuilder {
     /// Builds the `GlobalObjectDefinition`.
     #[must_use]
     pub fn finish(self) -> GlobalObjectDefinition {
-        GlobalObjectDefinition {
+        let mut s = GlobalObjectDefinition {
             ordered_keys: self.ordered_keys,
             items: Arc::new(self.items),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 }
 
 /// Definition for a global object, which is a collection of named items.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone)]
 pub struct GlobalObjectDefinition {
     /// Keys in insertion order, used to preserve deterministic iteration.
     ordered_keys: Vec<GlobalKey>,
     /// Map of item definitions keyed by their global key.
     items: Arc<BTreeMap<GlobalKey, ItemDefinitionType>>,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
+}
+
+impl Default for GlobalObjectDefinition {
+    fn default() -> Self {
+        Self::builder().finish()
+    }
 }
 
 impl GlobalObjectDefinition {
+    /// Computes and stores the BLAKE3 hash of this definition.
+    #[cfg_attr(feature = "hotpath", hotpath::measure)]
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"GlobalObjectDefinition");
+        h.update(
+            &u64::try_from(self.ordered_keys.len())
+                .unwrap_or(u64::MAX)
+                .to_le_bytes(),
+        );
+        for (key, item) in self.iter() {
+            h.update(&key.current_blake3_hash());
+            h.update(&item.hash());
+        }
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
+    }
     /// Returns a new `GlobalObjectDefinitionBuilder`.
     #[must_use]
     pub const fn builder() -> GlobalObjectDefinitionBuilder {
@@ -380,7 +416,16 @@ impl GlobalObjectDefinition {
                     .map(|(k, v)| (k.launder(store), v.launder(store)))
                     .collect(),
             ),
+            hash: self.hash,
         }
+    }
+}
+
+impl PartialEq for GlobalObjectDefinition {
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+            && self.ordered_keys == other.ordered_keys
+            && self.items == other.items
     }
 }
 

@@ -14,17 +14,22 @@ pub struct NumberWithUnitsDefinition {
     preferred_units: UnitId,
     /// Default value for this number parameter.
     default_value: ShareableString,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
 }
 
 impl NumberWithUnitsDefinition {
     /// Creates a new number-based `NumberWithUnitsDefinition`.
     pub fn new<S1: Into<ShareableString>>(description: S1, preferred_units: UnitId) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             constraint: NumberConstraint::none(),
             preferred_units,
             default_value: ShareableString::default(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new number-based `NumberWithUnitsDefinition` with a default value.
@@ -33,12 +38,15 @@ impl NumberWithUnitsDefinition {
         default_value: S2,
         preferred_units: UnitId,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             constraint: NumberConstraint::none(),
             preferred_units,
             default_value: default_value.into(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new number-based `NumberWithUnitsDefinition` with a constraint.
@@ -47,12 +55,15 @@ impl NumberWithUnitsDefinition {
         constraint: NumberConstraint,
         preferred_units: UnitId,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             constraint,
             preferred_units,
             default_value: ShareableString::default(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new number-based `NumberWithUnitsDefinition` with a default value.
@@ -62,12 +73,35 @@ impl NumberWithUnitsDefinition {
         default_value: S2,
         preferred_units: UnitId,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             constraint,
             preferred_units,
             default_value: default_value.into(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
+    }
+
+    /// Computes and stores the BLAKE3 hash of this definition.
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"NumberWithUnitsDefinition");
+        h.update(&self.description.current_blake3_hash());
+        self.constraint.update_hasher(&mut h);
+        h.update(&self.preferred_units.to_u16().to_le_bytes());
+        h.update(&self.default_value.current_blake3_hash());
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
     }
 
     /// Returns the constraint.
@@ -90,6 +124,7 @@ impl NumberWithUnitsDefinition {
             constraint: self.constraint.clone(),
             default_value: store.launder(&self.default_value),
             preferred_units: self.preferred_units,
+            hash: self.hash,
         }
     }
 

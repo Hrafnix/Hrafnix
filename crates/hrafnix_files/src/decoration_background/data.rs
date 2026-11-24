@@ -5,13 +5,55 @@ use hrafnix_shareable_string::ShareableString;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BackgroundDecoration {
     /// Identifier of the decoration.
-    pub id: ShareableString,
+    id: ShareableString,
     /// Position in drawing coordinates.
-    pub position: Position,
+    position: Position,
     /// Dimensions in drawing coordinates.
-    pub dimensions: Dimension,
+    dimensions: Dimension,
     /// The shape of the decoration.
-    pub kind: BackgroundDecorationKind,
+    kind: BackgroundDecorationKind,
+}
+
+impl BackgroundDecoration {
+    /// Creates a new background decoration with the given identifier, bounds, and shape.
+    #[must_use]
+    pub(crate) const fn new(
+        id: ShareableString,
+        position: Position,
+        dimensions: Dimension,
+        kind: BackgroundDecorationKind,
+    ) -> Self {
+        Self {
+            id,
+            position,
+            dimensions,
+            kind,
+        }
+    }
+
+    /// Returns the identifier of the decoration.
+    #[must_use]
+    pub const fn id(&self) -> &ShareableString {
+        &self.id
+    }
+
+    /// Returns the position in drawing coordinates.
+    #[must_use]
+    pub const fn position(&self) -> Position {
+        self.position
+    }
+
+    /// Returns the dimensions in drawing coordinates.
+    #[must_use]
+    pub const fn dimensions(&self) -> Dimension {
+        self.dimensions
+    }
+
+    /// Returns the shape of the decoration.
+    #[must_use]
+    pub const fn kind(&self) -> &BackgroundDecorationKind {
+        &self.kind
+    }
 }
 
 /// The shapes allowed in a background layer.

@@ -23,12 +23,12 @@ pub(crate) struct MetadataReaderV1 {
 
 impl From<MetadataReaderV1> for MetadataFile {
     fn from(metadata: MetadataReaderV1) -> Self {
-        Self {
-            display_name: metadata.display_name.into(),
-            description: metadata.description.into(),
-            author: metadata.author.into(),
-            minimum_version_major: metadata.minimum_version_major,
-            minimum_version_minor: metadata.minimum_version_minor,
-        }
+        Self::new(
+            metadata.display_name.into(),
+            metadata.description.into(),
+            metadata.author.into(),
+            metadata.minimum_version_major,
+            metadata.minimum_version_minor,
+        )
     }
 }

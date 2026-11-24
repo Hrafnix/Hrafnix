@@ -1,6 +1,6 @@
 //! Tests for graphical styling values.
 
-use hrafnix_files::graphics::data::FontSize;
+use crate::graphics::data::FontSize;
 use std::ops::Div;
 
 #[test]

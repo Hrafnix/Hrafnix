@@ -22,12 +22,12 @@ pub(crate) struct BackgroundDecorationReaderV1 {
 
 impl From<BackgroundDecorationReaderV1> for BackgroundDecoration {
     fn from(decoration: BackgroundDecorationReaderV1) -> Self {
-        Self {
-            id: decoration.id.into(),
-            position: decoration.position.into(),
-            dimensions: decoration.dimensions.into(),
-            kind: decoration.kind.into(),
-        }
+        Self::new(
+            decoration.id.into(),
+            decoration.position.into(),
+            decoration.dimensions.into(),
+            decoration.kind.into(),
+        )
     }
 }
 

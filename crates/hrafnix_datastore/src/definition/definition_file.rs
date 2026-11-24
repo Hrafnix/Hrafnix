@@ -12,6 +12,8 @@ pub struct FileDefinition {
     is_input: bool,
     /// Default value for this file parameter.
     default_value: ShareableString,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
 }
 
 impl FileDefinition {
@@ -21,12 +23,15 @@ impl FileDefinition {
         extension_filter: S2,
         is_input: bool,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             extension_filter: extension_filter.into(),
             is_input,
             default_value: ShareableString::default(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new file-based `FileDefinition` with a default value.
@@ -40,12 +45,35 @@ impl FileDefinition {
         is_input: bool,
         default_value: S3,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             extension_filter: extension_filter.into(),
             is_input,
             default_value: default_value.into(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
+    }
+
+    /// Computes and stores the BLAKE3 hash of this definition.
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"FileDefinition");
+        h.update(&self.description.current_blake3_hash());
+        h.update(&self.extension_filter.current_blake3_hash());
+        h.update(&[u8::from(self.is_input)]);
+        h.update(&self.default_value.current_blake3_hash());
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
     }
 
     /// Returns the extension filter.
@@ -74,6 +102,7 @@ impl FileDefinition {
             extension_filter: store.launder(&self.extension_filter),
             is_input: self.is_input,
             default_value: store.launder(&self.default_value),
+            hash: self.hash,
         }
     }
 

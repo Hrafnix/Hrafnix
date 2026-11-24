@@ -45,10 +45,7 @@ impl TryFrom<TranslationsReaderV1> for TranslationsFile {
                 Ok((key.into(), languages))
             })
             .collect::<Result<_, Message>>()?;
-        Ok(Self {
-            language: translations.language.into(),
-            translations: entries,
-        })
+        Ok(Self::new(translations.language.into(), entries))
     }
 }
 
@@ -81,8 +78,11 @@ mod tests {
     #[test]
     fn source_language_keys_and_values_are_preserved() {
         let translations = read(&translations_json()).unwrap();
-        assert_eq!(translations.language.as_str(), "en");
-        let languages = translations.translations.get("Target temperature").unwrap();
+        assert_eq!(translations.language().as_str(), "en");
+        let languages = translations
+            .translations()
+            .get("Target temperature")
+            .unwrap();
         assert_eq!(
             languages.get("es").unwrap().as_str(),
             "Temperatura objetivo"
@@ -102,8 +102,8 @@ mod tests {
                 "translations": {},
             }))
             .unwrap();
-            assert_eq!(translations.language.as_str(), language);
-            assert!(translations.translations.is_empty());
+            assert_eq!(translations.language().as_str(), language);
+            assert!(translations.translations().is_empty());
         }
         let translations = read(&json!({
             "language": "en",
@@ -114,10 +114,10 @@ mod tests {
             },
         }))
         .unwrap();
-        assert_eq!(translations.translations[""][""].as_str(), "");
-        assert!(translations.translations[" untranslated "].is_empty());
+        assert_eq!(translations.translations()[""][""].as_str(), "");
+        assert!(translations.translations()[" untranslated "].is_empty());
         assert_eq!(
-            translations.translations["quoted \"key\"\n"]["fr-CA"].as_str(),
+            translations.translations()["quoted \"key\"\n"]["fr-CA"].as_str(),
             " texte \n\u{e9} ",
         );
     }
@@ -232,7 +232,7 @@ mod tests {
             r#"{"translations":{"key":{"fr":"texte"}},"language":"en"}"#,
         )
         .unwrap();
-        assert_eq!(translations.language.as_str(), "en");
-        assert_eq!(translations.translations["key"]["fr"].as_str(), "texte");
+        assert_eq!(translations.language().as_str(), "en");
+        assert_eq!(translations.translations()["key"]["fr"].as_str(), "texte");
     }
 }

@@ -10,6 +10,7 @@ use crate::definition_parameter::reader::v1::ParameterDefinitionReaderV1;
 use crate::definition_variable::reader::v1::VariableDefinitionReaderV1;
 use crate::metadata_general::reader::v1::MetadataReaderV1;
 use crate::metadata_gui::reader::v1::GuiMetadataReaderV1;
+use crate::source::data::ComponentSource;
 use crate::translations::reader::v1::TranslationsReaderV1;
 use hrafnix_message::message::Message;
 use serde::Deserialize;
@@ -45,32 +46,36 @@ pub(crate) struct ComponentReaderV1 {
     translations: TranslationsReaderV1,
 }
 
-impl TryFrom<ComponentReaderV1> for ComponentFile {
-    type Error = Message;
-
-    fn try_from(component: ComponentReaderV1) -> Result<Self, Self::Error> {
-        Ok(Self {
-            metadata: component.metadata.into(),
-            gui_metadata: component.gui_metadata.try_into()?,
-            parameter_definition: component.parameter_definition.try_into()?,
-            variable_definition: component.variable_definition.try_into()?,
-            foreground_decorations: component
-                .foreground_decorations
+impl ComponentReaderV1 {
+    /// Converts a version 1 component reader into a component file.
+    ///
+    /// # Errors
+    ///
+    /// Returns a localized error if any of the contained data is invalid.
+    pub(crate) fn try_into_component_file(
+        self,
+        source: ComponentSource,
+    ) -> Result<ComponentFile, Message> {
+        Ok(ComponentFile::new(
+            self.metadata.into(),
+            source,
+            self.gui_metadata.try_into()?,
+            self.foreground_decorations
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            background_decorations: component
-                .background_decorations
+            self.background_decorations
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            translations: component.translations.try_into()?,
-            components: convert_component_instances(component.components)?,
-            connections: component
-                .connections
+            convert_component_instances(self.components)?,
+            self.connections
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<_, _>>()?,
-        })
+            self.translations.try_into()?,
+            self.parameter_definition.try_into()?,
+            self.variable_definition.try_into()?,
+        ))
     }
 }

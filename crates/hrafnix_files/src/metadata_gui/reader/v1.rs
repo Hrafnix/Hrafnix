@@ -28,20 +28,22 @@ impl TryFrom<GuiMetadataReaderV1> for GuiMetadata {
 
     fn try_from(metadata: GuiMetadataReaderV1) -> Result<Self, Self::Error> {
         let dimensions: Dimension = metadata.dimensions.into();
-        Ok(Self {
-            dimensions,
-            icon: metadata.icon.into(),
-            ports: metadata
-                .ports
-                .into_iter()
-                .map(|port| {
-                    let mut port = Port::try_from(port)?;
-                    port.location.x = port.location.x.min(dimensions.width());
-                    port.location.y = port.location.y.min(dimensions.height());
-                    Ok(port)
-                })
-                .collect::<Result<_, Message>>()?,
-        })
+        let ports = metadata
+            .ports
+            .into_iter()
+            .map(|port| {
+                let location = PortLocation::new(
+                    port.location.x.min(dimensions.width()),
+                    port.location.y.min(dimensions.height()),
+                );
+                Ok(Port::new(
+                    PortKey::new(port.id.into())?,
+                    port.port_type.into(),
+                    location,
+                ))
+            })
+            .collect::<Result<_, Message>>()?;
+        Ok(Self::new(dimensions, metadata.icon.into(), ports))
     }
 }
 
@@ -63,11 +65,11 @@ impl TryFrom<PortReaderV1> for Port {
     type Error = Message;
 
     fn try_from(port: PortReaderV1) -> Result<Self, Self::Error> {
-        Ok(Self {
-            id: PortKey::new(port.id.into())?,
-            port_type: port.port_type.into(),
-            location: port.location.into(),
-        })
+        Ok(Self::new(
+            PortKey::new(port.id.into())?,
+            port.port_type.into(),
+            port.location.into(),
+        ))
     }
 }
 
@@ -117,10 +119,7 @@ struct PortLocationReaderV1 {
 
 impl From<PortLocationReaderV1> for PortLocation {
     fn from(location: PortLocationReaderV1) -> Self {
-        Self {
-            x: location.x,
-            y: location.y,
-        }
+        Self::new(location.x, location.y)
     }
 }
 
@@ -246,7 +245,7 @@ mod tests {
             let mut value = metadata_json();
             value["ports"] = json!([port]);
             let metadata = read(&value).unwrap();
-            assert_eq!(metadata.ports[0].id.as_str(), id);
+            assert_eq!(metadata.ports()[0].id().as_str(), id);
         }
         for (id, diagnostic) in [
             ("", "datastore_key_empty"),
@@ -315,20 +314,14 @@ mod tests {
                 value["ports"] = json!([port_json(), port]);
                 let metadata = read(&value).unwrap();
                 assert_eq!(
-                    metadata.ports[0].location,
-                    PortLocation {
-                        x: 100.min(width),
-                        y: 25.min(height),
-                    },
+                    metadata.ports()[0].location(),
+                    PortLocation::new(100.min(width), 25.min(height)),
                 );
                 assert_eq!(
-                    metadata.ports[1].location,
-                    PortLocation {
-                        x: x.min(width),
-                        y: y.min(height),
-                    },
+                    metadata.ports()[1].location(),
+                    PortLocation::new(x.min(width), y.min(height)),
                 );
-                assert_eq!(metadata.ports[1].id.as_str(), "temperature");
+                assert_eq!(metadata.ports()[1].id().as_str(), "temperature");
             }
         }
     }
@@ -360,9 +353,9 @@ mod tests {
             let mut value = metadata_json();
             value["icon"] = json!(path);
             let metadata = read(&value).unwrap();
-            assert_eq!(metadata.dimensions.width(), 100);
-            assert_eq!(metadata.dimensions.height(), 50);
-            assert_eq!(metadata.icon.as_str(), path);
+            assert_eq!(metadata.dimensions().width(), 100);
+            assert_eq!(metadata.dimensions().height(), 50);
+            assert_eq!(metadata.icon().as_str(), path);
         }
     }
 
@@ -384,8 +377,8 @@ mod tests {
             let mut value = metadata_json();
             value["dimensions"] = json!({"width": size, "height": size});
             let metadata = read(&value).unwrap();
-            assert_eq!(metadata.dimensions.width(), size);
-            assert_eq!(metadata.dimensions.height(), size);
+            assert_eq!(metadata.dimensions().width(), size);
+            assert_eq!(metadata.dimensions().height(), size);
         }
         for field in ["width", "height"] {
             for invalid in [

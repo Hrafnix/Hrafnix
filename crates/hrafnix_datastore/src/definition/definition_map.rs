@@ -84,6 +84,26 @@ impl MapItemDefault {
         }
     }
 
+    /// Feeds this default value into a BLAKE3 hasher.
+    fn update_hasher(&self, h: &mut blake3::Hasher) {
+        match self {
+            Self::Scalar(value) => {
+                h.update(&[0x00]);
+                h.update(&value.current_blake3_hash());
+            }
+            Self::Table(rows) => {
+                h.update(&[0x01]);
+                h.update(&u64::try_from(rows.len()).unwrap_or(u64::MAX).to_le_bytes());
+                for row in rows {
+                    h.update(&u64::try_from(row.len()).unwrap_or(u64::MAX).to_le_bytes());
+                    for cell in row {
+                        h.update(&cell.current_blake3_hash());
+                    }
+                }
+            }
+        }
+    }
+
     /// Returns a copy whose strings are interned in `store`.
     #[must_use]
     fn launder(&self, store: &SharedStringStore) -> Self {
@@ -181,6 +201,23 @@ impl From<UnitDefinition> for MapItemDefinition {
 }
 
 impl MapItemDefinition {
+    /// Returns the pre-calculated BLAKE3 hash of the map item definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        match self {
+            Self::Boolean(def) => def.hash(),
+            Self::Choice(def) => def.hash(),
+            Self::File(def) => def.hash(),
+            Self::Integer(def) => def.hash(),
+            Self::Number(def) => def.hash(),
+            Self::NumberWithUnits(def) => def.hash(),
+            Self::String(def) => def.hash(),
+            Self::Table(def) => def.hash(),
+            Self::TableWithUnits(def) => def.hash(),
+            Self::Unit(def) => def.hash(),
+        }
+    }
+
     /// Returns a new `MapItemDefinition` with strings laundered through the provided store.
     #[must_use]
     pub fn launder(&self, store: &SharedStringStore) -> Self {
@@ -260,7 +297,7 @@ impl TreePrint for MapItemDefinition {
 
 /// Definition for a map parameter where keys are strings and values follow a fixed schema of
 /// named `MapItemDefinition`s.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct MapDefinition {
     /// Human-readable description of this map parameter.
     description: ShareableString,
@@ -270,6 +307,8 @@ pub struct MapDefinition {
     item_type: Arc<BTreeMap<StoreKey, MapItemDefinition>>,
     /// Optional default map entries.
     default_map: Option<BTreeMap<StoreKey, MapEntryDefault>>,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
 }
 
 impl MapDefinition {
@@ -291,12 +330,15 @@ impl MapDefinition {
             ordered_keys.push(key.clone());
             items.insert(key, v.into());
         }
-        Self {
+        let mut s = Self {
             description: description.into(),
             ordered_keys,
             item_type: Arc::new(items),
             default_map: None,
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new `MapDefinition` with default map entries.
@@ -329,7 +371,56 @@ impl MapDefinition {
                 })
                 .collect(),
         );
+        definition.update_hash();
         definition
+    }
+
+    /// Computes and stores the BLAKE3 hash of this definition.
+    #[cfg_attr(feature = "hotpath", hotpath::measure)]
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"MapDefinition");
+        h.update(&self.description.current_blake3_hash());
+        h.update(
+            &u64::try_from(self.ordered_keys.len())
+                .unwrap_or(u64::MAX)
+                .to_le_bytes(),
+        );
+        for (key, item) in self.iter() {
+            h.update(&key.current_blake3_hash());
+            h.update(&item.hash());
+        }
+
+        match &self.default_map {
+            None => {
+                h.update(&[0x00]);
+            }
+            Some(entries) => {
+                h.update(&[0x01]);
+                h.update(
+                    &u64::try_from(entries.len())
+                        .unwrap_or(u64::MAX)
+                        .to_le_bytes(),
+                );
+                for (entry_key, entry) in entries {
+                    h.update(&entry_key.current_blake3_hash());
+                    h.update(&u64::try_from(entry.len()).unwrap_or(u64::MAX).to_le_bytes());
+                    for item_default in entry {
+                        item_default.update_hasher(&mut h);
+                    }
+                }
+            }
+        }
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
     }
 
     /// Returns the description of the map.
@@ -419,6 +510,7 @@ impl MapDefinition {
                     })
                     .collect()
             }),
+            hash: self.hash,
         }
     }
 
@@ -432,6 +524,16 @@ impl MapDefinition {
                 .iter()
                 .zip(other.iter())
                 .all(|((_, a), (_, b))| a.is_merge_compatible(b))
+    }
+}
+
+impl PartialEq for MapDefinition {
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+            && self.description == other.description
+            && self.ordered_keys == other.ordered_keys
+            && self.item_type == other.item_type
+            && self.default_map == other.default_map
     }
 }
 

@@ -8,15 +8,20 @@ pub struct StringDefinition {
     description: ShareableString,
     /// Default value for this string parameter.
     default_value: ShareableString,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
 }
 
 impl StringDefinition {
     /// Creates a new string-based `StringDefinition`.
     pub fn new<S: Into<ShareableString>>(description: S) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             default_value: ShareableString::default(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new string-based `StringDefinition` with a default value.
@@ -24,10 +29,31 @@ impl StringDefinition {
         description: S1,
         default_value: S2,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             default_value: default_value.into(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
+    }
+
+    /// Computes and stores the BLAKE3 hash of this definition.
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"StringDefinition");
+        h.update(&self.description.current_blake3_hash());
+        h.update(&self.default_value.current_blake3_hash());
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
     }
 
     /// Returns a new `StringDefinition` with strings laundered through the provided store.
@@ -36,6 +62,7 @@ impl StringDefinition {
         Self {
             description: store.launder(&self.description),
             default_value: store.launder(&self.default_value),
+            hash: self.hash,
         }
     }
 

@@ -4,6 +4,8 @@ pub(crate) mod deserialize;
 pub(crate) mod error;
 /// Bounded UTF-8 file reads and atomic writes.
 pub(crate) mod file;
+/// Component interface hashing.
+pub(crate) mod hash;
 /// Shared Serde serialization helpers.
 pub(crate) mod serialize;
 /// Test helpers that read documents through parsing and conversion.

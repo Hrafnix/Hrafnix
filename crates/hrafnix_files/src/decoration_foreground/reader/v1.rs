@@ -23,12 +23,12 @@ pub(crate) struct ForegroundDecorationReaderV1 {
 
 impl From<ForegroundDecorationReaderV1> for ForegroundDecoration {
     fn from(decoration: ForegroundDecorationReaderV1) -> Self {
-        Self {
-            id: decoration.id.into(),
-            position: decoration.position.into(),
-            dimensions: decoration.dimensions.into(),
-            kind: decoration.kind.into(),
-        }
+        Self::new(
+            decoration.id.into(),
+            decoration.position.into(),
+            decoration.dimensions.into(),
+            decoration.kind.into(),
+        )
     }
 }
 
@@ -63,10 +63,7 @@ pub(crate) struct TextDecorationReaderV1 {
 
 impl From<TextDecorationReaderV1> for TextDecoration {
     fn from(component: TextDecorationReaderV1) -> Self {
-        Self {
-            text: component.text.into(),
-            font_size: component.font_size.into(),
-        }
+        Self::new(component.text.into(), component.font_size.into())
     }
 }
 
@@ -82,10 +79,7 @@ pub(crate) struct ImageDecorationReaderV1 {
 
 impl From<ImageDecorationReaderV1> for ImageDecoration {
     fn from(component: ImageDecorationReaderV1) -> Self {
-        Self {
-            path: component.path.into(),
-            fit: component.fit.into(),
-        }
+        Self::new(component.path.into(), component.fit.into())
     }
 }
 
@@ -155,14 +149,14 @@ mod tests {
     #[test]
     fn shared_strings_preserve_their_contents() {
         let decoration = read(&text_json()).unwrap();
-        assert_eq!(decoration.id.as_str(), " label \u{3b1} ");
-        assert_eq!(decoration.position.x(), -10);
-        assert_eq!(decoration.position.y(), 20);
-        let ForegroundDecorationKind::Text(text) = decoration.kind else {
+        assert_eq!(decoration.id().as_str(), " label \u{3b1} ");
+        assert_eq!(decoration.position().x(), -10);
+        assert_eq!(decoration.position().y(), 20);
+        let ForegroundDecorationKind::Text(text) = decoration.kind() else {
             panic!("expected text");
         };
-        assert_eq!(text.text.as_str(), " Title \u{3b1}\n ");
-        assert_eq!(text.font_size.size(), 2050);
+        assert_eq!(text.text().as_str(), " Title \u{3b1}\n ");
+        assert_eq!(text.font_size().size(), 2050);
     }
 
     #[test]
@@ -179,11 +173,11 @@ mod tests {
                 ("Fill", ImageFit::Fill),
             ] {
                 let decoration = read(&image_json(path, fit)).unwrap();
-                let ForegroundDecorationKind::Image(image) = decoration.kind else {
+                let ForegroundDecorationKind::Image(image) = decoration.kind() else {
                     panic!("expected image");
                 };
-                assert_eq!(image.path.as_str(), path);
-                assert_eq!(image.fit, expected);
+                assert_eq!(image.path().as_str(), path);
+                assert_eq!(image.fit(), expected);
             }
         }
     }

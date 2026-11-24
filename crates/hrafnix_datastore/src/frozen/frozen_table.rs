@@ -12,7 +12,7 @@ pub struct TableFrozen {
     rows: Vec<Vec<ShareableString>>,
     /// Parameter key associated with this table instance.
     parameter: ShareableString,
-    /// Pre-computed BLAKE3 hash of all rows for fast diffing.
+    /// Pre-computed BLAKE3 hash of all rows and parameter reference for fast diffing.
     hash: [u8; 32],
 }
 
@@ -103,7 +103,7 @@ impl TableFrozen {
         table
     }
 
-    /// Recomputes and stores the BLAKE3 hash of all rows.
+    /// Recomputes and stores the BLAKE3 hash of all rows and the parameter reference.
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn update_hash(&mut self) {
         let mut h = blake3::Hasher::new();
@@ -111,6 +111,8 @@ impl TableFrozen {
         // Domain separation for this node/type.
         h.update(&[0x01]);
         h.update(b"Table");
+
+        h.update(&self.parameter.current_blake3_hash());
 
         h.update(
             &u64::try_from(self.rows.len())

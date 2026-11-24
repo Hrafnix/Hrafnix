@@ -48,32 +48,32 @@ pub(crate) struct ModelReaderV1 {
     translations: TranslationsReaderV1,
 }
 
-impl TryFrom<ModelReaderV1> for ModelFile {
-    type Error = Message;
-
-    fn try_from(model: ModelReaderV1) -> Result<Self, Self::Error> {
-        Ok(Self {
-            metadata: model.metadata.into(),
-            parameter_definition: model.parameter_definition.try_into()?,
-            variable_definition: model.variable_definition.try_into()?,
-            foreground_decorations: model
-                .foreground_decorations
+impl ModelReaderV1 {
+    /// Converts a version 1 model reader into a model file.
+    ///
+    /// # Errors
+    ///
+    /// Returns a localized error if any contained data is invalid.
+    pub(crate) fn try_into_model_file(self) -> Result<ModelFile, Message> {
+        Ok(ModelFile::new(
+            self.metadata.into(),
+            self.foreground_decorations
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            background_decorations: model
-                .background_decorations
+            self.background_decorations
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            global_settings: model.global_settings.try_into()?,
-            components: convert_component_instances(model.components)?,
-            translations: model.translations.try_into()?,
-            connections: model
-                .connections
+            self.global_settings.try_into()?,
+            convert_component_instances(self.components)?,
+            self.connections
                 .into_iter()
                 .map(TryInto::try_into)
                 .collect::<Result<_, _>>()?,
-        })
+            self.translations.try_into()?,
+            self.parameter_definition.try_into()?,
+            self.variable_definition.try_into()?,
+        ))
     }
 }

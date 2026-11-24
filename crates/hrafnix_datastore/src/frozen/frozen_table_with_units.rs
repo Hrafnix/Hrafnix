@@ -17,7 +17,7 @@ pub struct TableWithUnitsFrozen {
     rows: Vec<Vec<ShareableString>>,
     /// Parameter key associated with this table instance.
     parameter: ShareableString,
-    /// Pre-computed BLAKE3 hash of all rows and column units for fast diffing.
+    /// Pre-computed BLAKE3 hash of all rows, column units, and parameter reference for fast diffing.
     hash: [u8; 32],
 }
 
@@ -125,12 +125,14 @@ impl TableWithUnitsFrozen {
         table
     }
 
-    /// Recomputes and stores the BLAKE3 hash of all column units and row cells.
+    /// Recomputes and stores the BLAKE3 hash of the parameter reference, column units, and row cells.
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn update_hash(&mut self) {
         let mut hasher = blake3::Hasher::new();
         hasher.update(&[0x01]);
         hasher.update(b"TableWithUnits");
+
+        hasher.update(&self.parameter.current_blake3_hash());
 
         // Hash column units so that changing a unit changes the hash.
         hasher.update(

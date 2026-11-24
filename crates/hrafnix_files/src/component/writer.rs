@@ -48,25 +48,27 @@ impl From<ComponentFile> for ComponentWriter {
         Self {
             file_version: "1".to_owned(),
             component: ComponentDataWriter {
-                metadata: MetadataWriter::from(&component.metadata),
-                gui_metadata: GuiMetadataWriter::from(&component.gui_metadata),
+                metadata: MetadataWriter::from(component.metadata()),
+                gui_metadata: GuiMetadataWriter::from(component.gui_metadata()),
                 parameter_definition: ParameterDefinitionWriter::from(
-                    &component.parameter_definition,
+                    component.parameter_definition(),
                 ),
-                variable_definition: VariableDefinitionWriter::from(&component.variable_definition),
+                variable_definition: VariableDefinitionWriter::from(
+                    component.variable_definition(),
+                ),
                 foreground_decorations: component
-                    .foreground_decorations
+                    .foreground_decorations()
                     .iter()
                     .map(Into::into)
                     .collect(),
                 background_decorations: component
-                    .background_decorations
+                    .background_decorations()
                     .iter()
                     .map(Into::into)
                     .collect(),
-                translations: TranslationsWriter::from(&component.translations),
-                components: component.components.iter().map(Into::into).collect(),
-                connections: component.connections.iter().map(Into::into).collect(),
+                translations: TranslationsWriter::from(component.translations()),
+                components: component.components().iter().map(Into::into).collect(),
+                connections: component.connections().iter().map(Into::into).collect(),
             },
         }
     }

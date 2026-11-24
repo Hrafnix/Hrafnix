@@ -12,27 +12,35 @@ pub struct BooleanDefinition {
     false_description: ShareableString,
     /// Default value for this boolean parameter.
     default_value: ShareableString,
+    /// Pre-computed BLAKE3 hash of this definition.
+    hash: [u8; 32],
 }
 
 impl BooleanDefinition {
     /// Creates a new `BooleanDefinition` with the specified description.
     pub fn new<S: Into<ShareableString>>(description: S) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             true_description: ShareableString::new("True"),
             false_description: ShareableString::new("False"),
             default_value: ShareableString::new(""),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a new `BooleanDefinition` with the specified description and default value.
     pub fn new_with_default<S: Into<ShareableString>>(description: S, default_value: bool) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             true_description: ShareableString::new("True"),
             false_description: ShareableString::new("False"),
             default_value: ShareableString::new(if default_value { "true" } else { "false" }),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
     }
 
     /// Creates a boolean definition with custom labels and an unevaluated default expression.
@@ -47,12 +55,35 @@ impl BooleanDefinition {
         false_description: S3,
         default_value: S4,
     ) -> Self {
-        Self {
+        let mut s = Self {
             description: description.into(),
             true_description: true_description.into(),
             false_description: false_description.into(),
             default_value: default_value.into(),
-        }
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
+    }
+
+    /// Computes and stores the BLAKE3 hash of this definition.
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        h.update(&[0x01]);
+        h.update(b"BooleanDefinition");
+        h.update(&self.description.current_blake3_hash());
+        h.update(&self.true_description.current_blake3_hash());
+        h.update(&self.false_description.current_blake3_hash());
+        h.update(&self.default_value.current_blake3_hash());
+
+        self.hash = *h.finalize().as_bytes();
+    }
+
+    /// Returns the pre-calculated BLAKE3 hash of the definition.
+    #[must_use]
+    pub const fn hash(&self) -> [u8; 32] {
+        self.hash
     }
 
     /// Returns a reference to the label for the true state.
@@ -90,6 +121,7 @@ impl BooleanDefinition {
             true_description: store.launder(&self.true_description),
             false_description: store.launder(&self.false_description),
             default_value: store.launder(&self.default_value),
+            hash: self.hash,
         }
     }
 
