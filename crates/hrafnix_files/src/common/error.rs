@@ -111,6 +111,28 @@ pub(crate) fn json_serialization_error(path: &Utf8Path, error: serde_json::Error
     )
 }
 
+/// Maps a TOML parse or schema error to a localized diagnostic with parser details.
+pub(crate) fn toml_error(path: &Utf8Path, error: &toml::de::Error) -> Message {
+    Message::new_with_params(
+        MessageLevel::Error,
+        MessageCategory::File,
+        "files_toml_data".into(),
+        HashMap::from([("path".into(), path.as_str().into())]),
+        Some(error.to_string().into()),
+    )
+}
+
+/// Maps a TOML serialization error to a localized diagnostic.
+pub(crate) fn toml_serialization_error(path: &Utf8Path, error: &toml::ser::Error) -> Message {
+    Message::new_with_params(
+        MessageLevel::Error,
+        MessageCategory::File,
+        "files_toml_serialization".into(),
+        HashMap::from([("path".into(), path.as_str().into())]),
+        Some(error.to_string().into()),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -258,6 +280,36 @@ mod tests {
             json_serialization_error(path, serde_json::Error::io(error)),
             expected
         );
+    }
+
+    #[test]
+    fn toml_diagnostics_preserve_details_and_translate_everywhere() {
+        let path = Utf8Path::new("hrafnix.toml");
+        let parse_error = toml::from_str::<u32>("}").unwrap_err();
+        let serialization_error =
+            <toml::ser::Error as serde::ser::Error>::custom("unrepresentable value");
+        let cases = [
+            (
+                toml_error(path, &parse_error),
+                "files_toml_data",
+                parse_error.to_string(),
+                "'hrafnix.toml': Invalid TOML or data does not match the expected structure",
+            ),
+            (
+                toml_serialization_error(path, &serialization_error),
+                "files_toml_serialization",
+                serialization_error.to_string(),
+                "'hrafnix.toml': Data could not be serialized as TOML",
+            ),
+        ];
+        for (message, key, details, english) in cases {
+            assert_eq!(message.level(), MessageLevel::Error);
+            assert_eq!(message.category(), MessageCategory::File);
+            assert_eq!(message.translate_data().message_key().as_str(), key);
+            assert_eq!(param(&message, "path"), Some(path.as_str()));
+            assert_eq!(message.extra_detail().unwrap().as_str(), details);
+            assert_translates_everywhere(&message, english);
+        }
     }
 
     #[test]

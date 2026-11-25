@@ -20,6 +20,7 @@ hotpath = { workspace = true, optional = true }
 camino.workspace = true
 serde.workspace = true
 serde_json = { workspace = true, features = ["float_roundtrip"] }
+toml.workspace = true
 hrafnix_common.workspace = true
 hrafnix_datastore.workspace = true
 hrafnix_keys.workspace = true

@@ -6,7 +6,22 @@ edition.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[features]
+default = []
+diagnostics = []
+
 [dependencies]
+camino = { workspace = true }
+parking_lot = { workspace = true }
+rustc-hash = { workspace = true }
+
+hrafnix_common = { workspace = true }
+hrafnix_datastore = { workspace = true }
+hrafnix_files = { workspace = true }
+hrafnix_keys = { workspace = true }
+hrafnix_message = { workspace = true }
+hrafnix_shareable_string = { workspace = true }
+hrafnix_translation = { workspace = true }
 
 [lints]
 workspace = true

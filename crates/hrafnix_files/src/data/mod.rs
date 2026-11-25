@@ -21,6 +21,8 @@ pub mod metadata_general;
 pub mod metadata_gui;
 /// Simulation model definitions and their data hashes.
 pub mod model;
+/// Project manifest metadata.
+pub mod project;
 /// Component source references and package provenance.
 pub mod source;
 /// Source languages and translated text shared by model and component files.

@@ -6,7 +6,14 @@ use std::collections::{BTreeSet, HashMap};
 
 const LANGUAGES: [&str; 7] = ["en", "zh", "de", "es", "fr", "ja", "ko"];
 
-const TRANSLATION_KEYS: [&str; 186] = [
+const TRANSLATION_KEYS: [&str; 193] = [
+    "design_builtin_not_found",
+    "design_package_not_registered",
+    "design_component_not_found",
+    "design_component_source_mismatch",
+    "files_io_created_sync_failed",
+    "files_toml_data",
+    "files_toml_serialization",
     "files_io_replaced_sync_failed",
     "files_io_error",
     "files_io_not_found",

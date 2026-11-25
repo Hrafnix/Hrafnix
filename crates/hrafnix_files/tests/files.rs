@@ -1,4 +1,4 @@
-//! Integration tests for public model and component file APIs.
+//! Integration tests for public project, model, and component file APIs.
 
 #![allow(
     clippy::unwrap_used,
@@ -28,3 +28,5 @@ mod definitions;
 mod hashes;
 #[path = "files/model.rs"]
 mod model;
+#[path = "files/project.rs"]
+mod project;

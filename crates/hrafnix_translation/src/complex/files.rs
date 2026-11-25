@@ -4,6 +4,72 @@ use std::collections::HashMap;
 /// Adds translations for file diagnostics to the provided translation map.
 pub(crate) fn add_files_translation_map(translation_map: &mut SharedStringTranslationMap) {
     translation_map.set_translation_key(
+        "files_io_created_sync_failed",
+        HashMap::from([
+            ("en", "File '%{path}' has been created, but syncing its parent directory failed; persistence across a crash is uncertain"),
+            ("zh", "文件“%{path}”已创建，但其父目录同步失败；无法确定崩溃后数据是否持久保存"),
+            ("de", "Datei '%{path}' wurde erstellt, aber das Synchronisieren des übergeordneten Verzeichnisses ist fehlgeschlagen; die dauerhafte Speicherung bei einem Absturz ist ungewiss"),
+            ("es", "El archivo '%{path}' se ha creado, pero no se pudo sincronizar su directorio padre; no se garantiza la persistencia en caso de fallo"),
+            ("fr", "Le fichier '%{path}' a été créé, mais la synchronisation de son répertoire parent a échoué ; la persistance en cas de panne est incertaine"),
+            ("ja", "ファイル '%{path}' は作成されましたが、親ディレクトリの同期に失敗しました。クラッシュ後のデータ保持は保証できません"),
+            ("ko", "파일 '%{path}'이(가) 생성되었지만 상위 디렉터리 동기화에 실패했습니다. 충돌 후 데이터 보존은 확실하지 않습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_toml_data",
+        HashMap::from([
+            (
+                "en",
+                "'%{path}': Invalid TOML or data does not match the expected structure",
+            ),
+            ("zh", "“%{path}”：TOML 无效或数据与预期结构不匹配"),
+            (
+                "de",
+                "'%{path}': Ungültiges TOML oder Daten entsprechen nicht der erwarteten Struktur",
+            ),
+            (
+                "es",
+                "'%{path}': TOML no válido o los datos no coinciden con la estructura esperada",
+            ),
+            (
+                "fr",
+                "'%{path}' : TOML invalide ou données non conformes à la structure attendue",
+            ),
+            (
+                "ja",
+                "'%{path}': TOML が無効か、データが期待される構造と一致しません",
+            ),
+            (
+                "ko",
+                "'%{path}': TOML이 유효하지 않거나 데이터가 예상 구조와 일치하지 않습니다",
+            ),
+        ]),
+    );
+    translation_map.set_translation_key(
+        "files_toml_serialization",
+        HashMap::from([
+            ("en", "'%{path}': Data could not be serialized as TOML"),
+            ("zh", "“%{path}”：无法将数据序列化为 TOML"),
+            (
+                "de",
+                "'%{path}': Daten konnten nicht als TOML serialisiert werden",
+            ),
+            (
+                "es",
+                "'%{path}': No se pudieron serializar los datos como TOML",
+            ),
+            (
+                "fr",
+                "'%{path}' : Les données n’ont pas pu être sérialisées en TOML",
+            ),
+            (
+                "ja",
+                "'%{path}': データを TOML としてシリアル化できませんでした",
+            ),
+            ("ko", "'%{path}': 데이터를 TOML로 직렬화할 수 없습니다"),
+        ]),
+    );
+    translation_map.set_translation_key(
         "files_io_replaced_sync_failed",
         HashMap::from([
             ("en", "File '%{path}' has been replaced, but syncing its parent directory failed; persistence across a crash is uncertain"),

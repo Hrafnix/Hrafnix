@@ -1,5 +1,10 @@
 //! Project, model, and component files.
 //!
+//! Project manifests use TOML with a required `[project]` table containing
+//! required string `name` and `version` fields. Unknown fields, duplicate keys,
+//! and positional arrays are rejected. Versions are stored as supplied, without
+//! semantic-version validation. Project writers include a final newline.
+//!
 //! Model and component documents use a string `"file-version"` tag and a named
 //! `"model"` or `"component"` object containing metadata. Version 1 is currently
 //! supported. Readers accept a leading UTF-8 BOM and reject unknown fields.
@@ -65,19 +70,19 @@
 //! (`1234` means `12.34`); decimal and exponent values are rejected.
 //!
 //! File-data constructors are crate-private. Callers obtain data through the readers
-//! and inspect it through public getter accessors.
+//! or [`builder`] and inspect it through public getter accessors.
 //! [`data::source::PackageReference::new`] and [`data::source::PackageVersion::new`]
 //! remain public for reader input.
 //! String-bearing file-data types expose `launder(&mut self, store)` to intern
 //! their strings recursively in place, preserving values, ordering, paths, and hashes.
 //!
-//! The public read and write functions live in [`formats::model`] and
-//! [`formats::component`].
+//! The public read and write functions live in [`formats::project`],
+//! [`formats::model`], and [`formats::component`].
 //! JSON readers and writers live under [`scheme`], with version-1 readers grouped
 //! in [`scheme::reader::v1`] and current-format writers in [`scheme::writer`].
 //! File-version dispatch lives in [`scheme::reader`]; in-memory file-data types
 //! live under [`data`].
-//! Writers consume the file data and atomically replace the destination with
+//! Model and component writers consume the file data and atomically replace the destination with
 //! pretty-printed JSON, without a final newline. Reads and writes are limited to
 //! 256 MiB.
 //! Readers compute `file_hash` from all validated data using field-by-field
@@ -108,9 +113,11 @@
     )
 )]
 
+/// Public builders for constructing validated file data snapshots.
+pub mod builder;
 /// Shared file I/O and localized diagnostics.
 mod common;
-/// In-memory model, component, and nested file-data types.
+/// In-memory project, model, component, and nested file-data types.
 pub mod data;
 /// Public file-format reading and writing.
 pub mod formats;

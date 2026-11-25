@@ -10,6 +10,15 @@ use std::{fs, io};
 /// Maximum file size for reads and writes, in bytes (256 MiB).
 const MAX_FILE_SIZE: u64 = 256 * 1024 * 1024;
 
+/// Whether publishing a complete temporary file may replace an existing destination.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum WriteMode {
+    /// Replace the destination with an atomic rename.
+    Replace,
+    /// Create a previously absent destination with an exclusive hard link.
+    Create,
+}
+
 /// Reads a regular file as UTF-8, rejecting files larger than [`MAX_FILE_SIZE`].
 ///
 /// Checks the path before opening to reject FIFOs, then validates the opened
@@ -118,6 +127,18 @@ pub(crate) fn read_file_to_string(path: &Utf8Path) -> Result<String, Message> {
 /// the destination path. Parent-directory checks precede opening, but concurrent
 /// replacement with a special file can still block the open.
 pub(crate) fn write_string_to_file(contents: &str, path: &Utf8Path) -> Result<(), Message> {
+    write_string(contents, path, WriteMode::Replace)
+}
+
+/// Atomically creates a UTF-8 file without overwriting an existing destination.
+///
+/// Uses a synced temporary file and an exclusive hard link in the same directory.
+pub(crate) fn write_string_to_new_file(contents: &str, path: &Utf8Path) -> Result<(), Message> {
+    write_string(contents, path, WriteMode::Create)
+}
+
+/// Writes a bounded UTF-8 document and publishes it according to `mode`.
+fn write_string(contents: &str, path: &Utf8Path, mode: WriteMode) -> Result<(), Message> {
     if u64::try_from(contents.len()).map_or(true, |length| length > MAX_FILE_SIZE) {
         return Err(Message::new_with_params(
             MessageLevel::Error,
@@ -128,7 +149,9 @@ pub(crate) fn write_string_to_file(contents: &str, path: &Utf8Path) -> Result<()
         ));
     }
 
-    reject_read_only_destination(path)?;
+    if mode == WriteMode::Replace {
+        reject_read_only_destination(path)?;
+    }
 
     #[cfg(unix)]
     let parent_directory =
@@ -137,7 +160,7 @@ pub(crate) fn write_string_to_file(contents: &str, path: &Utf8Path) -> Result<()
     check_parent_directory(path).map_err(|error| file_io_error(path, &error))?;
 
     let (temporary_path, file) = create_temporary_file(path)?;
-    if let Err(error) = write_and_replace(file, &temporary_path, path, contents) {
+    if let Err(error) = write_and_publish(file, &temporary_path, path, contents, mode) {
         // The file handle has been closed, including when writing or syncing failed.
         if let Err(cleanup_error) = fs::remove_file(&temporary_path) {
             return Err(file_io_error(
@@ -151,8 +174,20 @@ pub(crate) fn write_string_to_file(contents: &str, path: &Utf8Path) -> Result<()
         return Err(file_io_error(path, &error));
     }
 
+    if mode == WriteMode::Create {
+        fs::remove_file(&temporary_path).map_err(|error| {
+            file_io_error(
+                path,
+                &io::Error::new(
+                    error.kind(),
+                    format!("file has been created, but temporary file cleanup failed: {error}"),
+                ),
+            )
+        })?;
+    }
+
     #[cfg(unix)]
-    sync_parent_directory(path, &parent_directory)?;
+    sync_parent_directory(path, &parent_directory, mode)?;
 
     Ok(())
 }
@@ -242,14 +277,15 @@ fn temporary_file_mode(path: &Utf8Path) -> u32 {
     }
 }
 
-/// Writes and syncs `contents`, then closes the file and renames it over `path`.
+/// Writes and syncs `contents`, then publishes the closed file at `path`.
 ///
 /// On Unix, regular-file permission bits are copied before writing, without special bits.
-fn write_and_replace(
+fn write_and_publish(
     mut file: File,
     temporary_path: &Utf8Path,
     path: &Utf8Path,
     contents: &str,
+    mode: WriteMode,
 ) -> io::Result<()> {
     #[cfg(unix)]
     {
@@ -267,7 +303,10 @@ fn write_and_replace(
     file.write_all(contents.as_bytes())?;
     sync_best_effort(&file)?;
     drop(file);
-    fs::rename(temporary_path, path)
+    match mode {
+        WriteMode::Replace => fs::rename(temporary_path, path),
+        WriteMode::Create => fs::hard_link(temporary_path, path),
+    }
 }
 
 /// Syncs a file or directory, treating unsupported syncing as best-effort.
@@ -319,14 +358,22 @@ fn open_parent_directory(path: &Utf8Path) -> io::Result<File> {
     Ok(directory)
 }
 
-/// Reports directory-sync failures separately because replacement has already succeeded.
+/// Reports directory-sync failures separately because publication has already succeeded.
 #[cfg(unix)]
-fn sync_parent_directory(path: &Utf8Path, directory: &File) -> Result<(), Message> {
+fn sync_parent_directory(
+    path: &Utf8Path,
+    directory: &File,
+    mode: WriteMode,
+) -> Result<(), Message> {
     sync_best_effort(directory).map_err(|error| {
+        let key = match mode {
+            WriteMode::Replace => "files_io_replaced_sync_failed",
+            WriteMode::Create => "files_io_created_sync_failed",
+        };
         Message::new_with_params(
             MessageLevel::Error,
             MessageCategory::File,
-            "files_io_replaced_sync_failed".into(),
+            key.into(),
             HashMap::from([("path".into(), path.as_str().into())]),
             Some(error.to_string().into()),
         )
@@ -566,6 +613,14 @@ mod tests {
         assert_error_path(&error, &path);
         assert_eq!(directory.entries(), Vec::<String>::new());
 
+        let error = write_string_to_new_file(&contents, &path).unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "files_io_file_too_large"
+        );
+        assert_error_path(&error, &path);
+        assert_eq!(directory.entries(), Vec::<String>::new());
+
         fs::write(&path, "original").unwrap();
         let error = write_string_to_file(&contents, &path).unwrap_err();
         assert_error_path(&error, &path);
@@ -595,13 +650,30 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
+    fn sync_failures_explicitly_report_that_creation_has_committed() {
+        let path = Utf8Path::new("hrafnix.toml");
+        let error =
+            sync_parent_directory(path, &File::open("/dev/null").unwrap(), WriteMode::Create)
+                .unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "files_io_created_sync_failed"
+        );
+        assert_error_path(&error, path);
+        assert!(error.extra_detail().is_some());
+    }
+
+    #[cfg(unix)]
+    #[test]
     fn sync_failures_explicitly_report_that_replacement_has_committed() {
         use hrafnix_shareable_string::SharedStringStore;
         use hrafnix_translation::generate_translation_map;
 
         let path = Utf8Path::new("model.hxm");
         // A device cannot be fsynced, providing a deterministic sync failure.
-        let error = sync_parent_directory(path, &File::open("/dev/null").unwrap()).unwrap_err();
+        let error =
+            sync_parent_directory(path, &File::open("/dev/null").unwrap(), WriteMode::Replace)
+                .unwrap_err();
         assert_eq!(error.level(), MessageLevel::Error);
         assert_eq!(error.category(), MessageCategory::File);
         assert_eq!(

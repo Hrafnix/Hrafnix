@@ -4,6 +4,8 @@
 pub mod component;
 /// Model file reading and writing.
 pub mod model;
+/// Project manifest TOML reading and writing.
+pub mod project;
 
 #[cfg(test)]
 mod tests {
