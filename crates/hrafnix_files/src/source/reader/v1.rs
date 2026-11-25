@@ -1,5 +1,7 @@
-use crate::common::deserialize::{StringTagDeserializer, deserialize_optional_object};
-use crate::source::data::{ComponentSource, PackageReference};
+use crate::common::deserialize::{
+    StringTagDeserializer, deserialize_object, deserialize_optional_object,
+};
+use crate::source::data::{ComponentSource, PackageReference, PackageVersion};
 use serde::{Deserialize, Deserializer};
 
 /// Version 1 source reference selected by a plain-string type tag.
@@ -24,7 +26,7 @@ pub(crate) enum ComponentSourceReaderV1 {
         /// Built-in name.
         name: String,
         /// Built-in version.
-        version: String,
+        version: u32,
     },
 }
 
@@ -43,7 +45,7 @@ impl From<ComponentSourceReaderV1> for ComponentSource {
             },
             ComponentSourceReaderV1::Builtin { name, version } => Self::Builtin {
                 name: name.into(),
-                version: version.into(),
+                version,
             },
         }
     }
@@ -56,11 +58,30 @@ pub(crate) struct PackageReferenceReaderV1 {
     /// Unresolved package name.
     name: String,
     /// Package version.
-    version: String,
+    #[serde(deserialize_with = "deserialize_object")]
+    version: PackageVersionReaderV1,
 }
 
 impl From<PackageReferenceReaderV1> for PackageReference {
     fn from(package: PackageReferenceReaderV1) -> Self {
         Self::new(package.name.into(), package.version.into())
+    }
+}
+
+/// Version 1 package version with required major, minor, and patch integers.
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct PackageVersionReaderV1 {
+    /// Major version component.
+    major: u16,
+    /// Minor version component.
+    minor: u16,
+    /// Patch version component.
+    patch: u16,
+}
+
+impl From<PackageVersionReaderV1> for PackageVersion {
+    fn from(version: PackageVersionReaderV1) -> Self {
+        Self::new(version.major, version.minor, version.patch)
     }
 }

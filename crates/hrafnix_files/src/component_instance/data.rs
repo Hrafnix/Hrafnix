@@ -1,7 +1,7 @@
 use crate::common::hash::instance_interface_hash;
 use crate::graphics::data::Position;
 use crate::metadata_gui::data::GuiMetadata;
-pub use crate::source::data::{ComponentSource, PackageReference};
+pub use crate::source::data::{ComponentSource, PackageReference, PackageVersion};
 use hrafnix_datastore::frozen::ParameterObjectFrozen;
 use hrafnix_keys::ComponentKey;
 

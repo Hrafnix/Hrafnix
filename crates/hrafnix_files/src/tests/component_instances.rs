@@ -5,7 +5,9 @@
 use super::common::{self, TestDirectory};
 
 use crate::component::{data::ComponentFile, read_component_file, write_component_file};
-use crate::component_instance::data::{ComponentInstance, ComponentSource, PackageReference};
+use crate::component_instance::data::{
+    ComponentInstance, ComponentSource, PackageReference, PackageVersion,
+};
 use crate::graphics::data::{Position, Rotation};
 use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
 use crate::model::{data::ModelFile, read_model_file, write_model_file};
@@ -25,7 +27,10 @@ fn instances_json() -> Value {
             "id": "temperature_sensor",
             "source": {
                 "type": "file",
-                "package": {"name": "hrafnix.sensors", "version": "1"},
+                "package": {
+                    "name": "hrafnix.sensors",
+                    "version": {"major": 1, "minor": 2, "patch": 3}
+                },
                 "path": "temperature_sensor.hxc"
             },
             "position": {"x": 150, "y": 0},
@@ -80,7 +85,7 @@ fn instances_json() -> Value {
         },
         {
             "id": "simulation_clock",
-            "source": {"type": "builtin", "name": "builtin.clock", "version": "1"},
+            "source": {"type": "builtin", "name": "builtin.clock", "version": 1},
             "position": {"x": 0, "y": 0},
             "gui_metadata": {
                 "dimensions": {"width": 100, "height": 50},
@@ -193,7 +198,10 @@ fn example_instances_round_trip_with_sources_snapshots_and_order() {
         assert_eq!(
             instances[0].source(),
             &ComponentSource::File {
-                package: Some(PackageReference::new("hrafnix.sensors".into(), "1".into())),
+                package: Some(PackageReference::new(
+                    "hrafnix.sensors".into(),
+                    PackageVersion::new(1, 2, 3),
+                )),
                 path: "temperature_sensor.hxc".into(),
             }
         );
@@ -208,7 +216,7 @@ fn example_instances_round_trip_with_sources_snapshots_and_order() {
             instances[2].source(),
             &ComponentSource::Builtin {
                 name: "builtin.clock".into(),
-                version: "1".into(),
+                version: 1,
             }
         );
         assert_eq!(instances[0].position(), Position::new(150, 0));
@@ -333,11 +341,18 @@ fn package_references_are_strict_objects_and_replace_file_source_versions() {
         let document = document(root, instances_json());
         for package in [
             json!("hrafnix.sensors"),
-            json!(["hrafnix.sensors", "1"]),
+            json!(["hrafnix.sensors", {"major": 1, "minor": 2, "patch": 3}]),
             json!({}),
             json!({"name": "hrafnix.sensors"}),
-            json!({"version": "1"}),
-            json!({"name": "hrafnix.sensors", "version": "1", "unknown": true}),
+            json!({"version": {"major": 1, "minor": 2, "patch": 3}}),
+            json!({"name": "hrafnix.sensors", "version": "1.2.3"}),
+            json!({"name": "hrafnix.sensors", "version": [1, 2, 3]}),
+            json!({"name": "hrafnix.sensors", "version": {}}),
+            json!({"name": "hrafnix.sensors", "version": {"major": 1, "minor": 2}}),
+            json!({"name": "hrafnix.sensors", "version": {"major": 1, "patch": 3}}),
+            json!({"name": "hrafnix.sensors", "version": {"minor": 2, "patch": 3}}),
+            json!({"name": "hrafnix.sensors", "version": {"major": 1, "minor": 2, "patch": 3, "unknown": true}}),
+            json!({"name": "hrafnix.sensors", "version": {"major": 1, "minor": 2, "patch": 3}, "unknown": true}),
         ] {
             let mut invalid = document.clone();
             invalid[root]["components"][0]["source"]["package"] = package;
@@ -352,7 +367,7 @@ fn package_references_are_strict_objects_and_replace_file_source_versions() {
         }
         let mut invalid = document;
         invalid[root]["components"][2]["source"]["package"] =
-            json!({"name": "hrafnix.sensors", "version": "1"});
+            json!({"name": "hrafnix.sensors", "version": {"major": 1, "minor": 2, "patch": 3}});
         assert_rejected(root, &path, &serde_json::to_string(&invalid).unwrap());
     }
 }
@@ -507,7 +522,6 @@ fn identifiers_tags_source_fields_geometry_and_parameters_are_validated() {
         "/components/0/source/path",
         "/components/0/source/package",
         "/components/2/source/name",
-        "/components/2/source/version",
     ] {
         for invalid in [json!(1), json!(true), json!([]), json!({})] {
             invalid_fields.push((pointer, invalid));
@@ -515,6 +529,36 @@ fn identifiers_tags_source_fields_geometry_and_parameters_are_validated() {
         if !pointer.ends_with("/package") {
             invalid_fields.push((pointer, Value::Null));
         }
+    }
+    for pointer in [
+        "/components/0/source/package/version/major",
+        "/components/0/source/package/version/minor",
+        "/components/0/source/package/version/patch",
+    ] {
+        for invalid in [
+            json!(-1),
+            json!(65536),
+            json!(1.0),
+            json!("1"),
+            json!(true),
+            Value::Null,
+            json!([]),
+            json!({}),
+        ] {
+            invalid_fields.push((pointer, invalid));
+        }
+    }
+    for invalid in [
+        json!(-1),
+        json!(4_294_967_296_u64),
+        json!(1.0),
+        json!("1"),
+        json!(true),
+        Value::Null,
+        json!([]),
+        json!({}),
+    ] {
+        invalid_fields.push(("/components/2/source/version", invalid));
     }
     for pointer in ["/components/0/position/x", "/components/0/position/y"] {
         for invalid in [
@@ -634,6 +678,18 @@ fn duplicate_fields_are_rejected_without_losing_raw_json_entries() {
             (format!("/{root}/components/0/source"), "type"),
             (format!("/{root}/components/0/source/package"), "name"),
             (format!("/{root}/components/0/source/package"), "version"),
+            (
+                format!("/{root}/components/0/source/package/version"),
+                "major",
+            ),
+            (
+                format!("/{root}/components/0/source/package/version"),
+                "minor",
+            ),
+            (
+                format!("/{root}/components/0/source/package/version"),
+                "patch",
+            ),
             (format!("/{root}/components/0/source"), "path"),
             (format!("/{root}/components/0/source"), "package"),
             (format!("/{root}/components/2/source"), "name"),
@@ -698,11 +754,11 @@ fn snapshot_expressions_parameter_order_and_unresolved_provenance_are_preserved(
         let mut document = document(root, instances_json());
         document[root]["components"][0]["source"] = json!({
             "type": "file",
-            "package": {"name": "", "version": "future-version"},
+            "package": {"name": "", "version": {"major": u16::MAX, "minor": 0, "patch": 1}},
             "path": "../missing/component.hxc"
         });
         document[root]["components"][2]["source"] = json!({
-            "type": "builtin", "name": "unknown.builtin", "version": "future-version"
+            "type": "builtin", "name": "unknown.builtin", "version": u32::MAX
         });
         document[root]["components"][0]["position"] = json!({"x": i32::MIN, "y": i32::MAX});
         document[root]["components"][0]["parameters"] = json!([

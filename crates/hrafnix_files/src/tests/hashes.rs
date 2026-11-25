@@ -41,7 +41,7 @@ fn document(root: &str) -> Value {
          "dimensions": {"width": 70, "height": 80}, "kind": "Frame"}
     ]);
     data["components"] = json!([
-        {"id": "first", "source": {"type": "builtin", "name": "clock", "version": "1"},
+        {"id": "first", "source": {"type": "builtin", "name": "clock", "version": 1},
          "position": {"x": 7, "y": 8},
          "gui_metadata": {"dimensions": {"width": 100, "height": 50}, "rotation": 0, "icon": "clock.svg",
              "ports": [{"id": "time", "type": "output", "location": {"x": 10, "y": 20}}]},
@@ -53,7 +53,7 @@ fn document(root: &str) -> Value {
               "definition": {"description": "Second", "default": "3", "constraint": {"type": "none"}},
               "value": "4"}]},
         {"id": "second", "source": {"type": "file", "path": "sensor.hxc",
-             "package": {"name": "sensors", "version": "1"}},
+             "package": {"name": "sensors", "version": {"major": 1, "minor": 2, "patch": 3}}},
          "position": {"x": 9, "y": 10},
          "gui_metadata": {"dimensions": {"width": 100, "height": 50}, "rotation": 90, "icon": "", "ports": []},
          "parameters": []}
@@ -176,7 +176,7 @@ fn file_hashes_cover_data_beyond_the_interface() {
             ("/background_decorations/0/dimensions/height", json!(81)),
             ("/components/0/id", json!("other")),
             ("/components/0/source/name", json!("other")),
-            ("/components/0/source/version", json!("2")),
+            ("/components/0/source/version", json!(2)),
             ("/components/0/position/x", json!(-7)),
             ("/components/0/position/y", json!(-8)),
             ("/components/0/gui_metadata/rotation", json!(90)),
@@ -197,7 +197,9 @@ fn file_hashes_cover_data_beyond_the_interface() {
             ("/components/0/parameters/0/definition/default", json!("5")),
             ("/components/1/source/path", json!("other.hxc")),
             ("/components/1/source/package/name", json!("other")),
-            ("/components/1/source/package/version", json!("2")),
+            ("/components/1/source/package/version/major", json!(2)),
+            ("/components/1/source/package/version/minor", json!(3)),
+            ("/components/1/source/package/version/patch", json!(4)),
             ("/connections/0/from_component", json!("other")),
             ("/connections/0/from_port", json!("other")),
             ("/connections/0/to_component", json!("other")),
@@ -319,7 +321,7 @@ fn component_file_hash_includes_loaded_provenance() {
         &first,
         Some(crate::source::data::PackageReference::new(
             "package".into(),
-            "1".into(),
+            crate::source::data::PackageVersion::new(1, 0, 0),
         )),
     )
     .unwrap();

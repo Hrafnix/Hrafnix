@@ -95,7 +95,9 @@ fn update_source_hash(hasher: &mut blake3::Hasher, source: &ComponentSource) {
                 Some(package) => {
                     hasher.update(&[1]);
                     update_string_hash(hasher, package.name().as_str());
-                    update_string_hash(hasher, package.version().as_str());
+                    hasher.update(&package.version().major().to_le_bytes());
+                    hasher.update(&package.version().minor().to_le_bytes());
+                    hasher.update(&package.version().patch().to_le_bytes());
                 }
                 None => {
                     hasher.update(&[0]);
@@ -107,7 +109,7 @@ fn update_source_hash(hasher: &mut blake3::Hasher, source: &ComponentSource) {
             hasher.update(&[1]);
             hasher.update(b"Builtin");
             update_string_hash(hasher, name.as_str());
-            update_string_hash(hasher, version.as_str());
+            hasher.update(&version.to_le_bytes());
         }
     }
 }

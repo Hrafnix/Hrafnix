@@ -1,5 +1,5 @@
 use crate::common::serialize::serialize_shareable_string;
-use crate::source::data::{ComponentSource, PackageReference};
+use crate::source::data::{ComponentSource, PackageReference, PackageVersion};
 use hrafnix_shareable_string::ShareableString;
 use serde::Serialize;
 
@@ -22,8 +22,7 @@ pub(crate) enum ComponentSourceWriter {
         #[serde(serialize_with = "serialize_shareable_string")]
         name: ShareableString,
         /// Built-in version.
-        #[serde(serialize_with = "serialize_shareable_string")]
-        version: ShareableString,
+        version: u32,
     },
 }
 
@@ -36,7 +35,7 @@ impl From<&ComponentSource> for ComponentSourceWriter {
             },
             ComponentSource::Builtin { name, version } => Self::Builtin {
                 name: name.clone(),
-                version: version.clone(),
+                version: *version,
             },
         }
     }
@@ -49,15 +48,35 @@ pub(crate) struct PackageReferenceWriter {
     #[serde(serialize_with = "serialize_shareable_string")]
     name: ShareableString,
     /// Package version.
-    #[serde(serialize_with = "serialize_shareable_string")]
-    version: ShareableString,
+    version: PackageVersionWriter,
 }
 
 impl From<&PackageReference> for PackageReferenceWriter {
     fn from(package: &PackageReference) -> Self {
         Self {
             name: package.name().clone(),
-            version: package.version().clone(),
+            version: package.version().into(),
+        }
+    }
+}
+
+/// Current JSON representation of a package version.
+#[derive(Debug, Serialize)]
+pub(crate) struct PackageVersionWriter {
+    /// Major version component.
+    major: u16,
+    /// Minor version component.
+    minor: u16,
+    /// Patch version component.
+    patch: u16,
+}
+
+impl From<PackageVersion> for PackageVersionWriter {
+    fn from(version: PackageVersion) -> Self {
+        Self {
+            major: version.major(),
+            minor: version.minor(),
+            patch: version.patch(),
         }
     }
 }
