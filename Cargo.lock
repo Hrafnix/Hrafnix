@@ -339,6 +339,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "hrafnix_design"
+version = "0.1.0"
+
+[[package]]
 name = "hrafnix_expression_engine"
 version = "0.1.0"
 dependencies = [
