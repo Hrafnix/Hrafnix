@@ -7,6 +7,9 @@ use super::common::{self, TestDirectory};
 use crate::component::{read_component_file, write_component_file};
 use crate::model::{read_model_file, write_model_file};
 use camino::Utf8Path;
+use hrafnix_datastore::definition::ItemDefinitionType;
+use hrafnix_datastore::frozen::ItemFrozen;
+use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use serde_json::{Value, json};
 use std::fs;
 
@@ -84,6 +87,174 @@ fn document(root: &str) -> Value {
         ]);
     }
     document
+}
+
+/// Checks pointer identity with a string already held by the target store.
+fn assert_interned(value: &ShareableString, store: &SharedStringStore) {
+    assert!(value.ptr_eq(&store.get(value.as_str())), "{value}");
+}
+
+/// Checks the string-bearing sections shared by both document types.
+fn assert_interned_sections(
+    foreground: &[crate::decoration_foreground::data::ForegroundDecoration],
+    background: &[crate::decoration_background::data::BackgroundDecoration],
+    components: &[crate::component_instance::data::ComponentInstance],
+    connections: &[crate::connection::data::Connection],
+    translations: &crate::translations::data::TranslationsFile,
+    store: &SharedStringStore,
+) {
+    use crate::decoration_foreground::data::ForegroundDecorationKind;
+    use crate::source::data::ComponentSource;
+
+    for decoration in foreground {
+        assert_interned(decoration.id(), store);
+        if let ForegroundDecorationKind::Text(text) = decoration.kind() {
+            assert_interned(text.text(), store);
+        }
+    }
+    for decoration in background {
+        assert_interned(decoration.id(), store);
+    }
+    for component in components {
+        assert_interned(component.id().as_shareable_string(), store);
+        match component.source() {
+            ComponentSource::Builtin { name, .. } => assert_interned(name, store),
+            ComponentSource::File { package, .. } => {
+                if let Some(package) = package {
+                    assert_interned(package.name(), store);
+                }
+            }
+        }
+        for port in component.gui_metadata().ports() {
+            assert_interned(port.id().as_shareable_string(), store);
+        }
+        for (key, value) in component.parameters().iter() {
+            assert_interned(key.as_shareable_string(), store);
+            assert_interned_number(value, store);
+        }
+    }
+    for connection in connections {
+        assert_interned(connection.from_component().as_shareable_string(), store);
+        assert_interned(connection.to_component().as_shareable_string(), store);
+        assert_interned(connection.from_port().as_shareable_string(), store);
+        assert_interned(connection.to_port().as_shareable_string(), store);
+    }
+    assert_interned(translations.language(), store);
+    for (text, translations) in translations.translations() {
+        assert_interned(text, store);
+        for (language, translation) in translations {
+            assert_interned(language, store);
+            assert_interned(translation, store);
+        }
+    }
+}
+
+/// Checks the numeric frozen values and embedded definitions used by this fixture.
+fn assert_interned_number(value: &ItemFrozen, store: &SharedStringStore) {
+    let ItemFrozen::Number(value) = value else {
+        panic!("expected a numeric fixture value");
+    };
+    assert_interned(&value.value(), store);
+    assert_interned(value.definition().description_ref(), store);
+    assert_interned(value.definition().default_value_ref(), store);
+}
+
+#[test]
+fn laundering_recursively_interns_strings_and_preserves_file_data() {
+    for root in ["model", "component"] {
+        let directory = TestDirectory::new();
+        let path = directory.path.join("launder.json");
+        let document = document(root);
+        let text = serde_json::to_string(&document).unwrap();
+        fs::write(&path, &text).unwrap();
+        let store = SharedStringStore::new();
+        // Populate a distinct store before reading, so unchanged allocations fail pointer checks.
+        for token in text.split('"') {
+            store.get(token);
+        }
+
+        let (metadata, parameter_definition, variable_definition) = if root == "model" {
+            let original = read_model_file(&path).unwrap();
+            let file = original.launder(&store);
+            assert_eq!(file, original);
+            assert_eq!(file.launder(&store), file);
+            assert_eq!(file.file_hash(), original.file_hash());
+            assert!(
+                !original
+                    .metadata()
+                    .display_name()
+                    .ptr_eq(file.metadata().display_name())
+            );
+            assert_interned_sections(
+                file.foreground_decorations(),
+                file.background_decorations(),
+                file.components(),
+                file.connections(),
+                file.translations(),
+                &store,
+            );
+            for (key, value) in file.global_settings().iter() {
+                assert_interned(key.as_shareable_string(), &store);
+                assert_interned_number(value, &store);
+            }
+            (
+                file.metadata().clone(),
+                file.parameter_definition().clone(),
+                file.variable_definition().clone(),
+            )
+        } else {
+            let package = crate::source::data::PackageReference::new(
+                ShareableString::new("sensors"),
+                crate::source::data::PackageVersion::new(1, 2, 3),
+            );
+            let original = read_component_file(&path, Some(package)).unwrap();
+            let file = original.launder(&store);
+            assert_eq!(file, original);
+            assert_eq!(file.launder(&store), file);
+            assert_eq!(file.file_hash(), original.file_hash());
+            assert_eq!(file.interface_hash(), original.interface_hash());
+            assert_interned_sections(
+                file.foreground_decorations(),
+                file.background_decorations(),
+                file.components(),
+                file.connections(),
+                file.translations(),
+                &store,
+            );
+            let crate::source::data::ComponentSource::File {
+                package: Some(package),
+                ..
+            } = file.source()
+            else {
+                panic!("expected packaged source");
+            };
+            assert_interned(package.name(), &store);
+            (
+                file.metadata().clone(),
+                file.parameter_definition().clone(),
+                file.variable_definition().clone(),
+            )
+        };
+        assert_interned(metadata.display_name(), &store);
+        assert_interned(metadata.description(), &store);
+        assert_interned(metadata.author(), &store);
+        for (key, definition) in parameter_definition.iter() {
+            assert_interned(key.as_shareable_string(), &store);
+            let ItemDefinitionType::Number(definition) = definition else {
+                panic!("expected numeric fixture definition");
+            };
+            assert_interned(definition.description_ref(), &store);
+            assert_interned(definition.default_value_ref(), &store);
+        }
+        for (key, definition) in variable_definition.iter() {
+            assert_interned(key.as_shareable_string(), &store);
+            let ItemDefinitionType::Number(definition) = definition else {
+                panic!("expected numeric fixture definition");
+            };
+            assert_interned(definition.description_ref(), &store);
+            assert_interned(definition.default_value_ref(), &store);
+        }
+    }
 }
 
 #[test]

@@ -1,5 +1,5 @@
 use camino::Utf8PathBuf;
-use hrafnix_shareable_string::ShareableString;
+use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 
 /// Provenance of a component instance, stored without resolving its source.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,6 +18,23 @@ pub enum ComponentSource {
         /// Built-in component version.
         version: u32,
     },
+}
+
+impl ComponentSource {
+    /// Returns a copy whose strings are interned in `store`.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        match self {
+            Self::File { package, path } => Self::File {
+                package: package.as_ref().map(|package| package.launder(store)),
+                path: path.clone(),
+            },
+            Self::Builtin { name, version } => Self::Builtin {
+                name: store.launder(name),
+                version: *version,
+            },
+        }
+    }
 }
 
 /// A semantic package version with major, minor, and patch components.
@@ -87,5 +104,14 @@ impl PackageReference {
     #[must_use]
     pub const fn version(&self) -> PackageVersion {
         self.version
+    }
+
+    /// Returns a copy whose strings are interned in `store`.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        Self {
+            name: store.launder(&self.name),
+            version: self.version,
+        }
     }
 }

@@ -2,6 +2,7 @@ use crate::graphics::data::{Dimension, Rotation};
 use camino::{Utf8Path, Utf8PathBuf};
 use hrafnix_common::port::PortType;
 use hrafnix_keys::PortKey;
+use hrafnix_shareable_string::SharedStringStore;
 
 /// Drawing dimensions, rotation, icon, and port locations associated with a component.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -56,6 +57,17 @@ impl GuiMetadata {
     pub fn ports(&self) -> &[Port] {
         &self.ports
     }
+
+    /// Returns a copy whose strings are interned in `store`.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        Self {
+            dimensions: self.dimensions,
+            rotation: self.rotation,
+            icon: self.icon.clone(),
+            ports: self.ports.iter().map(|port| port.launder(store)).collect(),
+        }
+    }
 }
 
 /// A connection placed on a component's icon.
@@ -97,6 +109,16 @@ impl Port {
     #[must_use]
     pub const fn location(&self) -> PortLocation {
         self.location
+    }
+
+    /// Returns a copy whose strings are interned in `store`.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        Self {
+            id: self.id.launder(store),
+            port_type: self.port_type,
+            location: self.location,
+        }
     }
 }
 

@@ -8,6 +8,7 @@ use crate::metadata_gui::data::GuiMetadata;
 use crate::source::data::ComponentSource;
 use crate::translations::data::TranslationsFile;
 use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
+use hrafnix_shareable_string::SharedStringStore;
 
 /// Represents User component data from a Hrafnix component file.
 #[derive(Debug, Clone)]
@@ -144,6 +145,41 @@ impl ComponentFile {
     #[must_use]
     pub const fn interface_hash(&self) -> [u8; 32] {
         self.interface_hash
+    }
+
+    /// Returns a copy whose nested strings are interned in `store`, preserving its hashes.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        Self {
+            metadata: self.metadata.launder(store),
+            source: self.source.launder(store),
+            gui_metadata: self.gui_metadata.launder(store),
+            foreground_decorations: self
+                .foreground_decorations
+                .iter()
+                .map(|decoration| decoration.launder(store))
+                .collect(),
+            background_decorations: self
+                .background_decorations
+                .iter()
+                .map(|decoration| decoration.launder(store))
+                .collect(),
+            components: self
+                .components
+                .iter()
+                .map(|component| component.launder(store))
+                .collect(),
+            connections: self
+                .connections
+                .iter()
+                .map(|connection| connection.launder(store))
+                .collect(),
+            translations: self.translations.launder(store),
+            parameter_definition: self.parameter_definition.launder(store),
+            variable_definition: self.variable_definition.launder(store),
+            file_hash: self.file_hash,
+            interface_hash: self.interface_hash,
+        }
     }
 }
 

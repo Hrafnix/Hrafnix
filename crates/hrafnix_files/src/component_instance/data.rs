@@ -4,6 +4,7 @@ use crate::metadata_gui::data::GuiMetadata;
 pub use crate::source::data::{ComponentSource, PackageReference, PackageVersion};
 use hrafnix_datastore::frozen::ParameterObjectFrozen;
 use hrafnix_keys::ComponentKey;
+use hrafnix_shareable_string::SharedStringStore;
 
 /// A saved instance of a file-defined or built-in component.
 #[derive(Debug, Clone)]
@@ -78,6 +79,19 @@ impl ComponentInstance {
     #[must_use]
     pub const fn interface_hash(&self) -> [u8; 32] {
         self.interface_hash
+    }
+
+    /// Returns a copy whose nested strings are interned in `store`, preserving its hash.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        Self {
+            id: self.id.launder(store),
+            source: self.source.launder(store),
+            position: self.position,
+            gui_metadata: self.gui_metadata.launder(store),
+            parameters: self.parameters.launder(store),
+            interface_hash: self.interface_hash,
+        }
     }
 }
 

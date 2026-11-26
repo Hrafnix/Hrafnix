@@ -1,5 +1,6 @@
 use crate::graphics::data::Position;
 use hrafnix_keys::{ComponentKey, PortKey};
+use hrafnix_shareable_string::SharedStringStore;
 
 /// A directed connection between two component ports.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -63,6 +64,18 @@ impl Connection {
     #[must_use]
     pub const fn line(&self) -> &ConnectionLine {
         &self.line
+    }
+
+    /// Returns a copy whose strings are interned in `store`.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        Self {
+            from_component: self.from_component.launder(store),
+            from_port: self.from_port.launder(store),
+            to_component: self.to_component.launder(store),
+            to_port: self.to_port.launder(store),
+            line: self.line.clone(),
+        }
     }
 }
 

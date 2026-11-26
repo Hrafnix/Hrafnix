@@ -1,6 +1,6 @@
 use crate::graphics::data::{Dimension, FontSize, Position};
 use camino::{Utf8Path, Utf8PathBuf};
-use hrafnix_shareable_string::ShareableString;
+use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 
 /// Text or an image in front of a model's or component's contents.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +55,17 @@ impl ForegroundDecoration {
     pub const fn kind(&self) -> &ForegroundDecorationKind {
         &self.kind
     }
+
+    /// Returns a copy whose strings are interned in `store`.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        Self {
+            id: store.launder(&self.id),
+            position: self.position,
+            dimensions: self.dimensions,
+            kind: self.kind.launder(store),
+        }
+    }
 }
 
 /// The content allowed in a foreground layer.
@@ -64,6 +75,17 @@ pub enum ForegroundDecorationKind {
     Text(TextDecoration),
     /// An image displayed within the decoration's bounds.
     Image(ImageDecoration),
+}
+
+impl ForegroundDecorationKind {
+    /// Returns a copy whose strings are interned in `store`.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        match self {
+            Self::Text(text) => Self::Text(text.launder(store)),
+            Self::Image(image) => Self::Image(image.clone()),
+        }
+    }
 }
 
 /// Text content and styling for a foreground decoration.
@@ -92,6 +114,15 @@ impl TextDecoration {
     #[must_use]
     pub const fn font_size(&self) -> FontSize {
         self.font_size
+    }
+
+    /// Returns a copy whose strings are interned in `store`.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        Self {
+            text: store.launder(&self.text),
+            font_size: self.font_size,
+        }
     }
 }
 

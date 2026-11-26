@@ -7,6 +7,7 @@ use crate::metadata_general::data::MetadataFile;
 use crate::translations::data::TranslationsFile;
 use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
 use hrafnix_datastore::frozen::GlobalObjectFrozen;
+use hrafnix_shareable_string::SharedStringStore;
 
 /// Represents User Model data from a Hrafnix model file.
 #[derive(Debug, Clone)]
@@ -122,6 +123,39 @@ impl ModelFile {
     #[must_use]
     pub const fn file_hash(&self) -> [u8; 32] {
         self.file_hash
+    }
+
+    /// Returns a copy whose nested strings are interned in `store`, preserving its hash.
+    #[must_use]
+    pub fn launder(&self, store: &SharedStringStore) -> Self {
+        Self {
+            metadata: self.metadata.launder(store),
+            foreground_decorations: self
+                .foreground_decorations
+                .iter()
+                .map(|decoration| decoration.launder(store))
+                .collect(),
+            background_decorations: self
+                .background_decorations
+                .iter()
+                .map(|decoration| decoration.launder(store))
+                .collect(),
+            global_settings: self.global_settings.launder(store),
+            components: self
+                .components
+                .iter()
+                .map(|component| component.launder(store))
+                .collect(),
+            connections: self
+                .connections
+                .iter()
+                .map(|connection| connection.launder(store))
+                .collect(),
+            translations: self.translations.launder(store),
+            parameter_definition: self.parameter_definition.launder(store),
+            variable_definition: self.variable_definition.launder(store),
+            file_hash: self.file_hash,
+        }
     }
 }
 
