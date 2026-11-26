@@ -1,4 +1,4 @@
-use hrafnix_shareable_string::ShareableString;
+use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use std::collections::BTreeMap;
 
 /// Source language and translated text shared by model and component files.
@@ -35,5 +35,24 @@ impl TranslationsFile {
         &self,
     ) -> &BTreeMap<ShareableString, BTreeMap<ShareableString, ShareableString>> {
         &self.translations
+    }
+
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.language = store.launder(&self.language);
+        self.translations = std::mem::take(&mut self.translations)
+            .into_iter()
+            .map(|(text, translations)| {
+                (
+                    store.launder(text),
+                    translations
+                        .into_iter()
+                        .map(|(language, translation)| {
+                            (store.launder(language), store.launder(translation))
+                        })
+                        .collect(),
+                )
+            })
+            .collect();
     }
 }

@@ -104,16 +104,17 @@ impl MapItemDefault {
         }
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    fn launder(&self, store: &SharedStringStore) -> Self {
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    fn launder(&mut self, store: &SharedStringStore) {
         match self {
-            Self::Scalar(value) => Self::Scalar(store.launder(value)),
-            Self::Table(rows) => Self::Table(
-                rows.iter()
-                    .map(|row| row.iter().map(|value| store.launder(value)).collect())
-                    .collect(),
-            ),
+            Self::Scalar(value) => *value = store.launder(&*value),
+            Self::Table(rows) => {
+                for row in rows {
+                    for value in row {
+                        *value = store.launder(&*value);
+                    }
+                }
+            }
         }
     }
 }
@@ -218,23 +219,6 @@ impl MapItemDefinition {
         }
     }
 
-    /// Returns a new `MapItemDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        match self {
-            Self::Boolean(def) => Self::Boolean(def.launder(store)),
-            Self::Choice(def) => Self::Choice(def.launder(store)),
-            Self::File(def) => Self::File(def.launder(store)),
-            Self::Integer(def) => Self::Integer(def.launder(store)),
-            Self::Number(def) => Self::Number(def.launder(store)),
-            Self::NumberWithUnits(def) => Self::NumberWithUnits(def.launder(store)),
-            Self::String(def) => Self::String(def.launder(store)),
-            Self::Table(def) => Self::Table(def.launder(store)),
-            Self::TableWithUnits(def) => Self::TableWithUnits(def.launder(store)),
-            Self::Unit(def) => Self::Unit(def.launder(store)),
-        }
-    }
-
     /// Returns true if values of `other` can safely replace values of `self` during a merge.
     ///
     /// Descriptions and defaults are ignored; the variant must match and its structure must be merge compatible.
@@ -252,6 +236,22 @@ impl MapItemDefinition {
             (Self::TableWithUnits(a), Self::TableWithUnits(b)) => a.is_merge_compatible(b),
             (Self::Unit(a), Self::Unit(b)) => a.is_merge_compatible(b),
             _ => false,
+        }
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        match self {
+            Self::Boolean(def) => def.launder(store),
+            Self::Choice(def) => def.launder(store),
+            Self::File(def) => def.launder(store),
+            Self::Integer(def) => def.launder(store),
+            Self::Number(def) => def.launder(store),
+            Self::NumberWithUnits(def) => def.launder(store),
+            Self::String(def) => def.launder(store),
+            Self::Table(def) => def.launder(store),
+            Self::TableWithUnits(def) => def.launder(store),
+            Self::Unit(def) => def.launder(store),
         }
     }
 }
@@ -487,33 +487,6 @@ impl MapDefinition {
         &self.description
     }
 
-    /// Returns a new `MapDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            description: store.launder(&self.description),
-            item_type: Arc::new(
-                self.item_type
-                    .iter()
-                    .map(|(k, v)| (k.launder(store), v.launder(store)))
-                    .collect(),
-            ),
-            ordered_keys: self.ordered_keys.iter().map(|k| k.launder(store)).collect(),
-            default_map: self.default_map.as_ref().map(|entries| {
-                entries
-                    .iter()
-                    .map(|(entry_key, entry)| {
-                        (
-                            entry_key.launder(store),
-                            entry.iter().map(|value| value.launder(store)).collect(),
-                        )
-                    })
-                    .collect()
-            }),
-            hash: self.hash,
-        }
-    }
-
     /// Returns true if values of `other` can safely replace values of `self` during a merge.
     ///
     /// Descriptions and defaults are ignored; entry items must match in order and be merge compatible.
@@ -524,6 +497,35 @@ impl MapDefinition {
                 .iter()
                 .zip(other.iter())
                 .all(|((_, a), (_, b))| a.is_merge_compatible(b))
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.description = store.launder(&self.description);
+        for value in &mut self.ordered_keys {
+            value.launder(store);
+        }
+        let item_type = Arc::make_mut(&mut self.item_type);
+        *item_type = std::mem::take(item_type)
+            .into_iter()
+            .map(|(mut key, mut value)| {
+                key.launder(store);
+                value.launder(store);
+                (key, value)
+            })
+            .collect();
+        if let Some(entries) = &mut self.default_map {
+            *entries = std::mem::take(entries)
+                .into_iter()
+                .map(|(mut key, mut entry)| {
+                    key.launder(store);
+                    for value in &mut entry {
+                        value.launder(store);
+                    }
+                    (key, entry)
+                })
+                .collect();
+        }
     }
 }
 

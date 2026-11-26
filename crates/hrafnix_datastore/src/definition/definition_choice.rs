@@ -62,14 +62,10 @@ impl ChoiceItemDefinition {
         &self.description
     }
 
-    /// Returns a new `ChoiceItemDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            id: self.id.launder(store),
-            description: store.launder(&self.description),
-            hash: self.hash,
-        }
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.id.launder(store);
+        self.description = store.launder(&self.description);
     }
 }
 
@@ -187,21 +183,6 @@ impl ChoiceDefinition {
             .collect()
     }
 
-    /// Returns a new `ChoiceDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            description: store.launder(&self.description),
-            choices: self
-                .choices
-                .iter()
-                .map(|choice| choice.launder(store))
-                .collect(),
-            default_value: store.launder(&self.default_value),
-            hash: self.hash,
-        }
-    }
-
     /// Returns the description of the parameter.
     #[must_use]
     pub fn description(&self) -> ShareableString {
@@ -238,6 +219,15 @@ impl ChoiceDefinition {
                 .collect::<std::collections::BTreeSet<_>>()
         };
         ids(self) == ids(other)
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.description = store.launder(&self.description);
+        for value in &mut self.choices {
+            value.launder(store);
+        }
+        self.default_value = store.launder(&self.default_value);
     }
 }
 

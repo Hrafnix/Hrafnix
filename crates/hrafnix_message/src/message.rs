@@ -174,25 +174,6 @@ impl Message {
         self.category
     }
 
-    /// Returns the translation message associated with this message.
-    #[must_use]
-    pub fn launder(&self, store: &hrafnix_shareable_string::SharedStringStore) -> Self {
-        Self {
-            object_path: self
-                .object_path
-                .as_deref()
-                .map(|path| Box::new(path.launder(store))),
-            item_path: self
-                .item_path
-                .as_deref()
-                .map(|path| Box::new(path.launder(store))),
-            level: self.level,
-            category: self.category,
-            translate_data: Box::new(self.translate_data.launder(store)),
-            extra_detail: self.extra_detail.as_ref().map(|d| store.launder(d)),
-        }
-    }
-
     /// Translates the message using the provided translation map and language.
     #[must_use]
     pub fn translated_message(
@@ -235,5 +216,86 @@ impl Message {
                         | MessageLevel::Error
                 )
         )
+    }
+
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &hrafnix_shareable_string::SharedStringStore) {
+        if let Some(path) = &mut self.object_path {
+            path.launder(store);
+        }
+        if let Some(path) = &mut self.item_path {
+            path.launder(store);
+        }
+        self.translate_data.launder(store);
+        if let Some(detail) = &mut self.extra_detail {
+            *detail = store.launder(&*detail);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_shareable_string::SharedStringStore;
+
+    #[test]
+    fn laundering_interns_message_paths_parameters_and_detail_in_place() {
+        let store = SharedStringStore::new();
+        for text in [
+            "message",
+            "parameter",
+            "value",
+            "detail",
+            "object",
+            "item",
+            "segment",
+        ] {
+            store.get(text);
+        }
+        let mut message = Message::new_with_params(
+            MessageLevel::Error,
+            MessageCategory::Datastore,
+            ShareableString::new("message"),
+            HashMap::from([(
+                ShareableString::new("parameter"),
+                ShareableString::new("value"),
+            )]),
+            Some(ShareableString::new("detail")),
+        );
+        message.override_object_path(Some(Path::new("object").with_segment("segment")));
+        message.override_item_path(Some(Path::new("item").with_segment("segment")));
+        let original = message.clone();
+        message.launder(&store);
+        assert_eq!(message, original);
+        assert!(
+            message
+                .translate_data()
+                .message_key()
+                .ptr_eq(&store.get("message"))
+        );
+        for (key, value) in message.translate_data().message_params() {
+            assert!(key.ptr_eq(&store.get("parameter")));
+            assert!(value.ptr_eq(&store.get("value")));
+        }
+        assert!(message.extra_detail().unwrap().ptr_eq(&store.get("detail")));
+        for path in [message.object_path().unwrap(), message.item_path().unwrap()] {
+            assert!(path.object_key().ptr_eq(&store.get(path.object_key())));
+            for segment in path.segments() {
+                assert!(segment.ptr_eq(&store.get("segment")));
+            }
+        }
+        assert!(
+            !original
+                .translate_data()
+                .message_key()
+                .ptr_eq(&store.get("message"))
+        );
+        message.launder(&store);
+        assert_eq!(message, original);
+
+        let mut empty = Message::error(MessageCategory::File, "message");
+        let original = empty.clone();
+        empty.launder(&store);
+        assert_eq!(empty, original);
     }
 }

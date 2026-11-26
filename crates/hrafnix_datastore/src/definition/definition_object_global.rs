@@ -404,20 +404,21 @@ impl GlobalObjectDefinition {
             .filter_map(move |k| self.items.get(k).map(|v| (k, v)))
     }
 
-    /// Returns a new `GlobalObjectDefinition` with strings laundered through the provided store.
-    #[must_use]
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            ordered_keys: self.ordered_keys.iter().map(|k| k.launder(store)).collect(),
-            items: Arc::new(
-                self.items
-                    .iter()
-                    .map(|(k, v)| (k.launder(store), v.launder(store)))
-                    .collect(),
-            ),
-            hash: self.hash,
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        for value in &mut self.ordered_keys {
+            value.launder(store);
         }
+        let items = Arc::make_mut(&mut self.items);
+        *items = std::mem::take(items)
+            .into_iter()
+            .map(|(mut key, mut value)| {
+                key.launder(store);
+                value.launder(store);
+                (key, value)
+            })
+            .collect();
     }
 }
 

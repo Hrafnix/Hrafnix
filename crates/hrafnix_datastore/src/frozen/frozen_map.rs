@@ -113,23 +113,6 @@ impl MapItemFrozen {
         }
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        match self {
-            Self::Boolean(value) => Self::Boolean(value.launder(store)),
-            Self::Choice(value) => Self::Choice(value.launder(store)),
-            Self::File(value) => Self::File(value.launder(store)),
-            Self::Integer(value) => Self::Integer(value.launder(store)),
-            Self::Number(value) => Self::Number(value.launder(store)),
-            Self::NumberWithUnits(value) => Self::NumberWithUnits(value.launder(store)),
-            Self::String(value) => Self::String(value.launder(store)),
-            Self::Table(value) => Self::Table(value.launder(store)),
-            Self::TableWithUnits(value) => Self::TableWithUnits(value.launder(store)),
-            Self::Unit(value) => Self::Unit(value.launder(store)),
-        }
-    }
-
     /// Returns the string value if this item is a string value.
     #[must_use]
     pub const fn get_string(&self) -> Option<&StringFrozen> {
@@ -281,6 +264,22 @@ impl MapItemFrozen {
             _ => false,
         }
     }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        match self {
+            Self::Boolean(value) => value.launder(store),
+            Self::Choice(value) => value.launder(store),
+            Self::File(value) => value.launder(store),
+            Self::Integer(value) => value.launder(store),
+            Self::Number(value) => value.launder(store),
+            Self::NumberWithUnits(value) => value.launder(store),
+            Self::String(value) => value.launder(store),
+            Self::Table(value) => value.launder(store),
+            Self::TableWithUnits(value) => value.launder(store),
+            Self::Unit(value) => value.launder(store),
+        }
+    }
 }
 
 impl PartialEq<&MapItemFrozen> for MapItemFrozen {
@@ -388,17 +387,6 @@ impl MapEntryFrozen {
         MapEntryEditable::new(self)
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self::new_from_items(
-            self.items
-                .iter()
-                .map(|(key, value)| (key.launder(store), value.launder(store)))
-                .collect(),
-        )
-    }
-
     /// Recomputes and stores the BLAKE3 hash of all items in this map entry.
     fn update_hash(&mut self) {
         let mut h = blake3::Hasher::new();
@@ -483,6 +471,18 @@ impl MapEntryFrozen {
             self.update_hash();
         }
         changed
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.items = std::mem::take(&mut self.items)
+            .into_iter()
+            .map(|(mut key, mut value)| {
+                key.launder(store);
+                value.launder(store);
+                (key, value)
+            })
+            .collect();
     }
 }
 
@@ -621,22 +621,6 @@ impl MapFrozen {
         MapEditable::new(self)
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        let mut map = Self {
-            definition: self.definition.launder(store),
-            items: self
-                .items
-                .iter()
-                .map(|(key, value)| (key.launder(store), value.launder(store)))
-                .collect(),
-            hash: [0u8; 32],
-        };
-        map.update_hash();
-        map
-    }
-
     /// Recomputes and stores the BLAKE3 hash of all entries in this map.
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn update_hash(&mut self) {
@@ -719,6 +703,19 @@ impl MapFrozen {
         self.items = items;
         self.update_hash();
         true
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.definition.launder(store);
+        self.items = std::mem::take(&mut self.items)
+            .into_iter()
+            .map(|(mut key, mut value)| {
+                key.launder(store);
+                value.launder(store);
+                (key, value)
+            })
+            .collect();
     }
 }
 

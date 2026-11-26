@@ -423,7 +423,9 @@ fn test_parameter_object_definition_launder() {
         )
         .finish();
 
-    let laundered = def.launder(&store);
+    let mut laundered = def.clone();
+    laundered.launder(&store);
+    assert_eq!(laundered, def);
     assert_eq!(laundered.count(), 8);
     assert!(laundered.contains("p_p1"));
     assert!(laundered.contains("p_p2"));

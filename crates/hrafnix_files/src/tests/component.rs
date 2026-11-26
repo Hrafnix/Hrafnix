@@ -8,7 +8,7 @@ use super::common::{self, TestDirectory};
 use crate::component::{data::ComponentFile, read_component_file, write_component_file};
 use crate::graphics::data::{Dimension, Rotation};
 use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
-use crate::source::data::{ComponentSource, PackageReference};
+use crate::source::data::{ComponentSource, PackageReference, PackageVersion};
 use camino::Utf8PathBuf;
 use hrafnix_common::port::PortType;
 use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
@@ -60,7 +60,7 @@ fn root_accepts_named_fields_and_rejects_positional_arrays() {
 
 #[test]
 fn package_information_is_preserved_in_component_source() {
-    let package = PackageReference::new("hrafnix.components".into(), "1.2.3".into());
+    let package = PackageReference::new("hrafnix.components".into(), PackageVersion::new(1, 2, 3));
     let component = read_component_file(
         &Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/minimal.hxc"),
         Some(package.clone()),

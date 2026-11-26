@@ -119,16 +119,11 @@ impl Path {
             .unwrap_or_else(|| self.key.clone())
     }
 
-    /// Launders the path using the provided `SharedStringStore`, returning a new `Path` with laundered strings.
-    #[must_use]
-    pub fn launder(&self, store: &hrafnix_shareable_string::SharedStringStore) -> Self {
-        Self {
-            key: store.launder(self.key.clone()),
-            segments: self
-                .segments
-                .iter()
-                .map(|s| store.launder(s.clone()))
-                .collect(),
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &hrafnix_shareable_string::SharedStringStore) {
+        self.key = store.launder(&self.key);
+        for segment in &mut self.segments {
+            *segment = store.launder(&*segment);
         }
     }
 }

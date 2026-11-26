@@ -286,34 +286,6 @@ impl TableWithUnitsDefinition {
         self.default_table.as_deref()
     }
 
-    /// Returns a new `TableWithUnitsDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            description: store.launder(&self.description),
-            columns: Arc::new(
-                self.columns
-                    .iter()
-                    .map(|(id, item)| (id.launder(store), item.launder(store)))
-                    .collect(),
-            ),
-            ordered_keys: self.ordered_keys.iter().map(|k| k.launder(store)).collect(),
-            column_requirements: Arc::new(
-                self.column_requirements
-                    .iter()
-                    .map(|(key, requirement)| (key.launder(store), *requirement))
-                    .collect(),
-            ),
-            default_table: self.default_table.as_ref().map(|table| {
-                table
-                    .iter()
-                    .map(|row| row.iter().map(|cell| store.launder(cell)).collect())
-                    .collect()
-            }),
-            hash: self.hash,
-        }
-    }
-
     /// Returns true if values of `other` can safely replace values of `self` during a merge.
     ///
     /// Descriptions, defaults, and numeric bounds are ignored; column keys must match in
@@ -328,6 +300,38 @@ impl TableWithUnitsDefinition {
                 .iter()
                 .zip(other.iter())
                 .all(|((_, a), (_, b))| a.is_merge_compatible(b))
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.description = store.launder(&self.description);
+        for value in &mut self.ordered_keys {
+            value.launder(store);
+        }
+        let columns = Arc::make_mut(&mut self.columns);
+        *columns = std::mem::take(columns)
+            .into_iter()
+            .map(|(mut key, mut value)| {
+                key.launder(store);
+                value.launder(store);
+                (key, value)
+            })
+            .collect();
+        let column_requirements = Arc::make_mut(&mut self.column_requirements);
+        *column_requirements = std::mem::take(column_requirements)
+            .into_iter()
+            .map(|(mut key, value)| {
+                key.launder(store);
+                (key, value)
+            })
+            .collect();
+        if let Some(rows) = &mut self.default_table {
+            for row in rows {
+                for value in row {
+                    *value = store.launder(&*value);
+                }
+            }
+        }
     }
 }
 

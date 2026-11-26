@@ -64,12 +64,6 @@ impl ChoiceFrozen {
         ChoiceEditable::new(self)
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self::new_with_value(self.definition.launder(store), store.launder(&self.value))
-    }
-
     /// Recomputes and stores the BLAKE3 hash of the current value.
     fn update_hash(&mut self) {
         let mut h = blake3::Hasher::new();
@@ -112,6 +106,12 @@ impl ChoiceFrozen {
         self.value.clone_from(&other.value);
         self.update_hash();
         true
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.definition.launder(store);
+        self.value = store.launder(&self.value);
     }
 }
 

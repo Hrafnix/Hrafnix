@@ -42,12 +42,6 @@ impl SeparatorFrozen {
         SeparatorEditable::new(self)
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self::new(self.definition.launder(store))
-    }
-
     /// Recomputes and stores the BLAKE3 hash.
     fn update_hash(&mut self) {
         let mut h = blake3::Hasher::new();
@@ -78,6 +72,11 @@ impl SeparatorFrozen {
     #[allow(clippy::unused_self)]
     pub(crate) const fn update_value_from(&mut self, _other: &Self) -> bool {
         false
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.definition.launder(store);
     }
 }
 

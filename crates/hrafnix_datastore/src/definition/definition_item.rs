@@ -146,27 +146,6 @@ impl ItemDefinitionType {
         }
     }
 
-    /// Returns a new `ItemDefinitionType` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        match self {
-            Self::Boolean(def) => Self::Boolean(def.launder(store)),
-            Self::Choice(def) => Self::Choice(def.launder(store)),
-            Self::File(def) => Self::File(def.launder(store)),
-            Self::Folder(def) => Self::Folder(def.launder(store)),
-            Self::Integer(def) => Self::Integer(def.launder(store)),
-            Self::Map(def) => Self::Map(def.launder(store)),
-            Self::Number(def) => Self::Number(def.launder(store)),
-            Self::NumberWithUnits(def) => Self::NumberWithUnits(def.launder(store)),
-            Self::String(def) => Self::String(def.launder(store)),
-            Self::Table(def) => Self::Table(def.launder(store)),
-            Self::TableWithUnits(def) => Self::TableWithUnits(def.launder(store)),
-            Self::Unit(def) => Self::Unit(def.launder(store)),
-            Self::Tab(def) => Self::Tab(def.launder(store)),
-            Self::Separator(def) => Self::Separator(def.launder(store)),
-        }
-    }
-
     /// Returns true if values of `other` can safely replace values of `self` during a merge.
     ///
     /// Looser than `==`: descriptions and default values are ignored, and floating-point
@@ -191,6 +170,26 @@ impl ItemDefinitionType {
             (Self::TableWithUnits(a), Self::TableWithUnits(b)) => a.is_merge_compatible(b),
             (Self::Unit(a), Self::Unit(b)) => a.is_merge_compatible(b),
             _ => false,
+        }
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        match self {
+            Self::Boolean(def) => def.launder(store),
+            Self::Choice(def) => def.launder(store),
+            Self::File(def) => def.launder(store),
+            Self::Folder(def) => def.launder(store),
+            Self::Integer(def) => def.launder(store),
+            Self::Map(def) => def.launder(store),
+            Self::Number(def) => def.launder(store),
+            Self::NumberWithUnits(def) => def.launder(store),
+            Self::String(def) => def.launder(store),
+            Self::Table(def) => def.launder(store),
+            Self::TableWithUnits(def) => def.launder(store),
+            Self::Unit(def) => def.launder(store),
+            Self::Tab(def) => def.launder(store),
+            Self::Separator(def) => def.launder(store),
         }
     }
 }

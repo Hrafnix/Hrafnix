@@ -20,7 +20,8 @@
 //! `parameters` array with embedded definitions and frozen expression values.
 //! Its `source` is tagged with `"type": "file"` (string `path`
 //! and optional `package` object with required string `name` and
-//! `version`) or `"type": "builtin"` (string `name` and `version`). File sources
+//! `version` object containing unsigned 16-bit `major`, `minor`, and `patch`
+//! integers) or `"type": "builtin"` (string `name` and unsigned 32-bit `version`). File sources
 //! have no standalone version; loose files omit the package. Source versions,
 //! names and paths are stored unchanged without resolution or
 //! verification. GUI metadata and parameters are saved snapshots, not loaded
@@ -65,7 +66,10 @@
 //!
 //! File-data constructors are crate-private. Callers obtain data through the readers
 //! and inspect it through public getter accessors.
-//! [`source::data::PackageReference::new`] remains public for reader input.
+//! [`source::data::PackageReference::new`] and [`source::data::PackageVersion::new`]
+//! remain public for reader input.
+//! String-bearing file-data types expose `launder(&mut self, store)` to intern
+//! their strings recursively in place, preserving values, ordering, paths, and hashes.
 //!
 //! The public read and write functions live in [`model`] and [`component`].
 //! Writers consume the file data and atomically replace the destination with

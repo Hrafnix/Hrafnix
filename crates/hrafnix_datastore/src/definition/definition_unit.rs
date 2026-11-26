@@ -105,17 +105,6 @@ impl UnitDefinition {
             .collect()
     }
 
-    /// Returns a new `UnitDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            description: store.launder(&self.description),
-            unit_family: self.unit_family,
-            default_value: store.launder(&self.default_value),
-            hash: self.hash,
-        }
-    }
-
     /// Returns the description of the parameter.
     #[must_use]
     pub fn description(&self) -> ShareableString {
@@ -146,6 +135,12 @@ impl UnitDefinition {
     #[must_use]
     pub const fn is_merge_compatible(&self, other: &Self) -> bool {
         self.unit_family.to_u8() == other.unit_family.to_u8()
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.description = store.launder(&self.description);
+        self.default_value = store.launder(&self.default_value);
     }
 }
 

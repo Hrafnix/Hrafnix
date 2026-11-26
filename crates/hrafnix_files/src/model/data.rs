@@ -7,6 +7,7 @@ use crate::metadata_general::data::MetadataFile;
 use crate::translations::data::TranslationsFile;
 use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
 use hrafnix_datastore::frozen::GlobalObjectFrozen;
+use hrafnix_shareable_string::SharedStringStore;
 
 /// Represents User Model data from a Hrafnix model file.
 #[derive(Debug, Clone)]
@@ -122,6 +123,27 @@ impl ModelFile {
     #[must_use]
     pub const fn file_hash(&self) -> [u8; 32] {
         self.file_hash
+    }
+
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.metadata.launder(store);
+        self.global_settings.launder(store);
+        self.translations.launder(store);
+        self.parameter_definition.launder(store);
+        self.variable_definition.launder(store);
+        for value in &mut self.foreground_decorations {
+            value.launder(store);
+        }
+        for value in &mut self.background_decorations {
+            value.launder(store);
+        }
+        for value in &mut self.components {
+            value.launder(store);
+        }
+        for value in &mut self.connections {
+            value.launder(store);
+        }
     }
 }
 

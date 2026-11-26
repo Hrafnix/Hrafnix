@@ -8,6 +8,7 @@ use crate::metadata_gui::data::GuiMetadata;
 use crate::source::data::ComponentSource;
 use crate::translations::data::TranslationsFile;
 use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
+use hrafnix_shareable_string::SharedStringStore;
 
 /// Represents User component data from a Hrafnix component file.
 #[derive(Debug, Clone)]
@@ -144,6 +145,28 @@ impl ComponentFile {
     #[must_use]
     pub const fn interface_hash(&self) -> [u8; 32] {
         self.interface_hash
+    }
+
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.metadata.launder(store);
+        self.source.launder(store);
+        self.gui_metadata.launder(store);
+        self.translations.launder(store);
+        self.parameter_definition.launder(store);
+        self.variable_definition.launder(store);
+        for value in &mut self.foreground_decorations {
+            value.launder(store);
+        }
+        for value in &mut self.background_decorations {
+            value.launder(store);
+        }
+        for value in &mut self.components {
+            value.launder(store);
+        }
+        for value in &mut self.connections {
+            value.launder(store);
+        }
     }
 }
 

@@ -119,7 +119,9 @@ fn column_requirements_are_independent_and_preserved() {
             definition.column_requirement_by_index(1),
             Some(TableColumnRequirement::None)
         );
-        assert_eq!(definition.launder(&SharedStringStore::new()), definition);
+        let mut laundered = definition.clone();
+        laundered.launder(&SharedStringStore::new());
+        assert_eq!(laundered, definition);
         assert_eq!(definition.get("z").unwrap(), original.get("z").unwrap());
         assert_eq!(definition.default_table(), original.default_table());
         assert_eq!(

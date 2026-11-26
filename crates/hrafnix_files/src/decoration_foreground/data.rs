@@ -1,6 +1,6 @@
 use crate::graphics::data::{Dimension, FontSize, Position};
 use camino::{Utf8Path, Utf8PathBuf};
-use hrafnix_shareable_string::ShareableString;
+use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 
 /// Text or an image in front of a model's or component's contents.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +55,12 @@ impl ForegroundDecoration {
     pub const fn kind(&self) -> &ForegroundDecorationKind {
         &self.kind
     }
+
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.id = store.launder(&self.id);
+        self.kind.launder(store);
+    }
 }
 
 /// The content allowed in a foreground layer.
@@ -64,6 +70,16 @@ pub enum ForegroundDecorationKind {
     Text(TextDecoration),
     /// An image displayed within the decoration's bounds.
     Image(ImageDecoration),
+}
+
+impl ForegroundDecorationKind {
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        match self {
+            Self::Text(text) => text.launder(store),
+            Self::Image(_) => {}
+        }
+    }
 }
 
 /// Text content and styling for a foreground decoration.
@@ -92,6 +108,11 @@ impl TextDecoration {
     #[must_use]
     pub const fn font_size(&self) -> FontSize {
         self.font_size
+    }
+
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.text = store.launder(&self.text);
     }
 }
 

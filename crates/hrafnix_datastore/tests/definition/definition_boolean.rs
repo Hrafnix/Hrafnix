@@ -39,7 +39,9 @@ fn test_definition_boolean_with_descriptions_and_default_expression() {
     assert_eq!(definition.descriptions(), vec!["On", "Off"]);
     assert_eq!(definition.ids(), vec!["true", "false"]);
     let store = hrafnix_shareable_string::SharedStringStore::new();
-    assert_eq!(definition.launder(&store), definition);
+    let mut laundered = definition.clone();
+    laundered.launder(&store);
+    assert_eq!(laundered, definition);
 }
 
 #[test]

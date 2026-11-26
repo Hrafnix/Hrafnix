@@ -1,4 +1,4 @@
-use hrafnix_shareable_string::ShareableString;
+use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 
 /// Descriptive information shared by model and component files.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -62,5 +62,12 @@ impl MetadataFile {
     #[must_use]
     pub const fn minimum_version_minor(&self) -> u16 {
         self.minimum_version_minor
+    }
+
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.display_name = store.launder(&self.display_name);
+        self.description = store.launder(&self.description);
+        self.author = store.launder(&self.author);
     }
 }

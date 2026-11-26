@@ -1,5 +1,5 @@
 use crate::graphics::data::{Dimension, Position};
-use hrafnix_shareable_string::ShareableString;
+use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 
 /// A shape behind a model's or component's contents.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,6 +53,11 @@ impl BackgroundDecoration {
     #[must_use]
     pub const fn kind(&self) -> &BackgroundDecorationKind {
         &self.kind
+    }
+
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.id = store.launder(&self.id);
     }
 }
 

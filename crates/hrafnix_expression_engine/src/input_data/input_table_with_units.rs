@@ -58,22 +58,62 @@ impl TableWithUnitsInputData {
         &self.parameter
     }
 
-    /// Returns a new `TableWithUnitsInputData` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &hrafnix_shareable_string::SharedStringStore) -> Self {
-        let laundered_definition = self.definition.launder(store);
-        let laundered_units = self.units.iter().map(|unit| store.launder(unit)).collect();
-        let laundered_data = self
-            .data
-            .iter()
-            .map(|row| row.iter().map(|value| store.launder(value)).collect())
-            .collect();
-
-        Self {
-            definition: laundered_definition,
-            parameter: store.launder(&self.parameter),
-            units: laundered_units,
-            data: laundered_data,
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &hrafnix_shareable_string::SharedStringStore) {
+        self.definition.launder(store);
+        self.parameter = store.launder(&self.parameter);
+        for row in &mut self.data {
+            for value in row {
+                *value = store.launder(&*value);
+            }
         }
+        for unit in &mut self.units {
+            *unit = store.launder(&*unit);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::NumberWithUnitsDefinition;
+    use hrafnix_keys::store_key;
+    use hrafnix_shareable_string::SharedStringStore;
+    use hrafnix_units::UnitId;
+
+    #[test]
+    fn laundering_interns_table_cells_parameter_and_units_in_place() {
+        let store = SharedStringStore::new();
+        for text in ["Table", "Column", "length", "row", "m", "42"] {
+            store.get(text);
+        }
+        let mut data = TableWithUnitsInputData::new(
+            TableWithUnitsDefinition::new(
+                "Table",
+                vec![(
+                    store_key!("length"),
+                    NumberWithUnitsDefinition::new("Column", UnitId::Length_Meter),
+                )],
+            ),
+            ShareableString::new("row"),
+            vec![ShareableString::new("m")],
+            vec![vec![ShareableString::new("42")]],
+        );
+        let original = data.clone();
+        data.launder(&store);
+        assert_eq!(data, original);
+        assert!(data.parameter().ptr_eq(&store.get("row")));
+        assert!(data.units()[0].ptr_eq(&store.get("m")));
+        assert!(data.data()[0][0].ptr_eq(&store.get("42")));
+        assert!(
+            data.definition()
+                .description_ref()
+                .ptr_eq(&store.get("Table"))
+        );
+        for (key, definition) in data.definition().iter() {
+            assert!(key.as_shareable_string().ptr_eq(&store.get("length")));
+            assert!(definition.description_ref().ptr_eq(&store.get("Column")));
+        }
+        assert!(!original.data()[0][0].ptr_eq(&store.get("42")));
     }
 }

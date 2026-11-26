@@ -67,14 +67,20 @@ impl SharedStringStore {
     }
 
     /// Adds a `ShareableString` to the store if it's not already present.
-    pub fn add(&self, string: &ShareableString) {
+    pub fn add<S>(&self, string: S)
+    where
+        S: Into<ShareableString> + AsRef<str>,
+    {
+        // Convert the input into a `ShareableString`.
+        let string = string.into();
+
         // If the string is already in the store, we don't need to do anything.
         // If not, we add it to enable interning for this string in the future.
         // We are taking the assumption that the string is not in the store.
         let mut store = self.string_store.write();
 
         if !store.contains(string.as_str()) {
-            store.insert(string.clone());
+            store.insert(string);
         }
     }
 
@@ -407,7 +413,7 @@ mod tests {
             *h.borrow_mut() = Some(Box::new(move || {
                 // Simulate a concurrent writer inserting the key after our read-lock check
                 // failed but before we acquire the write lock.
-                store_clone.add(&ShareableString::new("race"));
+                store_clone.add("race");
             }));
         });
 

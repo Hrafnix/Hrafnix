@@ -230,17 +230,6 @@ impl IntegerDefinition {
         &self.constraint.constraint_enum
     }
 
-    /// Returns a new `IntegerDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            description: store.launder(&self.description),
-            constraint: self.constraint.clone(),
-            default_value: store.launder(&self.default_value),
-            hash: self.hash,
-        }
-    }
-
     /// Returns the description of the parameter.
     #[must_use]
     pub fn description(&self) -> ShareableString {
@@ -263,6 +252,12 @@ impl IntegerDefinition {
     #[must_use]
     pub const fn default_value_ref(&self) -> &ShareableString {
         &self.default_value
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.description = store.launder(&self.description);
+        self.default_value = store.launder(&self.default_value);
     }
 }
 
