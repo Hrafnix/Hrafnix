@@ -47,13 +47,43 @@ impl BasicInputWithUnitsData {
         &self.units
     }
 
-    /// Returns a new `BasicInputWithUnitsData` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            definition: self.definition.launder(store),
-            data: store.launder(&self.data),
-            units: store.launder(&self.units),
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.definition.launder(store);
+        self.data = store.launder(&self.data);
+        self.units = store.launder(&self.units);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::NumberWithUnitsDefinition;
+    use hrafnix_units::UnitId;
+
+    #[test]
+    fn laundering_interns_values_and_units_in_place() {
+        let store = SharedStringStore::new();
+        let value = store.get("42");
+        let units = store.get("m");
+        let description = store.get("Length");
+        let mut data = BasicInputWithUnitsData::new(
+            BasicDefinition::NumberWithUnits(NumberWithUnitsDefinition::new(
+                "Length",
+                UnitId::Length_Meter,
+            )),
+            ShareableString::new("42"),
+            ShareableString::new("m"),
+        );
+        let original = data.clone();
+        data.launder(&store);
+        assert_eq!(data, original);
+        assert!(data.data().ptr_eq(&value));
+        assert!(data.units().ptr_eq(&units));
+        let BasicDefinition::NumberWithUnits(definition) = data.definition() else {
+            panic!("expected unit-aware definition");
+        };
+        assert!(definition.description_ref().ptr_eq(&description));
+        assert!(!original.data().ptr_eq(&value));
     }
 }

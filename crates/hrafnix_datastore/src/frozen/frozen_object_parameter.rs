@@ -223,24 +223,6 @@ impl ParameterObjectFrozen {
             .filter_map(|key| self.items.get(key).map(|item| (key, item)))
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        let definition = self.definition.launder(store);
-        let items = self
-            .items
-            .iter()
-            .map(|(key, value)| (key.launder(store), value.launder(store)))
-            .collect();
-        let mut s = Self {
-            definition,
-            items,
-            hash: [0u8; 32],
-        };
-        s.update_hash();
-        s
-    }
-
     /// Returns a reference to the object definition.
     #[must_use]
     pub const fn definition(&self) -> &ParameterObjectDefinition {
@@ -266,6 +248,19 @@ impl ParameterObjectFrozen {
         if changed {
             self.update_hash();
         }
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.definition.launder(store);
+        self.items = std::mem::take(&mut self.items)
+            .into_iter()
+            .map(|(mut key, mut value)| {
+                key.launder(store);
+                value.launder(store);
+                (key, value)
+            })
+            .collect();
     }
 }
 

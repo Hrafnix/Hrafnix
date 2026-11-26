@@ -113,18 +113,6 @@ impl BooleanDefinition {
         ]
     }
 
-    /// Returns a new `BooleanDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            description: store.launder(&self.description),
-            true_description: store.launder(&self.true_description),
-            false_description: store.launder(&self.false_description),
-            default_value: store.launder(&self.default_value),
-            hash: self.hash,
-        }
-    }
-
     /// Returns the description of the parameter.
     #[must_use]
     pub fn description(&self) -> ShareableString {
@@ -147,6 +135,14 @@ impl BooleanDefinition {
     #[must_use]
     pub const fn default_value_ref(&self) -> &ShareableString {
         &self.default_value
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.description = store.launder(&self.description);
+        self.true_description = store.launder(&self.true_description);
+        self.false_description = store.launder(&self.false_description);
+        self.default_value = store.launder(&self.default_value);
     }
 }
 

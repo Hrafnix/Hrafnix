@@ -145,21 +145,15 @@ impl UnitKey {
         &self.key
     }
 
-    /// Returns a new `UnitKey` with its string interned through the given `SharedStringStore`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        let laundered_key = store.launder(self.key.clone());
-
-        #[expect(unsafe_code)]
-        unsafe {
-            Self::new_unsafe(laundered_key)
-        }
-    }
-
     /// Returns the BLAKE3 hash of the key.
     #[must_use]
     pub const fn current_blake3_hash(&self) -> [u8; 32] {
         self.key.current_blake3_hash()
+    }
+
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.key = store.launder(&self.key);
     }
 }
 

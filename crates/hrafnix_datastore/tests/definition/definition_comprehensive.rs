@@ -124,7 +124,8 @@ fn test_launder_comprehensive() {
 
     // Test BasicDefinition launder
     let basic_def = StringDefinition::new("Basic");
-    let laundered_basic = basic_def.launder(&store);
+    let mut laundered_basic = basic_def.clone();
+    laundered_basic.launder(&store);
     assert_eq!(laundered_basic.description(), basic_def.description());
 
     // Test TableDefinition launder
@@ -132,7 +133,8 @@ fn test_launder_comprehensive() {
         "Table",
         vec![(store_key!("col"), NumberDefinition::new("C"))],
     );
-    let laundered_table = table_def.launder(&store);
+    let mut laundered_table = table_def.clone();
+    laundered_table.launder(&store);
     assert_eq!(laundered_table.description(), table_def.description());
     assert!(laundered_table.contains_key("col"));
 
@@ -141,7 +143,8 @@ fn test_launder_comprehensive() {
         "Map",
         vec![(store_key!("field"), NumberDefinition::new("F"))],
     );
-    let laundered_map = map_def.launder(&store);
+    let mut laundered_map = map_def.clone();
+    laundered_map.launder(&store);
     assert_eq!(laundered_map.description(), map_def.description());
     assert!(laundered_map.contains_key("field"));
 
@@ -149,7 +152,8 @@ fn test_launder_comprehensive() {
     let obj_def = GlobalObjectDefinition::builder()
         .with(global_key!("g_prop"), basic_def)
         .finish();
-    let laundered_obj = obj_def.launder(&store);
+    let mut laundered_obj = obj_def.clone();
+    laundered_obj.launder(&store);
     assert_eq!(laundered_obj, obj_def);
     assert!(laundered_obj.contains("g_prop"));
 }

@@ -31,12 +31,9 @@ impl BasicInputData {
         &self.data
     }
 
-    /// Returns a new `BasicInputData` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            definition: self.definition.launder(store),
-            data: store.launder(&self.data),
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.definition.launder(store);
+        self.data = store.launder(&self.data);
     }
 }

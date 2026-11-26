@@ -37,26 +37,22 @@ impl TranslationsFile {
         &self.translations
     }
 
-    /// Returns a copy whose strings, including translation keys, are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            language: store.launder(&self.language),
-            translations: self
-                .translations
-                .iter()
-                .map(|(text, translations)| {
-                    (
-                        store.launder(text),
-                        translations
-                            .iter()
-                            .map(|(language, translation)| {
-                                (store.launder(language), store.launder(translation))
-                            })
-                            .collect(),
-                    )
-                })
-                .collect(),
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.language = store.launder(&self.language);
+        self.translations = std::mem::take(&mut self.translations)
+            .into_iter()
+            .map(|(text, translations)| {
+                (
+                    store.launder(text),
+                    translations
+                        .into_iter()
+                        .map(|(language, translation)| {
+                            (store.launder(language), store.launder(translation))
+                        })
+                        .collect(),
+                )
+            })
+            .collect();
     }
 }

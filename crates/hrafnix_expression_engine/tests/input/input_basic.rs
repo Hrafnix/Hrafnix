@@ -124,16 +124,17 @@ fn test_basic_input_data_launder() {
     // Why: Laundering should replace strings with interned instances from the store while
     // preserving the definition and value contents.
     let store = SharedStringStore::new();
-    let data = basic_data_for(ItemFrozen::String(StringFrozen::new_from_editable(
+    let mut data = basic_data_for(ItemFrozen::String(StringFrozen::new_from_editable(
         &StringEditable::new_with_value(
             StringDefinition::new("A string parameter"),
             "hello".into(),
         ),
     )));
 
-    let laundered = data.launder(&store);
+    let original = data.clone();
+    data.launder(&store);
 
-    assert_eq!(laundered.data().as_ref(), "hello");
-    assert_eq!(laundered.definition(), data.definition());
+    assert_eq!(data.data().as_ref(), "hello");
+    assert_eq!(data, original);
     assert!(store.contains("hello"));
 }

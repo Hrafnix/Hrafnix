@@ -175,9 +175,11 @@ fn laundering_recursively_interns_strings_and_preserves_file_data() {
 
         let (metadata, parameter_definition, variable_definition) = if root == "model" {
             let original = read_model_file(&path).unwrap();
-            let file = original.launder(&store);
+            let mut file = original.clone();
+            file.launder(&store);
             assert_eq!(file, original);
-            assert_eq!(file.launder(&store), file);
+            file.launder(&store);
+            assert_eq!(file, original);
             assert_eq!(file.file_hash(), original.file_hash());
             assert!(
                 !original
@@ -208,9 +210,11 @@ fn laundering_recursively_interns_strings_and_preserves_file_data() {
                 crate::source::data::PackageVersion::new(1, 2, 3),
             );
             let original = read_component_file(&path, Some(package)).unwrap();
-            let file = original.launder(&store);
+            let mut file = original.clone();
+            file.launder(&store);
             assert_eq!(file, original);
-            assert_eq!(file.launder(&store), file);
+            file.launder(&store);
+            assert_eq!(file, original);
             assert_eq!(file.file_hash(), original.file_hash());
             assert_eq!(file.interface_hash(), original.interface_hash());
             assert_interned_sections(

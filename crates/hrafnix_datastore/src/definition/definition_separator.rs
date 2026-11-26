@@ -38,15 +38,6 @@ impl SeparatorDefinition {
         self.hash
     }
 
-    /// Returns a new `SeparatorDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            description: store.launder(&self.description),
-            hash: self.hash,
-        }
-    }
-
     /// Returns the description of the parameter.
     #[must_use]
     pub fn description(&self) -> ShareableString {
@@ -57,6 +48,11 @@ impl SeparatorDefinition {
     #[must_use]
     pub const fn description_ref(&self) -> &ShareableString {
         &self.description
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.description = store.launder(&self.description);
     }
 }
 

@@ -49,7 +49,9 @@ fn table_frozen_from_rows_normalizes_row_widths() {
         assert_eq!(table, expected);
         assert_eq!(table.hash(), expected.hash());
         assert_eq!(table.thaw().freeze(), table);
-        assert_eq!(table.launder(&SharedStringStore::new()), table);
+        let mut laundered = table.clone();
+        laundered.launder(&SharedStringStore::new());
+        assert_eq!(laundered, table);
         assert_eq!(
             TableFrozen::new_from_rows(definition, vec![]).row_count(),
             0

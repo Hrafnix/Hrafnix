@@ -92,13 +92,14 @@ fn test_table_input_data_launder() {
     // Why: Laundering should replace strings in both the definition and row values with
     // interned instances from the store while preserving content.
     let store = SharedStringStore::new();
-    let data = table_data_for(sample_table_frozen());
+    let mut data = table_data_for(sample_table_frozen());
+    let original = data.clone();
+    data.launder(&store);
 
-    let laundered = data.launder(&store);
-
-    assert_eq!(laundered.definition().description().as_ref(), "A table");
-    assert_eq!(laundered.data().len(), 2);
-    assert_eq!(laundered.data()[0][0].as_ref(), "1");
+    assert_eq!(data, original);
+    assert_eq!(data.definition().description().as_ref(), "A table");
+    assert_eq!(data.data().len(), 2);
+    assert_eq!(data.data()[0][0].as_ref(), "1");
     assert!(store.contains("1"));
     assert!(store.contains("4"));
 }

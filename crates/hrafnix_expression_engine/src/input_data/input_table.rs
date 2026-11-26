@@ -48,20 +48,14 @@ impl TableInputData {
         &self.parameter
     }
 
-    /// Returns a new `TableInputData` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &hrafnix_shareable_string::SharedStringStore) -> Self {
-        let laundered_definition = self.definition.launder(store);
-        let laundered_data = self
-            .data
-            .iter()
-            .map(|row| row.iter().map(|value| store.launder(value)).collect())
-            .collect();
-
-        Self {
-            definition: laundered_definition,
-            parameter: store.launder(&self.parameter),
-            data: laundered_data,
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &hrafnix_shareable_string::SharedStringStore) {
+        self.definition.launder(store);
+        self.parameter = store.launder(&self.parameter);
+        for row in &mut self.data {
+            for value in row {
+                *value = store.launder(&*value);
+            }
         }
     }
 }

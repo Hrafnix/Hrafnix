@@ -85,24 +85,6 @@ impl TableFrozen {
         TableEditable::new(self)
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        let rows = self
-            .rows
-            .iter()
-            .map(|row| row.iter().map(|value| store.launder(value)).collect())
-            .collect();
-        let mut table = Self {
-            definition: self.definition.launder(store),
-            rows,
-            parameter: store.launder(&self.parameter),
-            hash: [0u8; 32],
-        };
-        table.update_hash();
-        table
-    }
-
     /// Recomputes and stores the BLAKE3 hash of all rows and the parameter reference.
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn update_hash(&mut self) {
@@ -201,6 +183,17 @@ impl TableFrozen {
         self.rows.clone_from(&other.rows);
         self.update_hash();
         true
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.definition.launder(store);
+        for row in &mut self.rows {
+            for value in row {
+                *value = store.launder(&*value);
+            }
+        }
+        self.parameter = store.launder(&self.parameter);
     }
 }
 

@@ -116,18 +116,6 @@ impl NumberWithUnitsDefinition {
         &self.constraint.constraint_enum
     }
 
-    /// Returns a new `NumberWithUnitsDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            description: store.launder(&self.description),
-            constraint: self.constraint.clone(),
-            default_value: store.launder(&self.default_value),
-            preferred_units: self.preferred_units,
-            hash: self.hash,
-        }
-    }
-
     /// Returns the description of the parameter.
     #[must_use]
     pub fn description(&self) -> ShareableString {
@@ -193,6 +181,12 @@ impl NumberWithUnitsDefinition {
     #[must_use]
     pub const fn is_merge_compatible(&self, other: &Self) -> bool {
         self.preferred_units.family_id().to_u8() == other.preferred_units.family_id().to_u8()
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.description = store.launder(&self.description);
+        self.default_value = store.launder(&self.default_value);
     }
 }
 

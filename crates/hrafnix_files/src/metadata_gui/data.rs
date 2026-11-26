@@ -58,14 +58,10 @@ impl GuiMetadata {
         &self.ports
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            dimensions: self.dimensions,
-            rotation: self.rotation,
-            icon: self.icon.clone(),
-            ports: self.ports.iter().map(|port| port.launder(store)).collect(),
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        for port in &mut self.ports {
+            port.launder(store);
         }
     }
 }
@@ -111,14 +107,9 @@ impl Port {
         self.location
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            id: self.id.launder(store),
-            port_type: self.port_type,
-            location: self.location,
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.id.launder(store);
     }
 }
 

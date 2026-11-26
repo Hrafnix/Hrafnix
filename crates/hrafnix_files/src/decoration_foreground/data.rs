@@ -56,15 +56,10 @@ impl ForegroundDecoration {
         &self.kind
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            id: store.launder(&self.id),
-            position: self.position,
-            dimensions: self.dimensions,
-            kind: self.kind.launder(store),
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.id = store.launder(&self.id);
+        self.kind.launder(store);
     }
 }
 
@@ -78,12 +73,11 @@ pub enum ForegroundDecorationKind {
 }
 
 impl ForegroundDecorationKind {
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
         match self {
-            Self::Text(text) => Self::Text(text.launder(store)),
-            Self::Image(image) => Self::Image(image.clone()),
+            Self::Text(text) => text.launder(store),
+            Self::Image(_) => {}
         }
     }
 }
@@ -116,13 +110,9 @@ impl TextDecoration {
         self.font_size
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            text: store.launder(&self.text),
-            font_size: self.font_size,
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.text = store.launder(&self.text);
     }
 }
 

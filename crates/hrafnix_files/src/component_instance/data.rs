@@ -81,17 +81,12 @@ impl ComponentInstance {
         self.interface_hash
     }
 
-    /// Returns a copy whose nested strings are interned in `store`, preserving its hash.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            id: self.id.launder(store),
-            source: self.source.launder(store),
-            position: self.position,
-            gui_metadata: self.gui_metadata.launder(store),
-            parameters: self.parameters.launder(store),
-            interface_hash: self.interface_hash,
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.id.launder(store);
+        self.source.launder(store);
+        self.gui_metadata.launder(store);
+        self.parameters.launder(store);
     }
 }
 

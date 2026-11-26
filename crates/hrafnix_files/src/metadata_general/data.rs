@@ -64,15 +64,10 @@ impl MetadataFile {
         self.minimum_version_minor
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            display_name: store.launder(&self.display_name),
-            description: store.launder(&self.description),
-            author: store.launder(&self.author),
-            minimum_version_major: self.minimum_version_major,
-            minimum_version_minor: self.minimum_version_minor,
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.display_name = store.launder(&self.display_name);
+        self.description = store.launder(&self.description);
+        self.author = store.launder(&self.author);
     }
 }

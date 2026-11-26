@@ -21,18 +21,15 @@ pub enum ComponentSource {
 }
 
 impl ComponentSource {
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
         match self {
-            Self::File { package, path } => Self::File {
-                package: package.as_ref().map(|package| package.launder(store)),
-                path: path.clone(),
-            },
-            Self::Builtin { name, version } => Self::Builtin {
-                name: store.launder(name),
-                version: *version,
-            },
+            Self::File { package, .. } => {
+                if let Some(package) = package {
+                    package.launder(store);
+                }
+            }
+            Self::Builtin { name, .. } => *name = store.launder(&*name),
         }
     }
 }
@@ -106,12 +103,8 @@ impl PackageReference {
         self.version
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            name: store.launder(&self.name),
-            version: self.version,
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.name = store.launder(&self.name);
     }
 }

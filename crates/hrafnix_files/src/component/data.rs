@@ -147,38 +147,25 @@ impl ComponentFile {
         self.interface_hash
     }
 
-    /// Returns a copy whose nested strings are interned in `store`, preserving its hashes.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            metadata: self.metadata.launder(store),
-            source: self.source.launder(store),
-            gui_metadata: self.gui_metadata.launder(store),
-            foreground_decorations: self
-                .foreground_decorations
-                .iter()
-                .map(|decoration| decoration.launder(store))
-                .collect(),
-            background_decorations: self
-                .background_decorations
-                .iter()
-                .map(|decoration| decoration.launder(store))
-                .collect(),
-            components: self
-                .components
-                .iter()
-                .map(|component| component.launder(store))
-                .collect(),
-            connections: self
-                .connections
-                .iter()
-                .map(|connection| connection.launder(store))
-                .collect(),
-            translations: self.translations.launder(store),
-            parameter_definition: self.parameter_definition.launder(store),
-            variable_definition: self.variable_definition.launder(store),
-            file_hash: self.file_hash,
-            interface_hash: self.interface_hash,
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.metadata.launder(store);
+        self.source.launder(store);
+        self.gui_metadata.launder(store);
+        self.translations.launder(store);
+        self.parameter_definition.launder(store);
+        self.variable_definition.launder(store);
+        for value in &mut self.foreground_decorations {
+            value.launder(store);
+        }
+        for value in &mut self.background_decorations {
+            value.launder(store);
+        }
+        for value in &mut self.components {
+            value.launder(store);
+        }
+        for value in &mut self.connections {
+            value.launder(store);
         }
     }
 }

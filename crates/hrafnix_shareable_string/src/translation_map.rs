@@ -255,17 +255,13 @@ impl TranslateMessage {
         translation_map.get_translation(&self.message_key, language, Some(&self.message_params))
     }
 
-    /// Launders the message key and parameters using the provided `SharedStringStore`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        TranslateMessage {
-            message_key: store.launder(&self.message_key),
-            message_params: self
-                .message_params
-                .iter()
-                .map(|(k, v)| (store.launder(k), store.launder(v)))
-                .collect(),
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.message_key = store.launder(&self.message_key);
+        self.message_params = std::mem::take(&mut self.message_params)
+            .into_iter()
+            .map(|(key, value)| (store.launder(key), store.launder(value)))
+            .collect();
     }
 }
 

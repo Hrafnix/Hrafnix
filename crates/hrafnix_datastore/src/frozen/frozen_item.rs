@@ -41,27 +41,6 @@ pub enum ItemFrozen {
 }
 
 impl ItemFrozen {
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        match self {
-            Self::Boolean(value) => Self::Boolean(value.launder(store)),
-            Self::Choice(value) => Self::Choice(value.launder(store)),
-            Self::File(value) => Self::File(value.launder(store)),
-            Self::Folder(value) => Self::Folder(value.launder(store)),
-            Self::Integer(value) => Self::Integer(value.launder(store)),
-            Self::Map(value) => Self::Map(value.launder(store)),
-            Self::Number(value) => Self::Number(value.launder(store)),
-            Self::NumberWithUnits(value) => Self::NumberWithUnits(value.launder(store)),
-            Self::String(value) => Self::String(value.launder(store)),
-            Self::Table(value) => Self::Table(value.launder(store)),
-            Self::TableWithUnits(value) => Self::TableWithUnits(value.launder(store)),
-            Self::Unit(value) => Self::Unit(value.launder(store)),
-            Self::Tab(value) => Self::Tab(value.launder(store)),
-            Self::Separator(value) => Self::Separator(value.launder(store)),
-        }
-    }
-
     /// Returns the parameter definition.
     #[must_use]
     pub fn definition(&self) -> ItemDefinitionType {
@@ -276,6 +255,26 @@ impl ItemFrozen {
             (Self::Tab(a), Self::Tab(b)) => a.update_value_from(b),
             (Self::Separator(a), Self::Separator(b)) => a.update_value_from(b),
             _ => false,
+        }
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        match self {
+            Self::Boolean(value) => value.launder(store),
+            Self::Choice(value) => value.launder(store),
+            Self::File(value) => value.launder(store),
+            Self::Folder(value) => value.launder(store),
+            Self::Integer(value) => value.launder(store),
+            Self::Map(value) => value.launder(store),
+            Self::Number(value) => value.launder(store),
+            Self::NumberWithUnits(value) => value.launder(store),
+            Self::String(value) => value.launder(store),
+            Self::Table(value) => value.launder(store),
+            Self::TableWithUnits(value) => value.launder(store),
+            Self::Unit(value) => value.launder(store),
+            Self::Tab(value) => value.launder(store),
+            Self::Separator(value) => value.launder(store),
         }
     }
 }

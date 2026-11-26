@@ -107,24 +107,6 @@ impl TableWithUnitsFrozen {
         TableWithUnitsEditable::new(self)
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        let mut table = Self {
-            definition: self.definition.launder(store),
-            units: self.units.iter().map(|unit| store.launder(unit)).collect(),
-            rows: self
-                .rows
-                .iter()
-                .map(|row| row.iter().map(|value| store.launder(value)).collect())
-                .collect(),
-            parameter: store.launder(&self.parameter),
-            hash: [0u8; 32],
-        };
-        table.update_hash();
-        table
-    }
-
     /// Recomputes and stores the BLAKE3 hash of the parameter reference, column units, and row cells.
     #[cfg_attr(feature = "hotpath", hotpath::measure)]
     fn update_hash(&mut self) {
@@ -256,6 +238,20 @@ impl TableWithUnitsFrozen {
         self.rows.clone_from(&other.rows);
         self.update_hash();
         true
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.definition.launder(store);
+        for value in &mut self.units {
+            *value = store.launder(&*value);
+        }
+        for row in &mut self.rows {
+            for value in row {
+                *value = store.launder(&*value);
+            }
+        }
+        self.parameter = store.launder(&self.parameter);
     }
 }
 

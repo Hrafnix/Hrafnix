@@ -94,18 +94,6 @@ impl FileDefinition {
         self.is_input
     }
 
-    /// Returns a new `FileDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            description: store.launder(&self.description),
-            extension_filter: store.launder(&self.extension_filter),
-            is_input: self.is_input,
-            default_value: store.launder(&self.default_value),
-            hash: self.hash,
-        }
-    }
-
     /// Returns the description of the parameter.
     #[must_use]
     pub fn description(&self) -> ShareableString {
@@ -136,6 +124,13 @@ impl FileDefinition {
     #[must_use]
     pub fn is_merge_compatible(&self, other: &Self) -> bool {
         self.extension_filter == other.extension_filter && self.is_input == other.is_input
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.description = store.launder(&self.description);
+        self.extension_filter = store.launder(&self.extension_filter);
+        self.default_value = store.launder(&self.default_value);
     }
 }
 

@@ -1,6 +1,8 @@
 //! Keys and associated traits.
 //!
 //! Runtime key strings are private; use their accessors or conversions to read them.
+//! Runtime keys can be interned in place with `key.launder(&store)` without
+//! changing their validated contents or hashes.
 
 // Test code favors clarity and brevity over the strictness we require of library code:
 // panicking helpers (`unwrap`/`expect`/indexing/`panic!`) and approximate float comparisons
@@ -48,3 +50,37 @@ pub use port_key::*;
 pub use store_key::*;
 pub use unit_key::*;
 pub use variable_key::*;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_shareable_string::SharedStringStore;
+
+    #[test]
+    fn laundering_keys_preserves_contents_and_hashes() {
+        let store = SharedStringStore::new();
+        macro_rules! check {
+            ($type:ty, $text:literal) => {{
+                let interned = store.get($text);
+                let mut key = <$type>::new($text.into()).unwrap();
+                let original = key.clone();
+                let hash = key.current_blake3_hash();
+                assert!(!key.as_shareable_string().ptr_eq(&interned));
+                key.launder(&store);
+                assert_eq!(key, original);
+                assert_eq!(key.current_blake3_hash(), hash);
+                assert!(key.as_shareable_string().ptr_eq(&interned));
+                assert!(!original.as_shareable_string().ptr_eq(&interned));
+                key.launder(&store);
+                assert!(key.as_shareable_string().ptr_eq(&interned));
+            }};
+        }
+        check!(ComponentKey, "component");
+        check!(GlobalKey, "g_setting");
+        check!(ParameterKey, "p_parameter");
+        check!(PortKey, "port");
+        check!(StoreKey, "value");
+        check!(UnitKey, "u_unit");
+        check!(VariableKey, "v_variable");
+    }
+}

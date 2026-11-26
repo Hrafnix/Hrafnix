@@ -68,17 +68,6 @@ impl FolderDefinition {
         self.is_input
     }
 
-    /// Returns a new `FolderDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            description: store.launder(&self.description),
-            is_input: self.is_input,
-            default_value: store.launder(&self.default_value),
-            hash: self.hash,
-        }
-    }
-
     /// Returns the description of the parameter.
     #[must_use]
     pub fn description(&self) -> ShareableString {
@@ -109,6 +98,12 @@ impl FolderDefinition {
     #[must_use]
     pub const fn is_merge_compatible(&self, other: &Self) -> bool {
         self.is_input == other.is_input
+    }
+
+    /// Interns all strings in `store` in place, preserving values, hashes, and ordering.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.description = store.launder(&self.description);
+        self.default_value = store.launder(&self.default_value);
     }
 }
 

@@ -55,15 +55,9 @@ impl BackgroundDecoration {
         &self.kind
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            id: store.launder(&self.id),
-            position: self.position,
-            dimensions: self.dimensions,
-            kind: self.kind.clone(),
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.id = store.launder(&self.id);
     }
 }
 

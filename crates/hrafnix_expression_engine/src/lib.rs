@@ -67,21 +67,18 @@ pub enum BasicDefinition {
 }
 
 impl BasicDefinition {
-    /// Returns a new `BasicDefinition` with strings laundered through the provided store.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
         match self {
-            BasicDefinition::Boolean(boolean) => BasicDefinition::Boolean(boolean.launder(store)),
-            BasicDefinition::Choice(choice) => BasicDefinition::Choice(choice.launder(store)),
-            BasicDefinition::File(file) => BasicDefinition::File(file.launder(store)),
-            BasicDefinition::Folder(folder) => BasicDefinition::Folder(folder.launder(store)),
-            BasicDefinition::Integer(integer) => BasicDefinition::Integer(integer.launder(store)),
-            BasicDefinition::Number(number) => BasicDefinition::Number(number.launder(store)),
-            BasicDefinition::NumberWithUnits(number) => {
-                BasicDefinition::NumberWithUnits(number.launder(store))
-            }
-            BasicDefinition::String(string) => BasicDefinition::String(string.launder(store)),
-            BasicDefinition::Unit(unit) => BasicDefinition::Unit(unit.launder(store)),
+            Self::Boolean(value) => value.launder(store),
+            Self::Choice(value) => value.launder(store),
+            Self::File(value) => value.launder(store),
+            Self::Folder(value) => value.launder(store),
+            Self::Integer(value) => value.launder(store),
+            Self::Number(value) => value.launder(store),
+            Self::NumberWithUnits(value) => value.launder(store),
+            Self::String(value) => value.launder(store),
+            Self::Unit(value) => value.launder(store),
         }
     }
 }

@@ -68,6 +68,8 @@
 //! and inspect it through public getter accessors.
 //! [`source::data::PackageReference::new`] and [`source::data::PackageVersion::new`]
 //! remain public for reader input.
+//! String-bearing file-data types expose `launder(&mut self, store)` to intern
+//! their strings recursively in place, preserving values, ordering, paths, and hashes.
 //!
 //! The public read and write functions live in [`model`] and [`component`].
 //! Writers consume the file data and atomically replace the destination with

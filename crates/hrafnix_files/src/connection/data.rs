@@ -66,16 +66,12 @@ impl Connection {
         &self.line
     }
 
-    /// Returns a copy whose strings are interned in `store`.
-    #[must_use]
-    pub fn launder(&self, store: &SharedStringStore) -> Self {
-        Self {
-            from_component: self.from_component.launder(store),
-            from_port: self.from_port.launder(store),
-            to_component: self.to_component.launder(store),
-            to_port: self.to_port.launder(store),
-            line: self.line.clone(),
-        }
+    /// Interns this value's strings in `store` in place, preserving its contents.
+    pub fn launder(&mut self, store: &SharedStringStore) {
+        self.from_component.launder(store);
+        self.from_port.launder(store);
+        self.to_component.launder(store);
+        self.to_port.launder(store);
     }
 }
 
