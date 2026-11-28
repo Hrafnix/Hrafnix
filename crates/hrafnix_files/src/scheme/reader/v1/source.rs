@@ -1,7 +1,7 @@
 use crate::common::deserialize::{
     StringTagDeserializer, deserialize_object, deserialize_optional_object,
 };
-use crate::source::data::{ComponentSource, PackageReference, PackageVersion};
+use crate::data::source::{ComponentSource, PackageReference, PackageVersion};
 use serde::{Deserialize, Deserializer};
 
 /// Version 1 source reference selected by a plain-string type tag.

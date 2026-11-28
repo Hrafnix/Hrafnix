@@ -1,5 +1,5 @@
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
-use crate::model::data::ModelFile;
+use crate::data::model::ModelFile;
 use crate::scheme::reader::v1::component_instance::{
     ComponentInstanceReaderV1, convert_component_instances,
 };

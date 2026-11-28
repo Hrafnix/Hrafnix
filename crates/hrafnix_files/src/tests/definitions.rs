@@ -307,7 +307,7 @@ fn assert_definitions_round_trip(path: &Utf8Path, definitions: &[ItemDefinitionT
 
         if root == "model" {
             let model = read_model_file(path).unwrap();
-            let model = crate::model::data::ModelFile::new(
+            let model = crate::data::model::ModelFile::new(
                 model.metadata().clone(),
                 model.foreground_decorations().to_vec(),
                 model.background_decorations().to_vec(),
@@ -322,7 +322,7 @@ fn assert_definitions_round_trip(path: &Utf8Path, definitions: &[ItemDefinitionT
             assert_eq!(read_model_file(path).unwrap(), model);
         } else {
             let component = read_component_file(path, None).unwrap();
-            let component = crate::component::data::ComponentFile::new(
+            let component = crate::data::component::ComponentFile::new(
                 component.metadata().clone(),
                 component.source().clone(),
                 component.gui_metadata().clone(),

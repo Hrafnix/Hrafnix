@@ -1,5 +1,5 @@
 use crate::common::serialize::serialize_shareable_string;
-use crate::decoration_background::data::{BackgroundDecoration, BackgroundDecorationKind};
+use crate::data::decoration_background::{BackgroundDecoration, BackgroundDecorationKind};
 use crate::scheme::writer::graphics::{DimensionWriter, PositionWriter};
 use hrafnix_shareable_string::ShareableString;
 use serde::Serialize;
@@ -50,8 +50,8 @@ impl From<&BackgroundDecorationKind> for BackgroundDecorationKindWriter {
 mod tests {
     use super::BackgroundDecorationWriter;
     use crate::common::deserialize::RootObject;
-    use crate::decoration_background::data::{BackgroundDecoration, BackgroundDecorationKind};
-    use crate::graphics::data::{Dimension, Position};
+    use crate::data::decoration_background::{BackgroundDecoration, BackgroundDecorationKind};
+    use crate::data::graphics::{Dimension, Position};
     use crate::scheme::reader::v1::decoration_background::BackgroundDecorationReaderV1;
     use serde_json::json;
 

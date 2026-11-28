@@ -1,6 +1,6 @@
 use crate::common::deserialize::deserialize_object;
 use crate::common::validate::ensure_unique_keys;
-use crate::component_instance::data::ComponentInstance;
+use crate::data::component_instance::ComponentInstance;
 use crate::scheme::reader::v1::frozen_parameter::ParameterFrozenReaderV1;
 use crate::scheme::reader::v1::graphics::PositionReaderV1;
 use crate::scheme::reader::v1::metadata_gui::GuiMetadataReaderV1;

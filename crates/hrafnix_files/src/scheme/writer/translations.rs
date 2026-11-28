@@ -1,5 +1,5 @@
 use crate::common::serialize::serialize_shareable_string;
-use crate::translations::data::TranslationsFile;
+use crate::data::translations::TranslationsFile;
 use hrafnix_shareable_string::ShareableString;
 use serde::{Serialize, Serializer};
 use std::collections::BTreeMap;
@@ -48,8 +48,8 @@ impl From<&TranslationsFile> for TranslationsWriter {
 mod tests {
     use super::TranslationsWriter;
     use crate::common::deserialize::RootObject;
+    use crate::data::translations::TranslationsFile;
     use crate::scheme::reader::v1::translations::TranslationsReaderV1;
-    use crate::translations::data::TranslationsFile;
     use serde_json::{Value, json};
     use std::collections::BTreeMap;
 

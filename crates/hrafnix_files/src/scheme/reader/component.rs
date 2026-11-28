@@ -1,7 +1,7 @@
 use crate::common::deserialize::deserialize_object;
-use crate::component::data::ComponentFile;
+use crate::data::component::ComponentFile;
+use crate::data::source::ComponentSource;
 use crate::scheme::reader::v1::component::ComponentReaderV1;
-use crate::source::data::ComponentSource;
 use hrafnix_message::message::Message;
 use serde::Deserialize;
 

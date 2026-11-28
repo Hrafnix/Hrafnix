@@ -1,5 +1,5 @@
 use crate::common::serialize::serialize_shareable_string;
-use crate::decoration_foreground::data::{
+use crate::data::decoration_foreground::{
     ForegroundDecoration, ForegroundDecorationKind, ImageDecoration, ImageFit, TextDecoration,
 };
 use crate::scheme::writer::graphics::{DimensionWriter, FontSizeWriter, PositionWriter};
@@ -113,10 +113,10 @@ impl From<ImageFit> for ImageFitWriter {
 mod tests {
     use super::ForegroundDecorationWriter;
     use crate::common::deserialize::RootObject;
-    use crate::decoration_foreground::data::{
+    use crate::data::decoration_foreground::{
         ForegroundDecoration, ForegroundDecorationKind, ImageDecoration, ImageFit, TextDecoration,
     };
-    use crate::graphics::data::{Dimension, FontSize, Position};
+    use crate::data::graphics::{Dimension, FontSize, Position};
     use crate::scheme::reader::v1::decoration_foreground::ForegroundDecorationReaderV1;
     use serde_json::{Value, json};
 

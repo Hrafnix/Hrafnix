@@ -1,6 +1,6 @@
 use crate::common::serialize::serialize_component_key;
 use crate::common::validate::ensure_unique_keys;
-use crate::component_instance::data::ComponentInstance;
+use crate::data::component_instance::ComponentInstance;
 use crate::scheme::writer::frozen_parameter::ParameterFrozenWriter;
 use crate::scheme::writer::graphics::PositionWriter;
 use crate::scheme::writer::metadata_gui::GuiMetadataWriter;

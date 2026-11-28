@@ -1,5 +1,5 @@
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
-use crate::connection::data::{Connection, ConnectionLine};
+use crate::data::connection::{Connection, ConnectionLine};
 use crate::scheme::reader::v1::graphics::PositionReaderV1;
 use hrafnix_keys::{ComponentKey, PortKey};
 use hrafnix_message::message::Message;
@@ -56,8 +56,8 @@ mod tests {
     use super::ConnectionReaderV1;
     use crate::common::deserialize::RootObject;
     use crate::common::test_support::{ReadError, read_value};
-    use crate::connection::data::Connection;
-    use crate::graphics::data::Position;
+    use crate::data::connection::Connection;
+    use crate::data::graphics::Position;
     use serde_json::{Value, json};
 
     /// Reads a connection through its object-only envelope.

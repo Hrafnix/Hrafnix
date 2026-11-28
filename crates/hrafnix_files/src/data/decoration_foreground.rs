@@ -1,4 +1,4 @@
-use crate::graphics::data::{Dimension, FontSize, Position};
+use crate::data::graphics::{Dimension, FontSize, Position};
 use camino::{Utf8Path, Utf8PathBuf};
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 

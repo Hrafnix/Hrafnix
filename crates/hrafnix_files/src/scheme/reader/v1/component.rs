@@ -1,5 +1,6 @@
 use crate::common::deserialize::{deserialize_object, deserialize_objects};
-use crate::component::data::ComponentFile;
+use crate::data::component::ComponentFile;
+use crate::data::source::ComponentSource;
 use crate::scheme::reader::v1::component_instance::{
     ComponentInstanceReaderV1, convert_component_instances,
 };
@@ -11,7 +12,6 @@ use crate::scheme::reader::v1::definition_variable::VariableDefinitionReaderV1;
 use crate::scheme::reader::v1::metadata_general::MetadataReaderV1;
 use crate::scheme::reader::v1::metadata_gui::GuiMetadataReaderV1;
 use crate::scheme::reader::v1::translations::TranslationsReaderV1;
-use crate::source::data::ComponentSource;
 use hrafnix_message::message::Message;
 use serde::Deserialize;
 

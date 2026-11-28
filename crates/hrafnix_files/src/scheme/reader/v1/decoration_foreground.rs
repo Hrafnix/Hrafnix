@@ -1,5 +1,5 @@
 use crate::common::deserialize::deserialize_object;
-use crate::decoration_foreground::data::{
+use crate::data::decoration_foreground::{
     ForegroundDecoration, ForegroundDecorationKind, ImageDecoration, ImageFit, TextDecoration,
 };
 use crate::scheme::reader::v1::graphics::{DimensionReaderV1, FontSizeReaderV1, PositionReaderV1};
@@ -109,7 +109,7 @@ impl From<ImageFitReaderV1> for ImageFit {
 mod tests {
     use super::ForegroundDecorationReaderV1;
     use crate::common::deserialize::RootObject;
-    use crate::decoration_foreground::data::{
+    use crate::data::decoration_foreground::{
         ForegroundDecoration, ForegroundDecorationKind, ImageFit,
     };
     use serde_json::{Value, json};

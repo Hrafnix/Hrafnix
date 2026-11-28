@@ -1,4 +1,4 @@
-use crate::graphics::data::{Dimension, FontSize, Position, Rotation};
+use crate::data::graphics::{Dimension, FontSize, Position, Rotation};
 use serde::Serialize;
 
 /// The current JSON representation of a position.

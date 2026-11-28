@@ -1,4 +1,4 @@
-use crate::graphics::data::{Dimension, Rotation};
+use crate::data::graphics::{Dimension, Rotation};
 use camino::{Utf8Path, Utf8PathBuf};
 use hrafnix_common::port::PortType;
 use hrafnix_keys::PortKey;

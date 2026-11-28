@@ -1,14 +1,14 @@
 //! Shared support for file regression tests.
 
-use crate::component::data::ComponentFile;
-use crate::connection::data::{Connection, ConnectionLine};
-use crate::decoration_background::data::{BackgroundDecoration, BackgroundDecorationKind};
-use crate::decoration_foreground::data::{
+use crate::data::component::ComponentFile;
+use crate::data::connection::{Connection, ConnectionLine};
+use crate::data::decoration_background::{BackgroundDecoration, BackgroundDecorationKind};
+use crate::data::decoration_foreground::{
     ForegroundDecoration, ForegroundDecorationKind, TextDecoration,
 };
-use crate::graphics::data::{Dimension, FontSize, Position};
-use crate::metadata_general::data::MetadataFile;
-use crate::translations::data::TranslationsFile;
+use crate::data::graphics::{Dimension, FontSize, Position};
+use crate::data::metadata_general::MetadataFile;
+use crate::data::translations::TranslationsFile;
 use camino::{Utf8Path, Utf8PathBuf};
 use hrafnix_keys::{component_key, port_key};
 use hrafnix_message::message::Message;

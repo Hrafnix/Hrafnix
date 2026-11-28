@@ -1,6 +1,6 @@
 //! Tests for graphical styling values.
 
-use crate::graphics::data::FontSize;
+use crate::data::graphics::FontSize;
 use std::ops::Div;
 
 #[test]

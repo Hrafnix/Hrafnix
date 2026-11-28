@@ -1,5 +1,5 @@
 use crate::common::deserialize::deserialize_object;
-use crate::model::data::ModelFile;
+use crate::data::model::ModelFile;
 use crate::scheme::reader::v1::model::ModelReaderV1;
 use hrafnix_message::message::Message;
 use serde::Deserialize;

@@ -1,4 +1,4 @@
-use crate::component::data::ComponentFile;
+use crate::data::component::ComponentFile;
 use crate::scheme::writer::component_instance::ComponentInstanceWriter;
 use crate::scheme::writer::connection::ConnectionWriter;
 use crate::scheme::writer::decoration_background::BackgroundDecorationWriter;

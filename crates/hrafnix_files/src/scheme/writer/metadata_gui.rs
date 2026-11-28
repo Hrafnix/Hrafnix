@@ -1,5 +1,5 @@
 use crate::common::serialize::serialize_port_key;
-use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
+use crate::data::metadata_gui::{GuiMetadata, Port, PortLocation};
 use crate::scheme::writer::graphics::{DimensionWriter, RotationWriter};
 use hrafnix_common::port::PortType;
 use hrafnix_keys::PortKey;
@@ -119,8 +119,8 @@ impl From<&PortLocation> for PortLocationWriter {
 mod tests {
     use super::GuiMetadataWriter;
     use crate::common::deserialize::RootObject;
-    use crate::graphics::data::{Dimension, Rotation};
-    use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
+    use crate::data::graphics::{Dimension, Rotation};
+    use crate::data::metadata_gui::{GuiMetadata, Port, PortLocation};
     use crate::scheme::reader::v1::metadata_gui::GuiMetadataReaderV1;
     use hrafnix_common::port::PortType;
     use hrafnix_keys::port_key;

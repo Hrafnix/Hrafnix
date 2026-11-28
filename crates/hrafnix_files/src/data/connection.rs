@@ -1,4 +1,4 @@
-use crate::graphics::data::Position;
+use crate::data::graphics::Position;
 use hrafnix_keys::{ComponentKey, PortKey};
 use hrafnix_shareable_string::SharedStringStore;
 

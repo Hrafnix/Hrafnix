@@ -1,6 +1,6 @@
 use crate::common::deserialize::deserialize_entries;
 use crate::common::validate::unique_entries;
-use crate::translations::data::TranslationsFile;
+use crate::data::translations::TranslationsFile;
 use hrafnix_message::message::Message;
 use serde::Deserialize;
 
@@ -53,7 +53,7 @@ impl TryFrom<TranslationsReaderV1> for TranslationsFile {
 mod tests {
     use super::TranslationsReaderV1;
     use crate::common::test_support::{ReadError, read_str, read_value};
-    use crate::translations::data::TranslationsFile;
+    use crate::data::translations::TranslationsFile;
     use serde_json::{Value, json};
 
     /// Reads translations through their object-only envelope.

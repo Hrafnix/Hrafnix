@@ -1,5 +1,5 @@
 use crate::common::serialize::serialize_shareable_string;
-use crate::source::data::{ComponentSource, PackageReference, PackageVersion};
+use crate::data::source::{ComponentSource, PackageReference, PackageVersion};
 use hrafnix_shareable_string::ShareableString;
 use serde::Serialize;
 

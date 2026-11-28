@@ -4,13 +4,15 @@
 
 use super::common::{self, TestDirectory};
 
-use crate::component::{data::ComponentFile, read_component_file, write_component_file};
-use crate::component_instance::data::{
+use crate::component::{read_component_file, write_component_file};
+use crate::data::component::ComponentFile;
+use crate::data::component_instance::{
     ComponentInstance, ComponentSource, PackageReference, PackageVersion,
 };
-use crate::graphics::data::{Position, Rotation};
-use crate::metadata_gui::data::{GuiMetadata, Port, PortLocation};
-use crate::model::{data::ModelFile, read_model_file, write_model_file};
+use crate::data::graphics::{Position, Rotation};
+use crate::data::metadata_gui::{GuiMetadata, Port, PortLocation};
+use crate::data::model::ModelFile;
+use crate::model::{read_model_file, write_model_file};
 use camino::Utf8Path;
 use hrafnix_datastore::definition::{NumberDefinition, ParameterObjectDefinition, UnitDefinition};
 use hrafnix_datastore::frozen::{ItemFrozen, NumberFrozen, ParameterObjectFrozen, UnitFrozen};

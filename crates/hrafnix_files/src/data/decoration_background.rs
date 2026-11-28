@@ -1,4 +1,4 @@
-use crate::graphics::data::{Dimension, Position};
+use crate::data::graphics::{Dimension, Position};
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 
 /// A shape behind a model's or component's contents.

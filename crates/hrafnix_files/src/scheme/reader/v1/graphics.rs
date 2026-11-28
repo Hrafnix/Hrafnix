@@ -1,4 +1,4 @@
-use crate::graphics::data::{Dimension, FontSize, Position, Rotation};
+use crate::data::graphics::{Dimension, FontSize, Position, Rotation};
 use serde::Deserialize;
 
 /// The version 1 JSON representation of a drawing position.
@@ -69,7 +69,7 @@ impl From<FontSizeReaderV1> for FontSize {
 #[cfg(test)]
 mod tests {
     use super::{FontSizeReaderV1, RotationReaderV1};
-    use crate::graphics::data::{FontSize, Rotation};
+    use crate::data::graphics::{FontSize, Rotation};
 
     #[test]
     fn rotations_are_plain_unsigned_integers() {

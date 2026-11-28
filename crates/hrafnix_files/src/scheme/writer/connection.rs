@@ -1,5 +1,5 @@
 use crate::common::serialize::{serialize_component_key, serialize_port_key};
-use crate::connection::data::{Connection, ConnectionLine};
+use crate::data::connection::{Connection, ConnectionLine};
 use crate::scheme::writer::graphics::PositionWriter;
 use hrafnix_keys::{ComponentKey, PortKey};
 use serde::Serialize;
@@ -54,8 +54,8 @@ impl From<&ConnectionLine> for ConnectionLineWriter {
 mod tests {
     use super::ConnectionWriter;
     use crate::common::deserialize::RootObject;
-    use crate::connection::data::{Connection, ConnectionLine};
-    use crate::graphics::data::Position;
+    use crate::data::connection::{Connection, ConnectionLine};
+    use crate::data::graphics::Position;
     use crate::scheme::reader::v1::connection::ConnectionReaderV1;
     use hrafnix_keys::{component_key, port_key};
     use serde_json::json;
