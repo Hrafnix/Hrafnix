@@ -12,7 +12,7 @@ Hrafnix is an experimental Rust simulation engine.
 It's a Cargo workspace split into eleven crates:
 
 - `hrafnix` – the command-line application.
-- `hrafnix_common` – shared utilities, such as floating-point helpers, used across the workspace.
+- `hrafnix_common` – shared utilities and component primitives, including floating-point helpers, port types and kinds, and quarter-turn rotations.
 - `hrafnix_shareable_string` – interned, thread-safe strings and translation maps.
 - `hrafnix_keys` – strongly typed identifiers for stores, components, globals, parameters, variables, ports, and units.
 - `hrafnix_message` – messages, object paths, and source spans used for diagnostics.
