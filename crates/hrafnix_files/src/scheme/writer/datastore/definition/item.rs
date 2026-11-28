@@ -64,3 +64,61 @@ impl From<&ItemDefinitionType> for ItemDefinitionWriter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::{
+        BooleanDefinition, ChoiceDefinition, FileDefinition, FolderDefinition, IntegerDefinition,
+        MapDefinition, MapItemDefinition, NumberDefinition, NumberWithUnitsDefinition,
+        SeparatorDefinition, StringDefinition, TabDefinition, TableDefinition,
+        TableWithUnitsDefinition, UnitDefinition,
+    };
+    use hrafnix_keys::StoreKey;
+    use hrafnix_units::{UnitFamilyId, UnitId};
+    use serde_json::json;
+
+    #[test]
+    fn writes_each_variant_with_a_plain_type_tag_and_inline_payload() {
+        let cases: [(ItemDefinitionType, &str); 14] = [
+            (BooleanDefinition::new("Value").into(), "boolean"),
+            (ChoiceDefinition::new("Value", Vec::new()).into(), "choice"),
+            (FileDefinition::new("Value", "*.csv", true).into(), "file"),
+            (FolderDefinition::new("Value", false).into(), "folder"),
+            (IntegerDefinition::new("Value").into(), "integer"),
+            (
+                MapDefinition::new("Value", Vec::<(StoreKey, MapItemDefinition)>::new()).into(),
+                "map",
+            ),
+            (NumberDefinition::new("Value").into(), "number"),
+            (
+                NumberWithUnitsDefinition::new("Value", UnitId::Length_Meter).into(),
+                "number_with_units",
+            ),
+            (StringDefinition::new("Value").into(), "string"),
+            (
+                TableDefinition::new("Value", Vec::<(StoreKey, NumberDefinition)>::new()).into(),
+                "table",
+            ),
+            (
+                TableWithUnitsDefinition::new(
+                    "Value",
+                    Vec::<(StoreKey, NumberWithUnitsDefinition)>::new(),
+                )
+                .into(),
+                "table_with_units",
+            ),
+            (
+                UnitDefinition::new("Value", UnitFamilyId::Length).into(),
+                "unit",
+            ),
+            (TabDefinition::new("Value").into(), "tab"),
+            (SeparatorDefinition::new("Value").into(), "separator"),
+        ];
+        for (definition, tag) in cases {
+            let value = serde_json::to_value(ItemDefinitionWriter::from(&definition)).unwrap();
+            assert_eq!(value["type"], json!(tag));
+            assert_eq!(value["description"], json!("Value"));
+        }
+    }
+}

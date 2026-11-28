@@ -22,3 +22,33 @@ impl From<&NumberFrozen> for NumberWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::{NumberConstraint, NumberDefinition};
+    use serde_json::json;
+
+    #[test]
+    fn writes_bounds_default_and_current_expression() {
+        let number = NumberFrozen::new_with_value(
+            NumberDefinition::new_with_constraint_and_default(
+                "Ratio",
+                NumberConstraint::min(0.0, false),
+                "0.5",
+            ),
+            "1 / 3",
+        );
+
+        assert_eq!(
+            serde_json::to_value(NumberWriterV1::from(&number)).unwrap(),
+            json!({
+                "definition": {
+                    "description": "Ratio", "default": "0.5",
+                    "constraint": {"type": "min", "min": 0.0, "inclusive": false}
+                },
+                "value": "1 / 3"
+            })
+        );
+    }
+}

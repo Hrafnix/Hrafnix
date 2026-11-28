@@ -14,3 +14,31 @@ impl From<TabDefinitionReaderV1> for TabDefinition {
         TabDefinition::new(tab.description)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::deserialize::RootObject;
+    use serde_json::json;
+
+    #[test]
+    fn reads_tab_label() {
+        let reader = serde_json::from_value::<RootObject<TabDefinitionReaderV1>>(json!({
+            "description": "Advanced settings"
+        }))
+        .unwrap();
+        assert_eq!(
+            TabDefinition::from(reader.document),
+            TabDefinition::new("Advanced settings")
+        );
+    }
+
+    #[test]
+    fn rejects_value_fields() {
+        let error = serde_json::from_value::<RootObject<TabDefinitionReaderV1>>(json!({
+            "description": "Advanced settings", "default": "unused"
+        }))
+        .unwrap_err();
+        assert!(error.to_string().contains("unknown field `default`"));
+    }
+}

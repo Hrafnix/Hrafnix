@@ -18,3 +18,18 @@ impl From<&SeparatorDefinition> for SeparatorDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn writes_only_the_separator_label() {
+        let definition = SeparatorDefinition::new("Output settings");
+        assert_eq!(
+            serde_json::to_value(SeparatorDefinitionWriterV1::from(&definition)).unwrap(),
+            json!({"description": "Output settings"})
+        );
+    }
+}

@@ -79,3 +79,62 @@ impl ComponentReaderV1 {
         ))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ComponentReaderV1;
+    use crate::common::deserialize::RootObject;
+    use crate::data::source::ComponentSource;
+    use serde_json::{Value, json};
+
+    /// Minimal component contents, without populated nested schemas.
+    fn contents() -> Value {
+        json!({
+            "metadata": {
+                "display-name": "Example", "description": "", "author": "",
+                "minimum-version-major": 0, "minimum-version-minor": 0
+            },
+            "gui_metadata": {
+                "dimensions": {"width": 10, "height": 20},
+                "rotation": 0, "icon": "", "ports": []
+            },
+            "parameter_definition": [], "variable_definition": [],
+            "foreground_decorations": [], "background_decorations": [],
+            "components": [], "connections": [],
+            "translations": {"language": "en", "translations": {}}
+        })
+    }
+
+    #[test]
+    fn converts_minimal_component_and_attaches_supplied_source() {
+        let reader: RootObject<ComponentReaderV1> = serde_json::from_value(contents()).unwrap();
+        let source = ComponentSource::File {
+            package: None,
+            path: "example.hxc".into(),
+        };
+        let component = reader
+            .document
+            .try_into_component_file(source.clone())
+            .unwrap();
+        assert_eq!(component.source(), &source);
+        assert_eq!(component.metadata().display_name(), "Example");
+        assert_eq!(component.components(), &[]);
+        assert_eq!(component.connections(), &[]);
+    }
+
+    #[test]
+    fn requires_all_fields_and_rejects_unknown_fields() {
+        let value = contents();
+        for field in value.as_object().unwrap().keys() {
+            let mut invalid = value.clone();
+            invalid.as_object_mut().unwrap().remove(field);
+            assert!(
+                serde_json::from_value::<RootObject<ComponentReaderV1>>(invalid).is_err(),
+                "{field}"
+            );
+        }
+        let mut invalid = value;
+        invalid["unknown"] = json!(true);
+        assert!(serde_json::from_value::<RootObject<ComponentReaderV1>>(invalid).is_err());
+    }
+}

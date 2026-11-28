@@ -31,3 +31,76 @@ impl From<&TableWithUnitsFrozen> for TableWithUnitsWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::{
+        NumberConstraint, NumberWithUnitsDefinition, TableColumnRequirement,
+        TableWithUnitsDefinition,
+    };
+    use hrafnix_keys::StoreKey;
+    use hrafnix_units::UnitId;
+    use serde_json::json;
+
+    #[test]
+    fn writes_rows_column_units_and_explicit_parameter() {
+        let definition = TableWithUnitsDefinition::new_with_column_requirements_and_default(
+            "Measurements",
+            vec![
+                (
+                    StoreKey::new("z".into()).unwrap(),
+                    NumberWithUnitsDefinition::new_with_constraint_and_default(
+                        "Distance",
+                        NumberConstraint::min(0.0, true),
+                        "1 m",
+                        UnitId::Length_Meter,
+                    ),
+                    TableColumnRequirement::Increasing,
+                ),
+                (
+                    StoreKey::new("a".into()).unwrap(),
+                    NumberWithUnitsDefinition::new_with_default("Ratio", "1", UnitId::None),
+                    TableColumnRequirement::None,
+                ),
+            ],
+            vec![vec!["1 m", "1"]],
+        );
+        for parameter in ["", "p_source"] {
+            let table = TableWithUnitsFrozen::new_from_rows_with_parameter(
+                definition.clone(),
+                vec![
+                    vec!["2 * p_length".into(), "3".into()],
+                    vec!["4 m".into(), "5".into()],
+                ],
+                vec!["length_centimeter".into(), "none".into()],
+                parameter,
+            );
+
+            assert_eq!(
+                serde_json::to_value(TableWithUnitsWriterV1::from(&table)).unwrap(),
+                json!({
+                    "definition": {
+                        "description": "Measurements",
+                        "columns": [
+                            {
+                                "key": "z", "description": "Distance", "default": "1 m",
+                                "constraint": {"type": "min", "min": 0.0, "inclusive": true},
+                                "requirement": "increasing", "preferred_unit": "length_meter"
+                            },
+                            {
+                                "key": "a", "description": "Ratio", "default": "1",
+                                "constraint": {"type": "none"}, "requirement": "none",
+                                "preferred_unit": "none"
+                            }
+                        ],
+                        "default": [["1 m", "1"]]
+                    },
+                    "parameter": parameter,
+                    "units": ["length_centimeter", "none"],
+                    "rows": [["2 * p_length", "3"], ["4 m", "5"]]
+                })
+            );
+        }
+    }
+}

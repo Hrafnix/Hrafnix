@@ -22,3 +22,18 @@ impl From<&StringDefinition> for StringDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn writes_plain_strings_and_preserves_special_characters() {
+        let definition = StringDefinition::new_with_default("Label", "héllo\n\"world\"");
+        assert_eq!(
+            serde_json::to_value(StringDefinitionWriterV1::from(&definition)).unwrap(),
+            json!({"description": "Label", "default": "héllo\n\"world\""})
+        );
+    }
+}

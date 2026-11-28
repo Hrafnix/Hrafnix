@@ -33,3 +33,28 @@ impl From<&MetadataFile> for MetadataWriter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::MetadataWriter;
+    use crate::data::metadata_general::MetadataFile;
+    use serde_json::json;
+
+    #[test]
+    fn writes_all_fields_with_kebab_case_names() {
+        let metadata = MetadataFile::new(
+            "Example".into(),
+            "Description".into(),
+            "Author".into(),
+            1,
+            2,
+        );
+        assert_eq!(
+            serde_json::to_value(MetadataWriter::from(&metadata)).unwrap(),
+            json!({
+                "display-name": "Example", "description": "Description", "author": "Author",
+                "minimum-version-major": 1, "minimum-version-minor": 2
+            }),
+        );
+    }
+}

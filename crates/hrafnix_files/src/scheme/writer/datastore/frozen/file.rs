@@ -22,3 +22,29 @@ impl From<&FileFrozen> for FileWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::FileDefinition;
+    use serde_json::json;
+
+    #[test]
+    fn writes_path_expression_and_dialog_options() {
+        let file = FileFrozen::new_with_value(
+            FileDefinition::new_with_default("Input file", "*.csv", true, "default.csv"),
+            "p_filename",
+        );
+
+        assert_eq!(
+            serde_json::to_value(FileWriterV1::from(&file)).unwrap(),
+            json!({
+                "definition": {
+                    "description": "Input file", "default": "default.csv",
+                    "extension_filter": "*.csv", "is_input": true
+                },
+                "value": "p_filename"
+            })
+        );
+    }
+}

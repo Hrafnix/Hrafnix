@@ -22,3 +22,26 @@ impl From<&StringFrozen> for StringWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::StringDefinition;
+    use serde_json::json;
+
+    #[test]
+    fn writes_definition_and_string_contents() {
+        let string = StringFrozen::new_with_value(
+            StringDefinition::new_with_default("Label", "untitled"),
+            "sample \"A\"\nsecond line",
+        );
+
+        assert_eq!(
+            serde_json::to_value(StringWriterV1::from(&string)).unwrap(),
+            json!({
+                "definition": {"description": "Label", "default": "untitled"},
+                "value": "sample \"A\"\nsecond line"
+            })
+        );
+    }
+}

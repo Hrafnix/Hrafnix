@@ -31,3 +31,29 @@ impl From<&NumberWithUnitsDefinition> for NumberWithUnitDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::NumberConstraint;
+    use hrafnix_units::UnitId;
+    use serde_json::json;
+
+    #[test]
+    fn writes_expression_bounds_and_plain_unit_identifier() {
+        let definition = NumberWithUnitsDefinition::new_with_constraint_and_default(
+            "Distance",
+            NumberConstraint::min(0.0, false),
+            "12 cm",
+            UnitId::Length_Centimeter,
+        );
+        assert_eq!(
+            serde_json::to_value(NumberWithUnitDefinitionWriterV1::from(&definition)).unwrap(),
+            json!({
+                "description": "Distance", "default": "12 cm",
+                "constraint": {"type": "min", "min": 0.0, "inclusive": false},
+                "preferred_unit": "length_centimeter"
+            })
+        );
+    }
+}

@@ -19,3 +19,41 @@ impl From<FolderReaderV1> for FolderFrozen {
         FolderFrozen::new_with_value(folder.definition.into(), folder.value)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::deserialize::RootObject;
+    use hrafnix_datastore::definition::FolderDefinition;
+    use serde_json::{Value, json};
+
+    fn document() -> Value {
+        json!({
+            "definition": {
+                "description": "Output folder",
+                "default": "results",
+                "is_input": false
+            },
+            "value": "p_folder"
+        })
+    }
+
+    #[test]
+    fn reads_definition_and_path_expression() {
+        let reader = serde_json::from_value::<RootObject<FolderReaderV1>>(document()).unwrap();
+        let folder = FolderFrozen::from(reader.document);
+
+        assert_eq!(folder.value(), "p_folder");
+        assert_eq!(
+            folder.definition(),
+            &FolderDefinition::new_with_default("Output folder", false, "results")
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_fields() {
+        let mut value = document();
+        value["extension_filter"] = json!("*");
+        assert!(serde_json::from_value::<RootObject<FolderReaderV1>>(value).is_err());
+    }
+}

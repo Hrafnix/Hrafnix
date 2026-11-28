@@ -30,3 +30,22 @@ impl From<&BooleanDefinition> for BooleanDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn writes_expression_and_both_state_labels() {
+        let definition =
+            BooleanDefinition::new_with_descriptions_and_default("Enabled", "On", "Off", "1 == 1");
+        assert_eq!(
+            serde_json::to_value(BooleanDefinitionWriterV1::from(&definition)).unwrap(),
+            json!({
+                "description": "Enabled", "default": "1 == 1",
+                "true_description": "On", "false_description": "Off"
+            })
+        );
+    }
+}

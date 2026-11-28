@@ -31,3 +31,42 @@ impl From<RequirementDefinitionReaderV1> for TableColumnRequirement {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn reads_every_column_requirement() {
+        for (name, expected) in [
+            ("none", TableColumnRequirement::None),
+            (
+                "constant_or_increasing",
+                TableColumnRequirement::ConstantOrIncreasing,
+            ),
+            ("increasing", TableColumnRequirement::Increasing),
+            (
+                "constant_or_decreasing",
+                TableColumnRequirement::ConstantOrDecreasing,
+            ),
+            ("decreasing", TableColumnRequirement::Decreasing),
+            ("constant", TableColumnRequirement::Constant),
+        ] {
+            let requirement =
+                serde_json::from_value::<RequirementDefinitionReaderV1>(json!(name)).unwrap();
+            assert_eq!(
+                TableColumnRequirement::from(requirement),
+                expected,
+                "{name}"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_unknown_requirement() {
+        let error =
+            serde_json::from_value::<RequirementDefinitionReaderV1>(json!("unknown")).unwrap_err();
+        assert!(error.to_string().contains("unknown variant `unknown`"));
+    }
+}

@@ -26,3 +26,38 @@ impl From<&NumberWithUnitsFrozen> for NumberWithUnitsWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::{NumberConstraint, NumberWithUnitsDefinition};
+    use hrafnix_units::UnitId;
+    use serde_json::json;
+
+    #[test]
+    fn writes_expression_and_selected_units_separately_from_preferred_units() {
+        let number = NumberWithUnitsFrozen::new_with_value(
+            NumberWithUnitsDefinition::new_with_constraint_and_default(
+                "Distance",
+                NumberConstraint::min(0.0, true),
+                "1 m",
+                UnitId::Length_Meter,
+            ),
+            "2 * p_length",
+            "length_centimeter",
+        );
+
+        assert_eq!(
+            serde_json::to_value(NumberWithUnitsWriterV1::from(&number)).unwrap(),
+            json!({
+                "definition": {
+                    "description": "Distance", "default": "1 m",
+                    "constraint": {"type": "min", "min": 0.0, "inclusive": true},
+                    "preferred_unit": "length_meter"
+                },
+                "value": "2 * p_length",
+                "units": "length_centimeter"
+            })
+        );
+    }
+}

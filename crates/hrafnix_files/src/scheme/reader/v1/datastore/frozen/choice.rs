@@ -25,3 +25,49 @@ impl TryFrom<ChoiceReaderV1> for ChoiceFrozen {
         ))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::deserialize::RootObject;
+    use serde_json::{Value, json};
+
+    fn document() -> Value {
+        json!({
+            "definition": {
+                "description": "Mode",
+                "default": "fast",
+                "items": [
+                    {"id": "fast", "description": "Fast"},
+                    {"id": "slow", "description": "Slow"}
+                ]
+            },
+            "value": "slow"
+        })
+    }
+
+    #[test]
+    fn reads_definition_choices_and_current_value() {
+        let reader = serde_json::from_value::<RootObject<ChoiceReaderV1>>(document()).unwrap();
+        let choice = ChoiceFrozen::try_from(reader.document).unwrap();
+
+        assert_eq!(choice.value(), "slow");
+        assert_eq!(choice.definition().description(), "Mode");
+        assert_eq!(choice.definition().default_value(), "fast");
+        assert_eq!(choice.definition().ids(), vec!["fast", "slow"]);
+        assert_eq!(choice.definition().descriptions(), vec!["Fast", "Slow"]);
+    }
+
+    #[test]
+    fn rejects_invalid_choice_identifier_during_conversion() {
+        let mut value = document();
+        value["definition"]["items"][0]["id"] = json!("");
+        let reader = serde_json::from_value::<RootObject<ChoiceReaderV1>>(value).unwrap();
+        let error = ChoiceFrozen::try_from(reader.document).unwrap_err();
+
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "datastore_key_empty"
+        );
+    }
+}

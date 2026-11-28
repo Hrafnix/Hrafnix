@@ -69,3 +69,54 @@ impl From<ModelFile> for ModelWriter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ModelWriter;
+    use crate::data::metadata_general::MetadataFile;
+    use crate::data::model::ModelFile;
+    use crate::data::translations::TranslationsFile;
+    use hrafnix_datastore::definition::{
+        GlobalObjectDefinition, ParameterObjectDefinition, VariableObjectDefinition,
+    };
+    use hrafnix_datastore::frozen::GlobalObjectFrozen;
+    use serde_json::json;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn writes_version_envelope_and_required_empty_collections() {
+        let model = ModelFile::new(
+            MetadataFile::new(
+                "Example".into(),
+                "Description".into(),
+                "Author".into(),
+                1,
+                2,
+            ),
+            Vec::new(),
+            Vec::new(),
+            GlobalObjectFrozen::new(GlobalObjectDefinition::builder().finish()),
+            Vec::new(),
+            Vec::new(),
+            TranslationsFile::new("en".into(), BTreeMap::new()),
+            ParameterObjectDefinition::builder().finish(),
+            VariableObjectDefinition::builder().finish(),
+        );
+        assert_eq!(
+            serde_json::to_value(ModelWriter::from(model)).unwrap(),
+            json!({
+                "file-version": "1",
+                "model": {
+                    "metadata": {
+                        "display-name": "Example", "description": "Description", "author": "Author",
+                        "minimum-version-major": 1, "minimum-version-minor": 2
+                    },
+                    "parameter_definition": [], "variable_definition": [],
+                    "foreground_decorations": [], "background_decorations": [],
+                    "global_settings": [], "components": [], "connections": [],
+                    "translations": {"language": "en", "translations": {}}
+                }
+            }),
+        );
+    }
+}

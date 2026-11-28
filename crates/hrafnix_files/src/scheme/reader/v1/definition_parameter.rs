@@ -48,3 +48,56 @@ impl TryFrom<ParameterDefinitionReaderV1> for ParameterObjectDefinition {
         Ok(builder.finish())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ParameterDefinitionReaderV1;
+    use hrafnix_datastore::definition::{ItemDefinitionType, ParameterObjectDefinition};
+    use serde_json::{Value, json};
+
+    /// Two definitions in non-alphabetical key order.
+    fn definitions() -> Value {
+        json!([
+            {"key": "p_z", "type": "string", "description": "Last", "default": "base z"},
+            {"key": "p_a", "type": "string", "description": "First", "default": "base a"}
+        ])
+    }
+
+    #[test]
+    fn preserves_definition_fields_and_insertion_order() {
+        let reader = serde_json::from_value::<ParameterDefinitionReaderV1>(definitions()).unwrap();
+        let parameters = ParameterObjectDefinition::try_from(reader).unwrap();
+        assert_eq!(
+            parameters
+                .iter()
+                .map(|(key, _)| key.as_str())
+                .collect::<Vec<_>>(),
+            ["p_z", "p_a"],
+        );
+        let ItemDefinitionType::String(definition) = parameters.iter().next().unwrap().1 else {
+            panic!("expected a string definition");
+        };
+        assert_eq!(definition.description(), "Last");
+        assert_eq!(definition.default_value(), "base z");
+        let empty = serde_json::from_value::<ParameterDefinitionReaderV1>(json!([])).unwrap();
+        assert_eq!(
+            ParameterObjectDefinition::try_from(empty).unwrap().count(),
+            0
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_keys_and_wrong_key_namespaces() {
+        for (key, diagnostic) in [
+            ("p_z", "files_duplicate_parameter_key"),
+            ("v_wrong", "datastore_key_invalid_prefix"),
+        ] {
+            let mut value = definitions();
+            value[1]["key"] = json!(key);
+            let reader = serde_json::from_value::<ParameterDefinitionReaderV1>(value).unwrap();
+            let error = ParameterObjectDefinition::try_from(reader).unwrap_err();
+            assert_eq!(error.translate_data().message_key().as_str(), diagnostic);
+        }
+        assert!(serde_json::from_value::<ParameterDefinitionReaderV1>(json!({})).is_err());
+    }
+}

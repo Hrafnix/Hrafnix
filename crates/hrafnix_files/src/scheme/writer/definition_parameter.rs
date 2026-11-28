@@ -36,3 +36,39 @@ impl From<&ParameterObjectDefinition> for ParameterDefinitionWriter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ParameterDefinitionWriter;
+    use hrafnix_datastore::definition::{ParameterObjectDefinition, StringDefinition};
+    use hrafnix_keys::parameter_key;
+    use serde_json::json;
+
+    #[test]
+    fn writes_flat_definitions_in_insertion_order() {
+        let parameters = ParameterObjectDefinition::builder()
+            .with(
+                parameter_key!("p_z"),
+                StringDefinition::new_with_default("Last", "base z"),
+            )
+            .with(
+                parameter_key!("p_a"),
+                StringDefinition::new_with_default("First", "base a"),
+            )
+            .finish();
+        assert_eq!(
+            serde_json::to_value(ParameterDefinitionWriter::from(&parameters)).unwrap(),
+            json!([
+                {"key": "p_z", "type": "string", "description": "Last", "default": "base z"},
+                {"key": "p_a", "type": "string", "description": "First", "default": "base a"}
+            ]),
+        );
+        assert_eq!(
+            serde_json::to_value(ParameterDefinitionWriter::from(
+                &ParameterObjectDefinition::builder().finish()
+            ))
+            .unwrap(),
+            json!([]),
+        );
+    }
+}

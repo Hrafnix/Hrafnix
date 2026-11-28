@@ -68,8 +68,21 @@ mod tests {
         });
         let reader = serde_json::from_value::<RootObject<ChoiceDefinitionReaderV1>>(value).unwrap();
         let choice = ChoiceDefinition::try_from(reader.document).unwrap();
+        assert_eq!(choice.description(), "Mode");
         assert_eq!(choice.ids(), vec!["slow", "fast"]);
         assert_eq!(choice.descriptions(), vec!["Slow", "Also fast"]);
         assert_eq!(choice.default_value(), "fast");
+    }
+
+    #[test]
+    fn rejects_invalid_choice_identifier_during_conversion() {
+        let reader = serde_json::from_value::<RootObject<ChoiceDefinitionReaderV1>>(json!({
+            "description": "Mode", "default": "fast",
+            "items": [{"id": "invalid key", "description": "Invalid"}]
+        }))
+        .unwrap();
+        let error = ChoiceDefinition::try_from(reader.document).unwrap_err();
+        let expected = StoreKey::new("invalid key".into()).unwrap_err();
+        assert_eq!(error.translate_data(), expected.translate_data());
     }
 }

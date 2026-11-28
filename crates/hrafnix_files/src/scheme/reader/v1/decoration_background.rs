@@ -48,3 +48,48 @@ impl From<BackgroundDecorationKindReaderV1>
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::BackgroundDecorationReaderV1;
+    use crate::common::deserialize::RootObject;
+    use crate::data::decoration_background::{BackgroundDecoration, BackgroundDecorationKind};
+    use crate::data::graphics::{Dimension, Position};
+    use serde_json::json;
+
+    #[test]
+    fn reads_frame_and_preserves_geometry() {
+        let reader: RootObject<BackgroundDecorationReaderV1> = serde_json::from_value(json!({
+            "id": "frame", "position": {"x": -10, "y": 20},
+            "dimensions": {"width": 100, "height": 50}, "kind": "Frame",
+        }))
+        .unwrap();
+        assert_eq!(
+            BackgroundDecoration::from(reader.document),
+            BackgroundDecoration::new(
+                "frame".into(),
+                Position::new(-10, 20),
+                Dimension::new(100, 50),
+                BackgroundDecorationKind::Frame,
+            ),
+        );
+    }
+
+    #[test]
+    fn kind_requires_a_known_plain_string() {
+        for kind in [
+            json!("Unknown"),
+            json!({"Frame": null}),
+            json!(0),
+            json!(null),
+        ] {
+            assert!(
+                serde_json::from_value::<RootObject<BackgroundDecorationReaderV1>>(json!({
+                    "id": "frame", "position": {"x": 0, "y": 0},
+                    "dimensions": {"width": 100, "height": 50}, "kind": kind,
+                }))
+                .is_err()
+            );
+        }
+    }
+}

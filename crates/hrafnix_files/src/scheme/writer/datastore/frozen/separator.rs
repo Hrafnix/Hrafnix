@@ -16,3 +16,20 @@ impl From<&SeparatorFrozen> for SeparatorWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::SeparatorDefinition;
+    use serde_json::json;
+
+    #[test]
+    fn writes_only_definition_metadata() {
+        let separator = SeparatorFrozen::new(SeparatorDefinition::new("Advanced"));
+
+        assert_eq!(
+            serde_json::to_value(SeparatorWriterV1::from(&separator)).unwrap(),
+            json!({"definition": {"description": "Advanced"}})
+        );
+    }
+}

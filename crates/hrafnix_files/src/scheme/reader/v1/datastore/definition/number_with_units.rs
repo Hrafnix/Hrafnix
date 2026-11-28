@@ -27,3 +27,42 @@ impl From<NumberWithUnitDefinitionReaderV1> for NumberWithUnitsDefinition {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::deserialize::RootObject;
+    use hrafnix_datastore::definition::NumberConstraint;
+    use hrafnix_units::UnitId;
+    use serde_json::json;
+
+    #[test]
+    fn reads_expression_bounds_and_preferred_unit() {
+        let reader =
+            serde_json::from_value::<RootObject<NumberWithUnitDefinitionReaderV1>>(json!({
+                "description": "Distance", "default": "12 cm",
+                "constraint": {"type": "min", "min": 0.0, "inclusive": false},
+                "preferred_unit": "length_centimeter"
+            }))
+            .unwrap();
+        assert_eq!(
+            NumberWithUnitsDefinition::from(reader.document),
+            NumberWithUnitsDefinition::new_with_constraint_and_default(
+                "Distance",
+                NumberConstraint::min(0.0, false),
+                "12 cm",
+                UnitId::Length_Centimeter
+            )
+        );
+    }
+
+    #[test]
+    fn rejects_unknown_unit_identifier() {
+        let error = serde_json::from_value::<RootObject<NumberWithUnitDefinitionReaderV1>>(json!({
+            "description": "Distance", "default": "12 cm",
+            "constraint": {"type": "none"}, "preferred_unit": "unknown"
+        }))
+        .unwrap_err();
+        assert!(error.to_string().contains("unknown variant `unknown`"));
+    }
+}

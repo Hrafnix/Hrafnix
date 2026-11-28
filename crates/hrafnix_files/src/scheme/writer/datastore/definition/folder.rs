@@ -25,3 +25,23 @@ impl From<&FolderDefinition> for FolderDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn writes_path_and_archive_option() {
+        for is_input in [false, true] {
+            let definition =
+                FolderDefinition::new_with_default("Workspace", is_input, "data/input");
+            assert_eq!(
+                serde_json::to_value(FolderDefinitionWriterV1::from(&definition)).unwrap(),
+                json!({
+                    "description": "Workspace", "default": "data/input", "is_input": is_input
+                })
+            );
+        }
+    }
+}

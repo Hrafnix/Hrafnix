@@ -36,3 +36,45 @@ impl From<&ParameterObjectFrozen> for ParameterFrozenWriter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ParameterFrozenWriter;
+    use hrafnix_datastore::definition::{ParameterObjectDefinition, StringDefinition};
+    use hrafnix_datastore::frozen::ParameterObjectFrozen;
+    use hrafnix_keys::parameter_key;
+    use serde_json::json;
+
+    #[test]
+    fn writes_values_in_definition_order_and_explicit_empty_arrays() {
+        let definition = ParameterObjectDefinition::builder()
+            .with(
+                parameter_key!("p_z"),
+                StringDefinition::new_with_default("Last", "z"),
+            )
+            .with(
+                parameter_key!("p_a"),
+                StringDefinition::new_with_default("First", "a"),
+            )
+            .finish();
+        let parameters = ParameterObjectFrozen::new(definition);
+        assert_eq!(
+            serde_json::to_value(ParameterFrozenWriter::from(&parameters)).unwrap(),
+            json!([
+                {
+                    "key": "p_z", "type": "string",
+                    "definition": {"description": "Last", "default": "z"}, "value": "z"
+                },
+                {
+                    "key": "p_a", "type": "string",
+                    "definition": {"description": "First", "default": "a"}, "value": "a"
+                }
+            ]),
+        );
+        let empty = ParameterObjectFrozen::new(ParameterObjectDefinition::builder().finish());
+        assert_eq!(
+            serde_json::to_value(ParameterFrozenWriter::from(&empty)).unwrap(),
+            json!([])
+        );
+    }
+}

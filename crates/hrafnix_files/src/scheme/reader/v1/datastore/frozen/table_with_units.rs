@@ -40,3 +40,107 @@ impl TryFrom<TableWithUnitsReaderV1> for TableWithUnitsFrozen {
         ))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::deserialize::RootObject;
+    use hrafnix_datastore::definition::{
+        NumberConstraint, NumberWithUnitsDefinition, TableColumnRequirement,
+        TableWithUnitsDefinition,
+    };
+    use hrafnix_keys::StoreKey;
+    use hrafnix_units::UnitId;
+    use serde_json::{Value, json};
+
+    fn document() -> Value {
+        json!({
+            "definition": {
+                "description": "Measurements",
+                "columns": [
+                    {
+                        "key": "z", "description": "Distance", "default": "1 m",
+                        "constraint": {"type": "min", "min": 0.0, "inclusive": true},
+                        "requirement": "increasing", "preferred_unit": "length_meter"
+                    },
+                    {
+                        "key": "a", "description": "Ratio", "default": "1",
+                        "constraint": {"type": "none"}, "requirement": "none",
+                        "preferred_unit": "none"
+                    }
+                ],
+                "default": [["1 m", "1"]]
+            },
+            "parameter": "p_source",
+            "units": ["length_centimeter", "none"],
+            "rows": [["2 * p_length", "3"], ["4 m", "5"]]
+        })
+    }
+
+    #[test]
+    fn reads_definition_reference_rows_and_one_unit_per_column() {
+        let reader =
+            serde_json::from_value::<RootObject<TableWithUnitsReaderV1>>(document()).unwrap();
+        let table = TableWithUnitsFrozen::try_from(reader.document).unwrap();
+        let expected_definition =
+            TableWithUnitsDefinition::new_with_column_requirements_and_default(
+                "Measurements",
+                vec![
+                    (
+                        StoreKey::new("z".into()).unwrap(),
+                        NumberWithUnitsDefinition::new_with_constraint_and_default(
+                            "Distance",
+                            NumberConstraint::min(0.0, true),
+                            "1 m",
+                            UnitId::Length_Meter,
+                        ),
+                        TableColumnRequirement::Increasing,
+                    ),
+                    (
+                        StoreKey::new("a".into()).unwrap(),
+                        NumberWithUnitsDefinition::new_with_default("Ratio", "1", UnitId::None),
+                        TableColumnRequirement::None,
+                    ),
+                ],
+                vec![vec!["1 m", "1"]],
+            );
+
+        assert_eq!(table.definition(), &expected_definition);
+        assert_eq!(table.parameter(), "p_source");
+        assert_eq!(
+            table.rows(),
+            &[
+                vec![ShareableString::from("2 * p_length"), "3".into()],
+                vec!["4 m".into(), "5".into()]
+            ]
+        );
+        assert_eq!(
+            table.units(),
+            &[ShareableString::from("length_centimeter"), "none".into()]
+        );
+        assert_eq!(table.unit_by_name("z").unwrap(), "length_centimeter");
+    }
+
+    #[test]
+    fn rejects_unit_count_mismatch_during_conversion() {
+        let mut value = document();
+        value["units"] = json!(["length_centimeter"]);
+        let reader = serde_json::from_value::<RootObject<TableWithUnitsReaderV1>>(value).unwrap();
+        let error = TableWithUnitsFrozen::try_from(reader.document).unwrap_err();
+        let data = error.translate_data();
+
+        assert_eq!(
+            data.message_key().as_str(),
+            "files_table_unit_count_mismatch"
+        );
+        assert_eq!(data.message_params()["units"], "1");
+        assert_eq!(data.message_params()["columns"], "2");
+    }
+
+    #[test]
+    fn requires_explicit_parameter_even_for_local_rows() {
+        let mut value = document();
+        value.as_object_mut().unwrap().remove("parameter");
+        assert!(serde_json::from_value::<RootObject<TableWithUnitsReaderV1>>(value).is_err());
+    }
+}

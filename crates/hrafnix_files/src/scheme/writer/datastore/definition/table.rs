@@ -52,3 +52,78 @@ impl From<&TableDefinition> for TableDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::{NumberConstraint, NumberDefinition};
+    use serde_json::{Value, json};
+
+    fn columns() -> Vec<(StoreKey, NumberDefinition, TableColumnRequirement)> {
+        vec![
+            (
+                StoreKey::new("z".into()).unwrap(),
+                NumberDefinition::new_with_constraint_and_default(
+                    "First",
+                    NumberConstraint::min(-1.5, false),
+                    "1 + 2",
+                ),
+                TableColumnRequirement::Increasing,
+            ),
+            (
+                StoreKey::new("a".into()).unwrap(),
+                NumberDefinition::new_with_default("Second", "4"),
+                TableColumnRequirement::None,
+            ),
+        ]
+    }
+
+    fn expected(default: &Value) -> Value {
+        json!({
+            "description": "Samples",
+            "columns": [
+                {
+                    "key": "z", "description": "First", "default": "1 + 2",
+                    "constraint": {"type": "min", "min": -1.5, "inclusive": false},
+                    "requirement": "increasing"
+                },
+                {
+                    "key": "a", "description": "Second", "default": "4",
+                    "constraint": {"type": "none"}, "requirement": "none"
+                }
+            ],
+            "default": default
+        })
+    }
+
+    #[test]
+    fn writes_ordered_inline_columns_requirements_and_default_rows() {
+        let definition = TableDefinition::new_with_column_requirements_and_default(
+            "Samples",
+            columns(),
+            vec![vec!["5", "6"], vec!["7", "8"]],
+        );
+        assert_eq!(
+            serde_json::to_value(TableDefinitionWriterV1::from(&definition)).unwrap(),
+            expected(&json!([["5", "6"], ["7", "8"]]))
+        );
+    }
+
+    #[test]
+    fn preserves_null_and_explicitly_empty_defaults() {
+        let absent = TableDefinition::new_with_column_requirements("Samples", columns());
+        let empty = TableDefinition::new_with_column_requirements_and_default(
+            "Samples",
+            columns(),
+            Vec::<Vec<String>>::new(),
+        );
+        assert_eq!(
+            serde_json::to_value(TableDefinitionWriterV1::from(&absent)).unwrap(),
+            expected(&Value::Null)
+        );
+        assert_eq!(
+            serde_json::to_value(TableDefinitionWriterV1::from(&empty)).unwrap(),
+            expected(&json!([]))
+        );
+    }
+}

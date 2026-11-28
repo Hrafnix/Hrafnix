@@ -77,3 +77,50 @@ impl ModelReaderV1 {
         ))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ModelReaderV1;
+    use crate::common::deserialize::RootObject;
+    use serde_json::{Value, json};
+
+    /// Minimal model contents, without populated nested schemas.
+    fn contents() -> Value {
+        json!({
+            "metadata": {
+                "display-name": "Example", "description": "", "author": "",
+                "minimum-version-major": 0, "minimum-version-minor": 0
+            },
+            "parameter_definition": [], "variable_definition": [],
+            "foreground_decorations": [], "background_decorations": [],
+            "global_settings": [], "components": [], "connections": [],
+            "translations": {"language": "en", "translations": {}}
+        })
+    }
+
+    #[test]
+    fn converts_minimal_model() {
+        let reader: RootObject<ModelReaderV1> = serde_json::from_value(contents()).unwrap();
+        let model = reader.document.try_into_model_file().unwrap();
+        assert_eq!(model.metadata().display_name(), "Example");
+        assert_eq!(model.components(), &[]);
+        assert_eq!(model.connections(), &[]);
+        assert_eq!(model.global_settings().definition().count(), 0);
+    }
+
+    #[test]
+    fn requires_all_fields_and_rejects_unknown_fields() {
+        let value = contents();
+        for field in value.as_object().unwrap().keys() {
+            let mut invalid = value.clone();
+            invalid.as_object_mut().unwrap().remove(field);
+            assert!(
+                serde_json::from_value::<RootObject<ModelReaderV1>>(invalid).is_err(),
+                "{field}"
+            );
+        }
+        let mut invalid = value;
+        invalid["unknown"] = json!(true);
+        assert!(serde_json::from_value::<RootObject<ModelReaderV1>>(invalid).is_err());
+    }
+}

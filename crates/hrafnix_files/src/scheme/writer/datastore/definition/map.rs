@@ -139,3 +139,88 @@ impl From<&MapDefinition> for MapDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::{NumberDefinition, StringDefinition, TableDefinition};
+    use serde_json::{Value, json};
+
+    fn key(name: &str) -> StoreKey {
+        StoreKey::new(name.into()).unwrap()
+    }
+
+    fn schema() -> Vec<(StoreKey, MapItemDefinition)> {
+        vec![
+            (
+                key("z"),
+                StringDefinition::new_with_default("Label", "base").into(),
+            ),
+            (
+                key("a"),
+                TableDefinition::new(
+                    "Samples",
+                    vec![(
+                        key("value"),
+                        NumberDefinition::new_with_default("Value", "0"),
+                    )],
+                )
+                .into(),
+            ),
+        ]
+    }
+
+    fn expected(default: &Value) -> Value {
+        json!({
+            "description": "Entries",
+            "items": [
+                {"key": "z", "type": "string", "description": "Label", "default": "base"},
+                {
+                    "key": "a", "type": "table", "description": "Samples",
+                    "columns": [{
+                        "key": "value", "description": "Value", "default": "0",
+                        "constraint": {"type": "none"}, "requirement": "none"
+                    }],
+                    "default": null
+                }
+            ],
+            "default": default
+        })
+    }
+
+    #[test]
+    fn writes_scalar_and_table_defaults_with_plain_entry_keys() {
+        let definition = MapDefinition::new_with_default(
+            "Entries",
+            schema(),
+            BTreeMap::from([
+                (
+                    key("first"),
+                    vec![
+                        MapItemDefault::scalar("custom"),
+                        MapItemDefault::table(vec![vec!["1"], vec!["2"]]),
+                    ],
+                ),
+                (key("second"), vec![MapItemDefault::scalar("other")]),
+            ]),
+        );
+        assert_eq!(
+            serde_json::to_value(MapDefinitionWriterV1::from(&definition)).unwrap(),
+            expected(&json!({"first": ["custom", [["1"], ["2"]]], "second": ["other"]}))
+        );
+    }
+
+    #[test]
+    fn preserves_null_and_explicitly_empty_defaults() {
+        let absent = MapDefinition::new("Entries", schema());
+        let empty = MapDefinition::new_with_default("Entries", schema(), BTreeMap::new());
+        assert_eq!(
+            serde_json::to_value(MapDefinitionWriterV1::from(&absent)).unwrap(),
+            expected(&Value::Null)
+        );
+        assert_eq!(
+            serde_json::to_value(MapDefinitionWriterV1::from(&empty)).unwrap(),
+            expected(&json!({}))
+        );
+    }
+}

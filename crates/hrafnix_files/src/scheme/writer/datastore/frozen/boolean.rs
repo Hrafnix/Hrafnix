@@ -22,3 +22,29 @@ impl From<&BooleanFrozen> for BooleanWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::BooleanDefinition;
+    use serde_json::json;
+
+    #[test]
+    fn writes_definition_and_current_expression() {
+        let boolean = BooleanFrozen::new_with_value(
+            BooleanDefinition::new_with_descriptions_and_default("Enabled", "On", "Off", "true"),
+            "p_enabled",
+        );
+
+        assert_eq!(
+            serde_json::to_value(BooleanWriterV1::from(&boolean)).unwrap(),
+            json!({
+                "definition": {
+                    "description": "Enabled", "default": "true",
+                    "true_description": "On", "false_description": "Off"
+                },
+                "value": "p_enabled"
+            })
+        );
+    }
+}

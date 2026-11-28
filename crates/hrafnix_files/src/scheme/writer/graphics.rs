@@ -68,3 +68,43 @@ impl From<&FontSize> for FontSizeWriter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{DimensionWriter, FontSizeWriter, PositionWriter, RotationWriter};
+    use crate::data::graphics::{Dimension, FontSize, Position, Rotation};
+    use serde_json::json;
+
+    #[test]
+    fn writes_positions_and_dimensions_as_named_integer_fields() {
+        assert_eq!(
+            serde_json::to_value(PositionWriter::from(&Position::new(i32::MIN, i32::MAX))).unwrap(),
+            json!({"x": i32::MIN, "y": i32::MAX}),
+        );
+        assert_eq!(
+            serde_json::to_value(DimensionWriter::from(&Dimension::new(0, u16::MAX))).unwrap(),
+            json!({"width": 0, "height": u16::MAX}),
+        );
+    }
+
+    #[test]
+    fn writes_rotations_and_font_sizes_as_plain_integers() {
+        for (rotation, degrees) in [
+            (Rotation::Degrees0, 0),
+            (Rotation::Degrees90, 90),
+            (Rotation::Degrees180, 180),
+            (Rotation::Degrees270, 270),
+        ] {
+            assert_eq!(
+                serde_json::to_value(RotationWriter::from(&rotation)).unwrap(),
+                json!(degrees)
+            );
+        }
+        for size in [0, 1234, u16::MAX] {
+            assert_eq!(
+                serde_json::to_value(FontSizeWriter::from(&FontSize::new(size))).unwrap(),
+                json!(size),
+            );
+        }
+    }
+}

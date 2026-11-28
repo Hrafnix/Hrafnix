@@ -73,3 +73,67 @@ impl From<ComponentFile> for ComponentWriter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ComponentWriter;
+    use crate::data::component::ComponentFile;
+    use crate::data::graphics::{Dimension, Rotation};
+    use crate::data::metadata_general::MetadataFile;
+    use crate::data::metadata_gui::GuiMetadata;
+    use crate::data::source::ComponentSource;
+    use crate::data::translations::TranslationsFile;
+    use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
+    use serde_json::json;
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn writes_version_envelope_and_required_empty_collections() {
+        let component = ComponentFile::new(
+            MetadataFile::new(
+                "Example".into(),
+                "Description".into(),
+                "Author".into(),
+                1,
+                2,
+            ),
+            ComponentSource::File {
+                package: None,
+                path: "example.hxc".into(),
+            },
+            GuiMetadata::new(
+                Dimension::new(10, 20),
+                Rotation::Degrees90,
+                "icon.svg".into(),
+                Vec::new(),
+            ),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            TranslationsFile::new("en".into(), BTreeMap::new()),
+            ParameterObjectDefinition::builder().finish(),
+            VariableObjectDefinition::builder().finish(),
+        );
+        assert_eq!(
+            serde_json::to_value(ComponentWriter::from(component)).unwrap(),
+            json!({
+                "file-version": "1",
+                "component": {
+                    "metadata": {
+                        "display-name": "Example", "description": "Description", "author": "Author",
+                        "minimum-version-major": 1, "minimum-version-minor": 2
+                    },
+                    "gui_metadata": {
+                        "dimensions": {"width": 10, "height": 20},
+                        "rotation": 90, "icon": "icon.svg", "ports": []
+                    },
+                    "parameter_definition": [], "variable_definition": [],
+                    "foreground_decorations": [], "background_decorations": [],
+                    "components": [], "connections": [],
+                    "translations": {"language": "en", "translations": {}}
+                }
+            }),
+        );
+    }
+}

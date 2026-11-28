@@ -66,8 +66,15 @@ impl From<&ItemFrozen> for ItemWriterV1 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hrafnix_datastore::definition::BooleanDefinition;
-    use hrafnix_datastore::frozen::BooleanFrozen;
+    use hrafnix_datastore::definition::{
+        BooleanDefinition, NumberDefinition, NumberWithUnitsDefinition, SeparatorDefinition,
+        StringDefinition, TabDefinition, TableDefinition,
+    };
+    use hrafnix_datastore::frozen::{
+        BooleanFrozen, NumberWithUnitsFrozen, SeparatorFrozen, StringFrozen, TabFrozen, TableFrozen,
+    };
+    use hrafnix_keys::StoreKey;
+    use hrafnix_units::UnitId;
     use serde_json::json;
 
     #[test]
@@ -90,5 +97,81 @@ mod tests {
                 "value": "false"
             })
         );
+    }
+
+    #[test]
+    fn writes_scalar_unit_aware_and_structural_variant_tags() {
+        let cases = [
+            (
+                ItemFrozen::String(StringFrozen::new_with_value(
+                    StringDefinition::new_with_default("Label", "untitled"),
+                    "sample",
+                )),
+                json!({
+                    "type": "string",
+                    "definition": {"description": "Label", "default": "untitled"},
+                    "value": "sample"
+                }),
+            ),
+            (
+                ItemFrozen::NumberWithUnits(NumberWithUnitsFrozen::new_with_value(
+                    NumberWithUnitsDefinition::new_with_default(
+                        "Distance",
+                        "0 m",
+                        UnitId::Length_Meter,
+                    ),
+                    "12",
+                    "length_centimeter",
+                )),
+                json!({
+                    "type": "number_with_units",
+                    "definition": {
+                        "description": "Distance", "default": "0 m",
+                        "constraint": {"type": "none"}, "preferred_unit": "length_meter"
+                    },
+                    "value": "12", "units": "length_centimeter"
+                }),
+            ),
+            (
+                ItemFrozen::Tab(TabFrozen::new(TabDefinition::new("Settings"))),
+                json!({"type": "tab", "definition": {"description": "Settings"}}),
+            ),
+            (
+                ItemFrozen::Separator(SeparatorFrozen::new(SeparatorDefinition::new("Advanced"))),
+                json!({"type": "separator", "definition": {"description": "Advanced"}}),
+            ),
+            (
+                ItemFrozen::Table(TableFrozen::new_from_rows_with_parameter(
+                    TableDefinition::new(
+                        "Samples",
+                        vec![(
+                            StoreKey::new("value".into()).unwrap(),
+                            NumberDefinition::new_with_default("Value", "0"),
+                        )],
+                    ),
+                    vec![vec!["2 + 3".into()]],
+                    "p_source",
+                )),
+                json!({
+                    "type": "table",
+                    "definition": {
+                        "description": "Samples",
+                        "columns": [{
+                            "key": "value", "description": "Value", "default": "0",
+                            "constraint": {"type": "none"}, "requirement": "none"
+                        }],
+                        "default": null
+                    },
+                    "parameter": "p_source", "rows": [["2 + 3"]]
+                }),
+            ),
+        ];
+
+        for (item, expected) in cases {
+            assert_eq!(
+                serde_json::to_value(ItemWriterV1::from(&item)).unwrap(),
+                expected
+            );
+        }
     }
 }

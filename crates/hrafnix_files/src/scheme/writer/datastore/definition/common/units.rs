@@ -419,3 +419,34 @@ impl From<UnitId> for UnitIdDefinitionWriterV1 {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn writes_frozen_unit_identifiers_as_plain_strings() {
+        for (unit, expected) in [
+            (UnitId::None, "none"),
+            (UnitId::Length_Meter, "length_meter"),
+            (UnitId::Length_Centimeter, "length_centimeter"),
+            (UnitId::Time_Hour, "time_hour"),
+            (UnitId::Temperature_Celsius, "temperature_celsius"),
+            (
+                UnitId::Pressure_PoundPerSquareInch,
+                "pressure_pound_per_square_inch",
+            ),
+            (
+                UnitId::VolumeFlowAcceleration_LiterPerMinutePerSecond,
+                "volume_flow_acceleration_liter_per_minute_per_second",
+            ),
+        ] {
+            assert_eq!(
+                serde_json::to_value(UnitIdDefinitionWriterV1::from(unit)).unwrap(),
+                json!(expected),
+                "{unit:?}"
+            );
+        }
+    }
+}

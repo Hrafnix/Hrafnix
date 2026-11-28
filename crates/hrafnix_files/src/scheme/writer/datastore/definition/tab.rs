@@ -18,3 +18,18 @@ impl From<&TabDefinition> for TabDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn writes_only_the_tab_label() {
+        let definition = TabDefinition::new("Advanced settings");
+        assert_eq!(
+            serde_json::to_value(TabDefinitionWriterV1::from(&definition)).unwrap(),
+            json!({"description": "Advanced settings"})
+        );
+    }
+}

@@ -16,3 +16,20 @@ impl From<&TabFrozen> for TabWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::TabDefinition;
+    use serde_json::json;
+
+    #[test]
+    fn writes_only_definition_metadata() {
+        let tab = TabFrozen::new(TabDefinition::new("Settings"));
+
+        assert_eq!(
+            serde_json::to_value(TabWriterV1::from(&tab)).unwrap(),
+            json!({"definition": {"description": "Settings"}})
+        );
+    }
+}

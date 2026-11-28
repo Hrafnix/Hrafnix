@@ -32,3 +32,53 @@ impl From<MetadataReaderV1> for MetadataFile {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::MetadataReaderV1;
+    use crate::common::deserialize::RootObject;
+    use crate::data::metadata_general::MetadataFile;
+    use serde_json::{Value, json};
+
+    /// Metadata with distinct values for each field.
+    fn metadata_json() -> Value {
+        json!({
+            "display-name": "Example", "description": "Description", "author": "Author",
+            "minimum-version-major": 1, "minimum-version-minor": 2
+        })
+    }
+
+    #[test]
+    fn preserves_all_metadata_fields() {
+        let reader: RootObject<MetadataReaderV1> = serde_json::from_value(metadata_json()).unwrap();
+        let metadata = MetadataFile::from(reader.document);
+        assert_eq!(metadata.display_name(), "Example");
+        assert_eq!(metadata.description(), "Description");
+        assert_eq!(metadata.author(), "Author");
+        assert_eq!(metadata.minimum_version_major(), 1);
+        assert_eq!(metadata.minimum_version_minor(), 2);
+    }
+
+    #[test]
+    fn requires_fields_and_unsigned_versions() {
+        let value = metadata_json();
+        for field in value.as_object().unwrap().keys() {
+            let mut invalid = value.clone();
+            invalid.as_object_mut().unwrap().remove(field);
+            assert!(
+                serde_json::from_value::<RootObject<MetadataReaderV1>>(invalid).is_err(),
+                "{field}"
+            );
+        }
+        for field in ["minimum-version-major", "minimum-version-minor"] {
+            for version in [json!(-1), json!(65536), json!("1")] {
+                let mut invalid = value.clone();
+                invalid[field] = version;
+                assert!(serde_json::from_value::<RootObject<MetadataReaderV1>>(invalid).is_err());
+            }
+        }
+        let mut invalid = value;
+        invalid["unknown"] = json!(true);
+        assert!(serde_json::from_value::<RootObject<MetadataReaderV1>>(invalid).is_err());
+    }
+}

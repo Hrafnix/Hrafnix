@@ -74,3 +74,85 @@ pub(crate) enum ConstraintNumberDefinitionWriterV1 {
         max_inclusive: bool,
     },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::{json, value::Serializer};
+
+    #[test]
+    fn writes_every_integer_constraint_with_exact_fields() {
+        for (constraint, expected) in [
+            (IntegerConstraintEnum::None, json!({"type": "none"})),
+            (
+                IntegerConstraintEnum::Min {
+                    min: -3,
+                    inclusive: false,
+                },
+                json!({"type": "min", "min": -3, "inclusive": false}),
+            ),
+            (
+                IntegerConstraintEnum::Max {
+                    max: 8,
+                    inclusive: true,
+                },
+                json!({"type": "max", "max": 8, "inclusive": true}),
+            ),
+            (
+                IntegerConstraintEnum::Range {
+                    min: -3,
+                    max: 8,
+                    min_inclusive: false,
+                    max_inclusive: true,
+                },
+                json!({
+                    "type": "range", "min": -3, "max": 8,
+                    "min_inclusive": false, "max_inclusive": true
+                }),
+            ),
+        ] {
+            assert_eq!(
+                ConstraintIntDefinitionWriterV1::serialize(&constraint, Serializer).unwrap(),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn writes_every_number_constraint_with_exact_fields() {
+        for (constraint, expected) in [
+            (NumberConstraintEnum::None, json!({"type": "none"})),
+            (
+                NumberConstraintEnum::Min {
+                    min: -1.5,
+                    inclusive: false,
+                },
+                json!({"type": "min", "min": -1.5, "inclusive": false}),
+            ),
+            (
+                NumberConstraintEnum::Max {
+                    max: 2.5,
+                    inclusive: true,
+                },
+                json!({"type": "max", "max": 2.5, "inclusive": true}),
+            ),
+            (
+                NumberConstraintEnum::Range {
+                    min: -1.5,
+                    max: 2.5,
+                    min_inclusive: false,
+                    max_inclusive: true,
+                },
+                json!({
+                    "type": "range", "min": -1.5, "max": 2.5,
+                    "min_inclusive": false, "max_inclusive": true
+                }),
+            ),
+        ] {
+            assert_eq!(
+                ConstraintNumberDefinitionWriterV1::serialize(&constraint, Serializer).unwrap(),
+                expected
+            );
+        }
+    }
+}

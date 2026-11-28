@@ -287,6 +287,15 @@ mod tests {
             .document;
         let item = ItemFrozen::try_from(reader).unwrap();
 
+        let ItemFrozen::Boolean(boolean) = &item else {
+            panic!("expected a boolean");
+        };
+        assert_eq!(boolean.value(), "false");
+        assert_eq!(boolean.definition().description(), "Enabled");
+        assert_eq!(boolean.definition().default_value(), "true");
+        assert_eq!(boolean.definition().true_description_ref(), "On");
+        assert_eq!(boolean.definition().false_description_ref(), "Off");
+
         assert_eq!(
             serde_json::to_value(ItemWriterV1::from(&item)).unwrap(),
             value
@@ -311,9 +320,96 @@ mod tests {
             .document;
         let item = ItemFrozen::try_from(reader).unwrap();
 
+        let ItemFrozen::Map(map) = &item else {
+            panic!("expected a map");
+        };
+        assert_eq!(map.definition().description(), "Labels");
+        assert_eq!(map.count(), 1);
+        assert_eq!(
+            map.get("first")
+                .unwrap()
+                .get_string("name")
+                .unwrap()
+                .value(),
+            "sample"
+        );
+
         assert_eq!(
             serde_json::to_value(ItemWriterV1::from(&item)).unwrap(),
             value
+        );
+    }
+
+    #[test]
+    fn reads_scalar_unit_aware_and_structural_variants() {
+        let string = read_item(json!({
+            "type": "string",
+            "definition": {"description": "Label", "default": "untitled"},
+            "value": "sample"
+        }))
+        .unwrap();
+        let ItemFrozen::String(string) = string else {
+            panic!("expected a string");
+        };
+        assert_eq!(string.definition().description(), "Label");
+        assert_eq!(string.definition().default_value(), "untitled");
+        assert_eq!(string.value(), "sample");
+
+        let number = read_item(json!({
+            "type": "number_with_units",
+            "definition": {
+                "description": "Distance", "default": "0 m",
+                "constraint": {"type": "none"}, "preferred_unit": "length_meter"
+            },
+            "value": "12", "units": "length_centimeter"
+        }))
+        .unwrap();
+        let ItemFrozen::NumberWithUnits(number) = number else {
+            panic!("expected a number with units");
+        };
+        assert_eq!(number.definition().description(), "Distance");
+        assert_eq!(number.definition().default_value(), "0 m");
+        assert_eq!(
+            number.definition().preferred_units(),
+            hrafnix_units::UnitId::Length_Meter
+        );
+        assert_eq!(number.value(), "12");
+        assert_eq!(number.units(), "length_centimeter");
+
+        let tab = read_item(json!({
+            "type": "tab", "definition": {"description": "Settings"}
+        }))
+        .unwrap();
+        let ItemFrozen::Tab(tab) = tab else {
+            panic!("expected a tab");
+        };
+        assert_eq!(tab.definition().description(), "Settings");
+
+        let separator = read_item(json!({
+            "type": "separator", "definition": {"description": "Advanced"}
+        }))
+        .unwrap();
+        let ItemFrozen::Separator(separator) = separator else {
+            panic!("expected a separator");
+        };
+        assert_eq!(separator.definition().description(), "Advanced");
+    }
+
+    #[test]
+    fn propagates_nested_choice_validation_errors() {
+        let error = read_item(json!({
+            "type": "choice",
+            "definition": {
+                "description": "Mode", "default": "",
+                "items": [{"id": "", "description": "Invalid"}]
+            },
+            "value": "fast"
+        }))
+        .unwrap_err();
+
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "datastore_key_empty"
         );
     }
 

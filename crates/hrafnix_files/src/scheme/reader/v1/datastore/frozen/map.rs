@@ -230,6 +230,15 @@ mod tests {
         .document;
 
         let map = MapFrozen::try_from(reader).expect("matching schema");
+        assert_eq!(map.definition().description(), "Samples");
+        assert_eq!(
+            map.definition()
+                .keys()
+                .map(StoreKey::as_str)
+                .collect::<Vec<_>>(),
+            vec!["label", "distance", "values"]
+        );
+        assert_eq!(map.count(), 1);
         let entry = map.get("first").expect("entry");
         assert_eq!(
             entry.get_string("label").expect("string value").value(),
@@ -245,6 +254,9 @@ mod tests {
         };
         assert_eq!(values.rows()[0][0], "12 m");
         assert_eq!(values.units()[0], "length_meter");
+        assert_eq!(values.parameter(), "");
+        assert_eq!(values.row_count(), 1);
+        assert_eq!(entry.definition(), *map.definition().item_type());
     }
 
     #[test]
@@ -262,6 +274,44 @@ mod tests {
         .expect("structurally valid map value")
         .document;
 
-        assert!(MapFrozen::try_from(reader).is_err());
+        let error = MapFrozen::try_from(reader).unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "datastore_schema_mismatch"
+        );
+    }
+
+    #[test]
+    fn rejects_mismatched_value_shapes_and_duplicate_entry_keys() {
+        for (value, expected_error) in [
+            (
+                r#"{"first": [{"value": "1", "units": "none"}]}"#,
+                "datastore_schema_mismatch",
+            ),
+            (
+                r#"{"first": ["one"], "first": ["two"]}"#,
+                "files_duplicate_map_entry_key",
+            ),
+        ] {
+            let document = format!(
+                r#"{{
+                    "definition": {{
+                        "description": "",
+                        "items": [{{"key": "name", "type": "string", "description": "", "default": ""}}],
+                        "default": null
+                    }},
+                    "value": {value}
+                }}"#
+            );
+            let reader = serde_json::from_str::<RootObject<MapReaderV1>>(&document)
+                .unwrap()
+                .document;
+            let error = MapFrozen::try_from(reader).unwrap_err();
+
+            assert_eq!(
+                error.translate_data().message_key().as_str(),
+                expected_error
+            );
+        }
     }
 }

@@ -14,3 +14,29 @@ impl From<SeparatorDefinitionReaderV1> for SeparatorDefinition {
         SeparatorDefinition::new(separator.description)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::deserialize::RootObject;
+    use serde_json::json;
+
+    #[test]
+    fn reads_separator_label() {
+        let reader = serde_json::from_value::<RootObject<SeparatorDefinitionReaderV1>>(json!({
+            "description": "Output settings"
+        }))
+        .unwrap();
+        assert_eq!(
+            SeparatorDefinition::from(reader.document),
+            SeparatorDefinition::new("Output settings")
+        );
+    }
+
+    #[test]
+    fn requires_description() {
+        let error = serde_json::from_value::<RootObject<SeparatorDefinitionReaderV1>>(json!({}))
+            .unwrap_err();
+        assert!(error.to_string().contains("missing field `description`"));
+    }
+}

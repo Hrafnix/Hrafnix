@@ -27,3 +27,70 @@ impl From<&TableFrozen> for TableWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::{
+        NumberConstraint, NumberDefinition, TableColumnRequirement, TableDefinition,
+    };
+    use hrafnix_keys::StoreKey;
+    use serde_json::json;
+
+    #[test]
+    fn writes_ordered_columns_nonempty_rows_and_explicit_parameter() {
+        let definition = TableDefinition::new_with_column_requirements_and_default(
+            "Samples",
+            vec![
+                (
+                    StoreKey::new("z".into()).unwrap(),
+                    NumberDefinition::new_with_constraint_and_default(
+                        "Time",
+                        NumberConstraint::min(0.0, true),
+                        "0",
+                    ),
+                    TableColumnRequirement::Increasing,
+                ),
+                (
+                    StoreKey::new("a".into()).unwrap(),
+                    NumberDefinition::new_with_default("Value", "1"),
+                    TableColumnRequirement::None,
+                ),
+            ],
+            vec![vec!["0", "1"]],
+        );
+        for parameter in ["", "p_source"] {
+            let table = TableFrozen::new_from_rows_with_parameter(
+                definition.clone(),
+                vec![
+                    vec!["2".into(), "3 + 4".into()],
+                    vec!["5".into(), "6".into()],
+                ],
+                parameter,
+            );
+
+            assert_eq!(
+                serde_json::to_value(TableWriterV1::from(&table)).unwrap(),
+                json!({
+                    "definition": {
+                        "description": "Samples",
+                        "columns": [
+                            {
+                                "key": "z", "description": "Time", "default": "0",
+                                "constraint": {"type": "min", "min": 0.0, "inclusive": true},
+                                "requirement": "increasing"
+                            },
+                            {
+                                "key": "a", "description": "Value", "default": "1",
+                                "constraint": {"type": "none"}, "requirement": "none"
+                            }
+                        ],
+                        "default": [["0", "1"]]
+                    },
+                    "parameter": parameter,
+                    "rows": [["2", "3 + 4"], ["5", "6"]]
+                })
+            );
+        }
+    }
+}

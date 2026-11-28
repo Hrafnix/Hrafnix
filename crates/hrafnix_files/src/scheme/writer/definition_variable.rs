@@ -36,3 +36,39 @@ impl From<&VariableObjectDefinition> for VariableDefinitionWriter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::VariableDefinitionWriter;
+    use hrafnix_datastore::definition::{StringDefinition, VariableObjectDefinition};
+    use hrafnix_keys::variable_key;
+    use serde_json::json;
+
+    #[test]
+    fn writes_flat_definitions_in_insertion_order() {
+        let variables = VariableObjectDefinition::builder()
+            .with(
+                variable_key!("v_z"),
+                StringDefinition::new_with_default("Last", "base z"),
+            )
+            .with(
+                variable_key!("v_a"),
+                StringDefinition::new_with_default("First", "base a"),
+            )
+            .finish();
+        assert_eq!(
+            serde_json::to_value(VariableDefinitionWriter::from(&variables)).unwrap(),
+            json!([
+                {"key": "v_z", "type": "string", "description": "Last", "default": "base z"},
+                {"key": "v_a", "type": "string", "description": "First", "default": "base a"}
+            ]),
+        );
+        assert_eq!(
+            serde_json::to_value(VariableDefinitionWriter::from(
+                &VariableObjectDefinition::builder().finish()
+            ))
+            .unwrap(),
+            json!([]),
+        );
+    }
+}

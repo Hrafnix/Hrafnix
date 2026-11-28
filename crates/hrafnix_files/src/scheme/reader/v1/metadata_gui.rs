@@ -132,10 +132,12 @@ impl From<PortLocationReaderV1> for PortLocation {
 
 #[cfg(test)]
 mod tests {
-    use super::GuiMetadataReaderV1;
+    use super::{GuiMetadataReaderV1, PortReaderV1};
     use crate::common::deserialize::RootObject;
     use crate::common::test_support::{ReadError, read_value};
-    use crate::data::metadata_gui::{GuiMetadata, PortLocation};
+    use crate::data::metadata_gui::{GuiMetadata, Port, PortLocation};
+    use hrafnix_common::port::PortType;
+    use hrafnix_keys::port_key;
     use serde_json::{Value, json};
 
     /// Reads GUI metadata through its object-only envelope.
@@ -160,6 +162,26 @@ mod tests {
             "type": "output",
             "location": {"x": 100, "y": 25},
         })
+    }
+
+    #[test]
+    fn standalone_port_conversion_preserves_type_and_location() {
+        assert_eq!(
+            read_value::<PortReaderV1, Port>(&port_json()).unwrap(),
+            Port::new(
+                port_key!("temperature").into(),
+                PortType::Output,
+                PortLocation::new(100, 25),
+            ),
+        );
+        let mut invalid = port_json();
+        invalid["id"] = json!("");
+        assert_eq!(
+            read_value::<PortReaderV1, Port>(&invalid)
+                .unwrap_err()
+                .message_key(),
+            "datastore_key_empty",
+        );
     }
 
     #[test]

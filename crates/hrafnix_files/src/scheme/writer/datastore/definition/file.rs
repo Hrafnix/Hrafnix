@@ -29,3 +29,24 @@ impl From<&FileDefinition> for FileDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn writes_path_filter_and_archive_option() {
+        for is_input in [false, true] {
+            let definition =
+                FileDefinition::new_with_default("Data", "*.csv", is_input, "samples.csv");
+            assert_eq!(
+                serde_json::to_value(FileDefinitionWriterV1::from(&definition)).unwrap(),
+                json!({
+                    "description": "Data", "default": "samples.csv",
+                    "extension_filter": "*.csv", "is_input": is_input
+                })
+            );
+        }
+    }
+}

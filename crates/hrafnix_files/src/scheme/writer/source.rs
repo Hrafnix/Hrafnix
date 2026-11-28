@@ -80,3 +80,48 @@ impl From<PackageVersion> for PackageVersionWriter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ComponentSourceWriter;
+    use crate::data::source::{ComponentSource, PackageReference, PackageVersion};
+    use serde_json::json;
+
+    #[test]
+    fn writes_loose_files_without_a_package_or_standalone_version() {
+        let source = ComponentSource::File {
+            package: None,
+            path: "../missing.hxc".into(),
+        };
+        assert_eq!(
+            serde_json::to_value(ComponentSourceWriter::from(&source)).unwrap(),
+            json!({"type": "file", "path": "../missing.hxc"}),
+        );
+    }
+
+    #[test]
+    fn writes_packaged_files_and_builtins_with_their_distinct_version_shapes() {
+        let source = ComponentSource::File {
+            package: Some(PackageReference::new(
+                "example.package".into(),
+                PackageVersion::new(1, 2, u16::MAX),
+            )),
+            path: "components/example.hxc".into(),
+        };
+        assert_eq!(
+            serde_json::to_value(ComponentSourceWriter::from(&source)).unwrap(),
+            json!({
+                "type": "file", "path": "components/example.hxc",
+                "package": {"name": "example.package", "version": {"major": 1, "minor": 2, "patch": 65535}},
+            }),
+        );
+        let source = ComponentSource::Builtin {
+            name: "builtin.example".into(),
+            version: u32::MAX,
+        };
+        assert_eq!(
+            serde_json::to_value(ComponentSourceWriter::from(&source)).unwrap(),
+            json!({"type": "builtin", "name": "builtin.example", "version": u32::MAX}),
+        );
+    }
+}

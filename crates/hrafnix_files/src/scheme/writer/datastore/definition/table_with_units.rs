@@ -52,3 +52,81 @@ impl From<&TableWithUnitsDefinition> for TableWithUnitsDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::{NumberConstraint, NumberWithUnitsDefinition};
+    use hrafnix_units::UnitId;
+    use serde_json::{Value, json};
+
+    fn columns() -> Vec<(StoreKey, NumberWithUnitsDefinition, TableColumnRequirement)> {
+        vec![
+            (
+                StoreKey::new("z".into()).unwrap(),
+                NumberWithUnitsDefinition::new_with_constraint_and_default(
+                    "Distance",
+                    NumberConstraint::min(0.0, true),
+                    "1 m",
+                    UnitId::Length_Meter,
+                ),
+                TableColumnRequirement::Decreasing,
+            ),
+            (
+                StoreKey::new("a".into()).unwrap(),
+                NumberWithUnitsDefinition::new_with_default("Ratio", "4", UnitId::None),
+                TableColumnRequirement::None,
+            ),
+        ]
+    }
+
+    fn expected(default: &Value) -> Value {
+        json!({
+            "description": "Positions",
+            "columns": [
+                {
+                    "key": "z", "description": "Distance", "default": "1 m",
+                    "constraint": {"type": "min", "min": 0.0, "inclusive": true},
+                    "requirement": "decreasing", "preferred_unit": "length_meter"
+                },
+                {
+                    "key": "a", "description": "Ratio", "default": "4",
+                    "constraint": {"type": "none"}, "requirement": "none",
+                    "preferred_unit": "none"
+                }
+            ],
+            "default": default
+        })
+    }
+
+    #[test]
+    fn writes_ordered_columns_units_requirements_and_rows() {
+        let definition = TableWithUnitsDefinition::new_with_column_requirements_and_default(
+            "Positions",
+            columns(),
+            vec![vec!["3 m", "6"], vec!["2 m", "8"]],
+        );
+        assert_eq!(
+            serde_json::to_value(TableWithUnitsDefinitionWriterV1::from(&definition)).unwrap(),
+            expected(&json!([["3 m", "6"], ["2 m", "8"]]))
+        );
+    }
+
+    #[test]
+    fn preserves_null_and_explicitly_empty_defaults() {
+        let absent = TableWithUnitsDefinition::new_with_column_requirements("Positions", columns());
+        let empty = TableWithUnitsDefinition::new_with_column_requirements_and_default(
+            "Positions",
+            columns(),
+            Vec::<Vec<String>>::new(),
+        );
+        assert_eq!(
+            serde_json::to_value(TableWithUnitsDefinitionWriterV1::from(&absent)).unwrap(),
+            expected(&Value::Null)
+        );
+        assert_eq!(
+            serde_json::to_value(TableWithUnitsDefinitionWriterV1::from(&empty)).unwrap(),
+            expected(&json!([]))
+        );
+    }
+}

@@ -74,3 +74,235 @@ impl TryFrom<ItemDefinitionReaderV1> for ItemDefinitionType {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::deserialize::RootObject;
+    use hrafnix_datastore::definition::{
+        BooleanDefinition, ChoiceDefinition, ChoiceItemDefinition, FileDefinition,
+        FolderDefinition, IntegerConstraint, IntegerDefinition, MapDefinition, MapItemDefault,
+        MapItemDefinition, NumberConstraint, NumberDefinition, NumberWithUnitsDefinition,
+        SeparatorDefinition, StringDefinition, TabDefinition, TableColumnRequirement,
+        TableDefinition, TableWithUnitsDefinition, UnitDefinition,
+    };
+    use hrafnix_keys::StoreKey;
+    use hrafnix_units::{UnitFamilyId, UnitId};
+    use serde_json::{Value, json};
+    use std::collections::BTreeMap;
+
+    /// Definition payloads and their expected conversion values.
+    fn definition_cases() -> Vec<(Value, ItemDefinitionType)> {
+        let key = |name: &str| StoreKey::new(name.into()).unwrap();
+        vec![
+            (
+                json!({
+                    "type": "boolean", "description": "Flag", "default": "1 == 1",
+                    "true_description": "On", "false_description": "Off"
+                }),
+                BooleanDefinition::new_with_descriptions_and_default("Flag", "On", "Off", "1 == 1")
+                    .into(),
+            ),
+            (
+                json!({
+                    "type": "choice", "description": "Mode", "default": "fast",
+                    "items": [{"id": "fast", "description": "Fast"}]
+                }),
+                ChoiceDefinition::new_with_default(
+                    "Mode",
+                    vec![ChoiceItemDefinition::new(key("fast"), "Fast")],
+                    "fast",
+                )
+                .into(),
+            ),
+            (
+                json!({
+                    "type": "file", "description": "Input", "default": "input.csv",
+                    "extension_filter": "*.csv", "is_input": true
+                }),
+                FileDefinition::new_with_default("Input", "*.csv", true, "input.csv").into(),
+            ),
+            (
+                json!({
+                    "type": "folder", "description": "Workspace",
+                    "default": "data/input", "is_input": false
+                }),
+                FolderDefinition::new_with_default("Workspace", false, "data/input").into(),
+            ),
+            (
+                json!({
+                    "type": "integer", "description": "Count", "default": "2 + 3",
+                    "constraint": {"type": "min", "min": 0, "inclusive": true}
+                }),
+                IntegerDefinition::new_with_constraint_and_default(
+                    "Count",
+                    IntegerConstraint::min(0, true),
+                    "2 + 3",
+                )
+                .into(),
+            ),
+            (
+                json!({
+                    "type": "map", "description": "Labels",
+                    "items": [{
+                        "key": "label", "type": "string", "description": "Label", "default": "base"
+                    }],
+                    "default": {"first": ["custom"]}
+                }),
+                MapDefinition::new_with_default(
+                    "Labels",
+                    vec![(
+                        key("label"),
+                        MapItemDefinition::String(StringDefinition::new_with_default(
+                            "Label", "base",
+                        )),
+                    )],
+                    BTreeMap::from([(key("first"), vec![MapItemDefault::scalar("custom")])]),
+                )
+                .into(),
+            ),
+            (
+                json!({
+                    "type": "number", "description": "Ratio", "default": "1 / 2",
+                    "constraint": {"type": "max", "max": 2.5, "inclusive": false}
+                }),
+                NumberDefinition::new_with_constraint_and_default(
+                    "Ratio",
+                    NumberConstraint::max(2.5, false),
+                    "1 / 2",
+                )
+                .into(),
+            ),
+            (
+                json!({
+                    "type": "number_with_units", "description": "Distance", "default": "12 cm",
+                    "constraint": {"type": "min", "min": 0.0, "inclusive": true},
+                    "preferred_unit": "length_centimeter"
+                }),
+                NumberWithUnitsDefinition::new_with_constraint_and_default(
+                    "Distance",
+                    NumberConstraint::min(0.0, true),
+                    "12 cm",
+                    UnitId::Length_Centimeter,
+                )
+                .into(),
+            ),
+            (
+                json!({"type": "string", "description": "Label", "default": "héllo"}),
+                StringDefinition::new_with_default("Label", "héllo").into(),
+            ),
+            (
+                json!({
+                    "type": "table", "description": "Samples",
+                    "columns": [{
+                        "key": "value", "description": "Value", "default": "1",
+                        "constraint": {"type": "none"}, "requirement": "increasing"
+                    }],
+                    "default": [["2"], ["3"]]
+                }),
+                TableDefinition::new_with_column_requirements_and_default(
+                    "Samples",
+                    vec![(
+                        key("value"),
+                        NumberDefinition::new_with_default("Value", "1"),
+                        TableColumnRequirement::Increasing,
+                    )],
+                    vec![vec!["2"], vec!["3"]],
+                )
+                .into(),
+            ),
+            (
+                json!({
+                    "type": "table_with_units", "description": "Positions",
+                    "columns": [{
+                        "key": "distance", "description": "Distance", "default": "1 m",
+                        "constraint": {"type": "none"}, "requirement": "decreasing",
+                        "preferred_unit": "length_meter"
+                    }],
+                    "default": [["3 m"], ["2 m"]]
+                }),
+                TableWithUnitsDefinition::new_with_column_requirements_and_default(
+                    "Positions",
+                    vec![(
+                        key("distance"),
+                        NumberWithUnitsDefinition::new_with_default(
+                            "Distance",
+                            "1 m",
+                            UnitId::Length_Meter,
+                        ),
+                        TableColumnRequirement::Decreasing,
+                    )],
+                    vec![vec!["3 m"], vec!["2 m"]],
+                )
+                .into(),
+            ),
+            (
+                json!({
+                    "type": "unit", "description": "Units",
+                    "default": "u_length_meter", "unit_family": "length"
+                }),
+                UnitDefinition::new_with_default("Units", UnitFamilyId::Length, "u_length_meter")
+                    .into(),
+            ),
+            (
+                json!({"type": "tab", "description": "Advanced"}),
+                TabDefinition::new("Advanced").into(),
+            ),
+            (
+                json!({"type": "separator", "description": "Outputs"}),
+                SeparatorDefinition::new("Outputs").into(),
+            ),
+        ]
+    }
+
+    #[test]
+    fn dispatches_every_definition_type_and_preserves_data() {
+        let cases = definition_cases();
+        assert_eq!(cases.len(), 14);
+        for (value, expected) in cases {
+            let reader =
+                serde_json::from_value::<RootObject<ItemDefinitionReaderV1>>(value.clone())
+                    .unwrap();
+            assert_eq!(
+                ItemDefinitionType::try_from(reader.document).unwrap(),
+                expected,
+                "{value}"
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_type_tags() {
+        for tag in [
+            json!("unknown"),
+            json!(1),
+            json!({"string": null}),
+            Value::Null,
+        ] {
+            assert!(
+                serde_json::from_value::<RootObject<ItemDefinitionReaderV1>>(json!({
+                    "type": tag, "description": "Label", "default": "text"
+                }))
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn propagates_fallible_definition_validation() {
+        let reader = serde_json::from_value::<RootObject<ItemDefinitionReaderV1>>(json!({
+            "type": "table", "description": "Samples",
+            "columns": [{
+                "key": "value", "description": "Value", "default": "1",
+                "constraint": {"type": "none"}, "requirement": "none"
+            }],
+            "default": [["2", "3"]]
+        }))
+        .unwrap();
+        let error = ItemDefinitionType::try_from(reader.document).unwrap_err();
+        assert_eq!(
+            error.translate_data().message_key().as_str(),
+            "files_table_default_row_width"
+        );
+    }
+}

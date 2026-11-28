@@ -117,12 +117,74 @@ impl From<&MapFrozen> for MapWriterV1 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::deserialize::RootObject;
-    use crate::scheme::reader::v1::datastore::frozen::map::MapReaderV1;
+    use hrafnix_datastore::definition::{
+        MapDefinition, MapItemDefinition, NumberDefinition, NumberWithUnitsDefinition,
+        StringDefinition, TableDefinition, TableWithUnitsDefinition,
+    };
+    use hrafnix_datastore::frozen::{
+        MapEntryFrozen, NumberWithUnitsFrozen, StringFrozen, TableFrozen, TableWithUnitsFrozen,
+    };
+    use hrafnix_units::UnitId;
     use serde_json::json;
 
     #[test]
     fn writes_values_without_repeating_item_definitions() {
+        let key = |name: &str| StoreKey::new(name.into()).unwrap();
+        let label = StringDefinition::new_with_default("", "");
+        let distance = NumberWithUnitsDefinition::new_with_default("", "0 m", UnitId::Length_Meter);
+        let values = TableWithUnitsDefinition::new("", vec![(key("value"), distance.clone())]);
+        let plain = TableDefinition::new(
+            "",
+            vec![(key("value"), NumberDefinition::new_with_default("", "0"))],
+        );
+        let definition = MapDefinition::new(
+            "Samples",
+            vec![
+                (key("label"), MapItemDefinition::String(label.clone())),
+                (
+                    key("distance"),
+                    MapItemDefinition::NumberWithUnits(distance.clone()),
+                ),
+                (
+                    key("values"),
+                    MapItemDefinition::TableWithUnits(values.clone()),
+                ),
+                (key("plain"), MapItemDefinition::Table(plain.clone())),
+            ],
+        );
+        let entry = MapEntryFrozen::new_from_items(BTreeMap::from([
+            (
+                key("label"),
+                MapItemFrozen::String(StringFrozen::new_with_value(label, "sample")),
+            ),
+            (
+                key("distance"),
+                MapItemFrozen::NumberWithUnits(NumberWithUnitsFrozen::new_with_value(
+                    distance,
+                    "12 m",
+                    "length_centimeter",
+                )),
+            ),
+            (
+                key("values"),
+                MapItemFrozen::TableWithUnits(TableWithUnitsFrozen::new_from_rows_with_parameter(
+                    values,
+                    vec![vec!["12 m".into()]],
+                    vec!["length_centimeter".into()],
+                    "p_units",
+                )),
+            ),
+            (
+                key("plain"),
+                MapItemFrozen::Table(TableFrozen::new_from_rows_with_parameter(
+                    plain,
+                    vec![vec!["7".into()], vec!["8 + 9".into()]],
+                    "p_plain",
+                )),
+            ),
+        ]));
+        let map =
+            MapFrozen::new_with_items(definition, BTreeMap::from([(key("first"), entry)])).unwrap();
         let document = json!({
             "definition": {
                 "description": "Samples",
@@ -149,6 +211,16 @@ mod tests {
                             "preferred_unit": "length_meter"
                         }],
                         "default": null
+                    },
+                    {
+                        "key": "plain",
+                        "type": "table",
+                        "description": "",
+                        "columns": [{
+                            "key": "value", "description": "", "default": "0",
+                            "constraint": {"type": "none"}, "requirement": "none"
+                        }],
+                        "default": null
                     }
                 ],
                 "default": null
@@ -156,16 +228,12 @@ mod tests {
             "value": {
                 "first": [
                     "sample",
-                    {"value": "12 m", "units": "length_meter"},
-                    {"parameter": "", "units": ["length_meter"], "rows": [["12 m"]]}
+                    {"value": "12 m", "units": "length_centimeter"},
+                    {"parameter": "p_units", "units": ["length_centimeter"], "rows": [["12 m"]]},
+                    {"parameter": "p_plain", "rows": [["7"], ["8 + 9"]]}
                 ]
             }
         });
-        let reader = serde_json::from_value::<RootObject<MapReaderV1>>(document.clone())
-            .expect("valid map")
-            .document;
-        let map = MapFrozen::try_from(reader).expect("matching map");
-
         assert_eq!(
             serde_json::to_value(MapWriterV1::from(&map)).unwrap(),
             document

@@ -121,3 +121,86 @@ impl From<ConstraintNumberDefinitionReaderV1> for NumberConstraint {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::deserialize::RootObject;
+    use serde_json::json;
+
+    #[test]
+    fn reads_every_integer_constraint() {
+        for (value, expected) in [
+            (json!({"type": "none"}), IntegerConstraint::none()),
+            (
+                json!({"type": "min", "min": -3, "inclusive": false}),
+                IntegerConstraint::min(-3, false),
+            ),
+            (
+                json!({"type": "max", "max": 8, "inclusive": true}),
+                IntegerConstraint::max(8, true),
+            ),
+            (
+                json!({
+                    "type": "range", "min": -3, "max": 8,
+                    "min_inclusive": false, "max_inclusive": true
+                }),
+                IntegerConstraint::range(-3, 8, false, true),
+            ),
+        ] {
+            let reader =
+                serde_json::from_value::<RootObject<ConstraintIntDefinitionReaderV1>>(value)
+                    .unwrap();
+            assert_eq!(IntegerConstraint::from(reader.document), expected);
+        }
+    }
+
+    #[test]
+    fn reads_every_number_constraint_and_normalizes_reversed_bounds() {
+        for (value, expected) in [
+            (json!({"type": "none"}), NumberConstraint::none()),
+            (
+                json!({"type": "min", "min": -1.5, "inclusive": false}),
+                NumberConstraint::min(-1.5, false),
+            ),
+            (
+                json!({"type": "max", "max": 2.5, "inclusive": true}),
+                NumberConstraint::max(2.5, true),
+            ),
+            (
+                json!({
+                    "type": "range", "min": 2.5, "max": -1.5,
+                    "min_inclusive": false, "max_inclusive": true
+                }),
+                NumberConstraint::range(-1.5, 2.5, true, false),
+            ),
+        ] {
+            let reader =
+                serde_json::from_value::<RootObject<ConstraintNumberDefinitionReaderV1>>(value)
+                    .unwrap();
+            assert_eq!(NumberConstraint::from(reader.document), expected);
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_tags_missing_bounds_and_unknown_fields() {
+        for value in [
+            json!({"type": 1}),
+            json!({"type": "unknown"}),
+            json!({"type": "min", "min": 1}),
+            json!({"type": "none", "min": 1}),
+        ] {
+            assert!(
+                serde_json::from_value::<RootObject<ConstraintIntDefinitionReaderV1>>(
+                    value.clone()
+                )
+                .is_err(),
+                "{value}"
+            );
+            assert!(
+                serde_json::from_value::<RootObject<ConstraintNumberDefinitionReaderV1>>(value)
+                    .is_err()
+            );
+        }
+    }
+}

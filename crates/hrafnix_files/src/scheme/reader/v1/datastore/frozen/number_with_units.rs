@@ -21,3 +21,51 @@ impl From<NumberWithUnitsReaderV1> for NumberWithUnitsFrozen {
         NumberWithUnitsFrozen::new_with_value(number.definition.into(), number.value, number.units)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::deserialize::RootObject;
+    use hrafnix_datastore::definition::{NumberConstraint, NumberWithUnitsDefinition};
+    use hrafnix_units::UnitId;
+    use serde_json::{Value, json};
+
+    fn document() -> Value {
+        json!({
+            "definition": {
+                "description": "Distance",
+                "default": "1 m",
+                "constraint": {"type": "min", "min": 0.0, "inclusive": true},
+                "preferred_unit": "length_meter"
+            },
+            "value": "2 * p_length",
+            "units": "length_centimeter"
+        })
+    }
+
+    #[test]
+    fn reads_expression_and_selected_units_separately_from_default_units() {
+        let reader =
+            serde_json::from_value::<RootObject<NumberWithUnitsReaderV1>>(document()).unwrap();
+        let number = NumberWithUnitsFrozen::from(reader.document);
+
+        assert_eq!(number.value(), "2 * p_length");
+        assert_eq!(number.units(), "length_centimeter");
+        assert_eq!(
+            number.definition(),
+            &NumberWithUnitsDefinition::new_with_constraint_and_default(
+                "Distance",
+                NumberConstraint::min(0.0, true),
+                "1 m",
+                UnitId::Length_Meter
+            )
+        );
+    }
+
+    #[test]
+    fn rejects_array_instead_of_selected_unit_string() {
+        let mut value = document();
+        value["units"] = json!(["length_centimeter"]);
+        assert!(serde_json::from_value::<RootObject<NumberWithUnitsReaderV1>>(value).is_err());
+    }
+}

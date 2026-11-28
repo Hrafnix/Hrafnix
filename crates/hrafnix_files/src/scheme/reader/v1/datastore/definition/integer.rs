@@ -23,3 +23,41 @@ impl From<IntegerDefinitionReaderV1> for IntegerDefinition {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::deserialize::RootObject;
+    use hrafnix_datastore::definition::IntegerConstraint;
+    use serde_json::json;
+
+    #[test]
+    fn reads_expression_and_bounds() {
+        let reader = serde_json::from_value::<RootObject<IntegerDefinitionReaderV1>>(json!({
+            "description": "Count", "default": "2 + 3",
+            "constraint": {
+                "type": "range", "min": -2, "max": 10,
+                "min_inclusive": false, "max_inclusive": true
+            }
+        }))
+        .unwrap();
+        assert_eq!(
+            IntegerDefinition::from(reader.document),
+            IntegerDefinition::new_with_constraint_and_default(
+                "Count",
+                IntegerConstraint::range(-2, 10, false, true),
+                "2 + 3"
+            )
+        );
+    }
+
+    #[test]
+    fn rejects_fractional_integer_bound() {
+        let error = serde_json::from_value::<RootObject<IntegerDefinitionReaderV1>>(json!({
+            "description": "Count", "default": "5",
+            "constraint": {"type": "min", "min": 0.5, "inclusive": true}
+        }))
+        .unwrap_err();
+        assert!(error.to_string().contains("expected i64"));
+    }
+}

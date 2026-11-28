@@ -68,8 +68,48 @@ impl From<FontSizeReaderV1> for FontSize {
 
 #[cfg(test)]
 mod tests {
-    use super::{FontSizeReaderV1, RotationReaderV1};
-    use crate::data::graphics::{FontSize, Rotation};
+    use super::{DimensionReaderV1, FontSizeReaderV1, PositionReaderV1, RotationReaderV1};
+    use crate::common::deserialize::RootObject;
+    use crate::data::graphics::{Dimension, FontSize, Position, Rotation};
+    use serde_json::json;
+
+    #[test]
+    fn reads_positions_and_dimensions_at_numeric_bounds() {
+        let position: RootObject<PositionReaderV1> =
+            serde_json::from_value(json!({"x": i32::MIN, "y": i32::MAX})).unwrap();
+        assert_eq!(
+            Position::from(position.document),
+            Position::new(i32::MIN, i32::MAX)
+        );
+        let dimensions: RootObject<DimensionReaderV1> =
+            serde_json::from_value(json!({"width": 0, "height": u16::MAX})).unwrap();
+        assert_eq!(
+            Dimension::from(dimensions.document),
+            Dimension::new(0, u16::MAX)
+        );
+    }
+
+    #[test]
+    fn geometry_rejects_missing_out_of_range_and_unknown_fields() {
+        for invalid in [
+            json!({"x": 0}),
+            json!({"x": 2147483648_u64, "y": 0}),
+            json!({"x": 0, "y": -2147483649_i64}),
+            json!({"x": 0, "y": 0, "extra": 1}),
+            json!([0, 0]),
+        ] {
+            assert!(serde_json::from_value::<RootObject<PositionReaderV1>>(invalid).is_err());
+        }
+        for invalid in [
+            json!({"width": 0}),
+            json!({"width": -1, "height": 0}),
+            json!({"width": 0, "height": 65536}),
+            json!({"width": 0, "height": 0, "extra": 1}),
+            json!([0, 0]),
+        ] {
+            assert!(serde_json::from_value::<RootObject<DimensionReaderV1>>(invalid).is_err());
+        }
+    }
 
     #[test]
     fn rotations_are_plain_unsigned_integers() {

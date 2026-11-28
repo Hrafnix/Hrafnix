@@ -51,3 +51,64 @@ impl TryFrom<GlobalFrozenReaderV1> for GlobalObjectFrozen {
         Self::new_with_items(definition.finish(), items)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::GlobalFrozenReaderV1;
+    use hrafnix_datastore::definition::GlobalObjectDefinition;
+    use hrafnix_datastore::frozen::{GlobalObjectFrozen, ItemFrozen};
+    use serde_json::{Value, json};
+
+    /// Saved string values in non-alphabetical key order.
+    fn globals() -> Value {
+        json!([
+            {
+                "key": "g_z", "type": "string",
+                "definition": {"description": "Last", "default": "base z"}, "value": "saved z"
+            },
+            {
+                "key": "g_a", "type": "string",
+                "definition": {"description": "First", "default": "base a"}, "value": "saved a"
+            }
+        ])
+    }
+
+    #[test]
+    fn preserves_saved_values_definitions_and_order() {
+        let reader = serde_json::from_value::<GlobalFrozenReaderV1>(globals()).unwrap();
+        let globals = GlobalObjectFrozen::try_from(reader).unwrap();
+        assert_eq!(
+            globals
+                .ordered_iter()
+                .map(|(key, _)| key.as_str())
+                .collect::<Vec<_>>(),
+            ["g_z", "g_a"],
+        );
+        let ItemFrozen::String(value) = globals.ordered_iter().next().unwrap().1 else {
+            panic!("expected a string value");
+        };
+        assert_eq!(value.value(), "saved z");
+        assert_eq!(value.definition().description(), "Last");
+        assert_eq!(value.definition().default_value(), "base z");
+        let empty = serde_json::from_value::<GlobalFrozenReaderV1>(json!([])).unwrap();
+        assert_eq!(
+            GlobalObjectFrozen::try_from(empty).unwrap(),
+            GlobalObjectFrozen::new(GlobalObjectDefinition::builder().finish())
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_keys_and_wrong_key_namespaces() {
+        for (key, diagnostic) in [
+            ("g_z", "files_duplicate_global_key"),
+            ("p_wrong", "datastore_key_invalid_prefix"),
+        ] {
+            let mut value = globals();
+            value[1]["key"] = json!(key);
+            let reader = serde_json::from_value::<GlobalFrozenReaderV1>(value).unwrap();
+            let error = GlobalObjectFrozen::try_from(reader).unwrap_err();
+            assert_eq!(error.translate_data().message_key().as_str(), diagnostic);
+        }
+        assert!(serde_json::from_value::<GlobalFrozenReaderV1>(json!({})).is_err());
+    }
+}

@@ -46,3 +46,36 @@ impl From<&ChoiceDefinition> for ChoiceDefinitionWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn writes_choice_items_in_definition_order() {
+        let first = ChoiceItemDefinition::new(StoreKey::new("slow".into()).unwrap(), "Slow");
+        assert_eq!(
+            serde_json::to_value(ChoiceItemDefinitionWriterV1::from(&first)).unwrap(),
+            json!({"id": "slow", "description": "Slow"})
+        );
+        let definition = ChoiceDefinition::new_with_default(
+            "Mode",
+            vec![
+                first,
+                ChoiceItemDefinition::new(StoreKey::new("fast".into()).unwrap(), "Fast"),
+            ],
+            "fast",
+        );
+        assert_eq!(
+            serde_json::to_value(ChoiceDefinitionWriterV1::from(&definition)).unwrap(),
+            json!({
+                "description": "Mode", "default": "fast",
+                "items": [
+                    {"id": "slow", "description": "Slow"},
+                    {"id": "fast", "description": "Fast"}
+                ]
+            })
+        );
+    }
+}

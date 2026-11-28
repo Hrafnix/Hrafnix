@@ -22,3 +22,36 @@ impl From<&IntegerFrozen> for IntegerWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::{IntegerConstraint, IntegerDefinition};
+    use serde_json::json;
+
+    #[test]
+    fn writes_bounds_default_and_current_expression() {
+        let integer = IntegerFrozen::new_with_value(
+            IntegerDefinition::new_with_constraint_and_default(
+                "Count",
+                IntegerConstraint::range(0, 10, true, false),
+                "2",
+            ),
+            "1 + 2",
+        );
+
+        assert_eq!(
+            serde_json::to_value(IntegerWriterV1::from(&integer)).unwrap(),
+            json!({
+                "definition": {
+                    "description": "Count", "default": "2",
+                    "constraint": {
+                        "type": "range", "min": 0, "max": 10,
+                        "min_inclusive": true, "max_inclusive": false
+                    }
+                },
+                "value": "1 + 2"
+            })
+        );
+    }
+}

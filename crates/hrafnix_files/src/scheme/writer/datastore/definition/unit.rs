@@ -137,3 +137,35 @@ enum UnitFamilyDefinitionWriterV1 {
     /// Volume flow acceleration.
     VolumeFlowAcceleration,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn writes_unit_expression_and_snake_case_family() {
+        for (family, name) in [
+            (UnitFamilyId::None, "none"),
+            (UnitFamilyId::Length, "length"),
+            (UnitFamilyId::ElectricCharge, "electric_charge"),
+            (
+                UnitFamilyId::MotorBackEmfConstant,
+                "motor_back_emf_constant",
+            ),
+            (
+                UnitFamilyId::VolumeFlowAcceleration,
+                "volume_flow_acceleration",
+            ),
+        ] {
+            let definition = UnitDefinition::new_with_default("Units", family, "selected_unit");
+            assert_eq!(
+                serde_json::to_value(UnitDefinitionWriterV1::from(&definition)).unwrap(),
+                json!({
+                    "description": "Units", "default": "selected_unit", "unit_family": name
+                }),
+                "{family:?}"
+            );
+        }
+    }
+}

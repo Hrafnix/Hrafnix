@@ -22,3 +22,28 @@ impl From<&FolderFrozen> for FolderWriterV1 {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use hrafnix_datastore::definition::FolderDefinition;
+    use serde_json::json;
+
+    #[test]
+    fn writes_path_expression_and_archive_option() {
+        let folder = FolderFrozen::new_with_value(
+            FolderDefinition::new_with_default("Output folder", false, "results"),
+            "p_folder",
+        );
+
+        assert_eq!(
+            serde_json::to_value(FolderWriterV1::from(&folder)).unwrap(),
+            json!({
+                "definition": {
+                    "description": "Output folder", "default": "results", "is_input": false
+                },
+                "value": "p_folder"
+            })
+        );
+    }
+}
