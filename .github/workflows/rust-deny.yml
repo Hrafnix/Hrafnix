@@ -14,7 +14,7 @@ jobs:
         id: msrv
         run: echo "version=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)" >> "$GITHUB_OUTPUT"
       - name: Deny
-        uses: EmbarkStudios/cargo-deny-action@v2.1.1
+        uses: EmbarkStudios/cargo-deny-action@v2.1.3
         with:
           rust-version: ${{ steps.msrv.outputs.version }}
           log-level: warn
