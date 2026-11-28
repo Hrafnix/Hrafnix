@@ -1,16 +1,16 @@
-use crate::component::data::ComponentFile;
-use crate::component_instance::data::ComponentInstance;
-use crate::connection::data::Connection;
-use crate::decoration_background::data::{BackgroundDecoration, BackgroundDecorationKind};
-use crate::decoration_foreground::data::{
+use crate::data::component::ComponentFile;
+use crate::data::component_instance::ComponentInstance;
+use crate::data::connection::Connection;
+use crate::data::decoration_background::{BackgroundDecoration, BackgroundDecorationKind};
+use crate::data::decoration_foreground::{
     ForegroundDecoration, ForegroundDecorationKind, ImageFit,
 };
-use crate::graphics::data::{Dimension, Position};
-use crate::metadata_general::data::MetadataFile;
-use crate::metadata_gui::data::GuiMetadata;
-use crate::model::data::ModelFile;
-use crate::source::data::ComponentSource;
-use crate::translations::data::TranslationsFile;
+use crate::data::graphics::{Dimension, Position};
+use crate::data::metadata_general::MetadataFile;
+use crate::data::metadata_gui::GuiMetadata;
+use crate::data::model::ModelFile;
+use crate::data::source::ComponentSource;
+use crate::data::translations::TranslationsFile;
 use hrafnix_common::port::PortType;
 use hrafnix_datastore::definition::ParameterObjectDefinition;
 

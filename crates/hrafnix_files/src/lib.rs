@@ -66,12 +66,17 @@
 //!
 //! File-data constructors are crate-private. Callers obtain data through the readers
 //! and inspect it through public getter accessors.
-//! [`source::data::PackageReference::new`] and [`source::data::PackageVersion::new`]
+//! [`data::source::PackageReference::new`] and [`data::source::PackageVersion::new`]
 //! remain public for reader input.
 //! String-bearing file-data types expose `launder(&mut self, store)` to intern
 //! their strings recursively in place, preserving values, ordering, paths, and hashes.
 //!
-//! The public read and write functions live in [`model`] and [`component`].
+//! The public read and write functions live in [`formats::model`] and
+//! [`formats::component`].
+//! JSON readers and writers live under [`scheme`], with version-1 readers grouped
+//! in [`scheme::reader::v1`] and current-format writers in [`scheme::writer`].
+//! File-version dispatch lives in [`scheme::reader`]; in-memory file-data types
+//! live under [`data`].
 //! Writers consume the file data and atomically replace the destination with
 //! pretty-printed JSON, without a final newline. Reads and writes are limited to
 //! 256 MiB.
@@ -105,38 +110,9 @@
 
 /// Shared file I/O and localized diagnostics.
 mod common;
-/// Component definitions and behavior.
-pub mod component;
-/// Saved component instances and their unresolved source references.
-pub mod component_instance;
-/// Connections between component ports and their drawing paths.
-pub mod connection;
-/// Shared datastore definition codecs used by parameter and variable files.
-mod datastore;
-/// Shapes drawn behind model and component contents.
-pub mod decoration_background;
-/// Text and images drawn in front of model and component contents.
-pub mod decoration_foreground;
-/// Ordered parameter-definition codecs.
-pub mod definition_parameter;
-/// Ordered variable-definition codecs.
-pub mod definition_variable;
-/// Frozen global-value codecs.
-pub mod frozen_global;
-/// Frozen parameter-value codecs.
-pub mod frozen_parameter;
-/// Geometry and styling values shared by graphical elements.
-pub mod graphics;
-/// Metadata shared by model and component files.
-pub mod metadata_general;
-/// Drawing dimensions, rotation, icons, and port locations associated with components.
-pub mod metadata_gui;
-/// Simulation model definitions.
-pub mod model;
-/// Component source references and package provenance.
-pub mod source;
-/// Source languages and translated text shared by model and component files.
-pub mod translations;
-
-#[cfg(test)]
-mod tests;
+/// In-memory model, component, and nested file-data types.
+pub mod data;
+/// Public file-format reading and writing.
+pub mod formats;
+/// Versioned JSON schemas for model and component files.
+pub mod scheme;
