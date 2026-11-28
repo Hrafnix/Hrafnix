@@ -4,7 +4,7 @@
 
 use super::common::{self, TestDirectory};
 
-use crate::{
+use crate::formats::{
     component::{read_component_file, write_component_file},
     model::{read_model_file, write_model_file},
 };

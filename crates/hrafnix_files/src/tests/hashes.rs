@@ -4,8 +4,8 @@
 
 use super::common::{self, TestDirectory};
 
-use crate::component::{read_component_file, write_component_file};
-use crate::model::{read_model_file, write_model_file};
+use crate::formats::component::{read_component_file, write_component_file};
+use crate::formats::model::{read_model_file, write_model_file};
 use camino::Utf8Path;
 use hrafnix_datastore::definition::ItemDefinitionType;
 use hrafnix_datastore::frozen::ItemFrozen;

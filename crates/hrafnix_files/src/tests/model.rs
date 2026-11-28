@@ -6,7 +6,7 @@
 use super::common::{self, METADATA, TRANSLATIONS, TestDirectory};
 
 use crate::data::model::ModelFile;
-use crate::model::{read_model_file, write_model_file};
+use crate::formats::model::{read_model_file, write_model_file};
 use camino::Utf8PathBuf;
 use hrafnix_datastore::definition::{
     GlobalObjectDefinition, IntegerDefinition, ParameterObjectDefinition, StringDefinition,

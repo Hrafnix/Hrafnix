@@ -5,11 +5,11 @@
 
 use super::common::{self, TestDirectory};
 
-use crate::component::{read_component_file, write_component_file};
 use crate::data::component::ComponentFile;
 use crate::data::graphics::{Dimension, Rotation};
 use crate::data::metadata_gui::{GuiMetadata, Port, PortLocation};
 use crate::data::source::{ComponentSource, PackageReference, PackageVersion};
+use crate::formats::component::{read_component_file, write_component_file};
 use camino::Utf8PathBuf;
 use hrafnix_common::port::PortType;
 use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};

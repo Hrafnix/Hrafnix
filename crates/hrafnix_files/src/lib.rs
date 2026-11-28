@@ -71,7 +71,8 @@
 //! String-bearing file-data types expose `launder(&mut self, store)` to intern
 //! their strings recursively in place, preserving values, ordering, paths, and hashes.
 //!
-//! The public read and write functions live in [`model`] and [`component`].
+//! The public read and write functions live in [`formats::model`] and
+//! [`formats::component`].
 //! JSON readers and writers live under [`scheme`], with version-1 readers grouped
 //! in [`scheme::reader::v1`] and current-format writers in [`scheme::writer`].
 //! File-version dispatch lives in [`scheme::reader`]; in-memory file-data types
@@ -109,12 +110,10 @@
 
 /// Shared file I/O and localized diagnostics.
 mod common;
-/// Component file reading and writing.
-pub mod component;
 /// In-memory model, component, and nested file-data types.
 pub mod data;
-/// Model file reading and writing.
-pub mod model;
+/// Public file-format reading and writing.
+pub mod formats;
 /// Versioned JSON schemas for model and component files.
 pub mod scheme;
 
