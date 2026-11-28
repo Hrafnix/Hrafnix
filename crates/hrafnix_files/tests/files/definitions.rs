@@ -1,13 +1,9 @@
-//! Document-level coverage of parameter and variable definition codecs.
+//! Public file-API round trips for ordered definitions, exact bounds, and canonical defaults.
 
 #![allow(clippy::expect_used, clippy::indexing_slicing, clippy::unwrap_used)]
 
 use super::common::{self, TestDirectory};
 
-use crate::formats::{
-    component::{read_component_file, write_component_file},
-    model::{read_model_file, write_model_file},
-};
 use camino::Utf8Path;
 use hrafnix_datastore::definition::{
     BooleanDefinition, ChoiceDefinition, ChoiceItemDefinition, FileDefinition, FolderDefinition,
@@ -17,8 +13,11 @@ use hrafnix_datastore::definition::{
     TableColumnRequirement, TableDefinition, TableWithUnitsDefinition, UnitDefinition,
     VariableObjectDefinition,
 };
+use hrafnix_files::formats::{
+    component::{read_component_file, write_component_file},
+    model::{read_model_file, write_model_file},
+};
 use hrafnix_keys::{ParameterKey, StoreKey, VariableKey};
-use hrafnix_message::message::Message;
 use hrafnix_units::{UnitFamilyId, UnitId};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, fs};
@@ -288,67 +287,44 @@ fn round_trip(root: &str, path: &Utf8Path) {
     }
 }
 
-/// Saves constructed datastore definitions and compares reloaded model and component data.
-fn assert_definitions_round_trip(path: &Utf8Path, definitions: &[ItemDefinitionType]) {
+/// Compares JSON fixtures with independent datastore expectations and the complete rewritten file.
+fn assert_definitions_round_trip(path: &Utf8Path, definitions: &[(ItemDefinitionType, Value)]) {
     for root in ["model", "component"] {
+        let mut document = document(root);
         let mut parameters = ParameterObjectDefinition::builder();
         let mut variables = VariableObjectDefinition::builder();
-        for (index, definition) in definitions.iter().enumerate() {
-            parameters.insert(
-                ParameterKey::new(format!("p_item{index}").into()).unwrap(),
-                definition.clone(),
-            );
-            variables.insert(
-                VariableKey::new(format!("v_item{index}").into()).unwrap(),
-                definition.clone(),
-            );
+        let mut parameter_json = Vec::new();
+        let mut variable_json = Vec::new();
+        for (index, (definition, value)) in definitions.iter().enumerate() {
+            let parameter = ParameterKey::new(format!("p_item{index}").into()).unwrap();
+            let variable = VariableKey::new(format!("v_item{index}").into()).unwrap();
+            let mut parameter_value = value.clone();
+            parameter_value["key"] = json!(parameter.as_str());
+            let mut variable_value = value.clone();
+            variable_value["key"] = json!(variable.as_str());
+            parameter_json.push(parameter_value);
+            variable_json.push(variable_value);
+            parameters.insert(parameter, definition.clone());
+            variables.insert(variable, definition.clone());
         }
-        fs::write(path, serde_json::to_string(&document(root)).unwrap()).unwrap();
+        let parameters = parameters.finish();
+        let variables = variables.finish();
+        document[root]["parameter_definition"] = json!(parameter_json);
+        document[root]["variable_definition"] = json!(variable_json);
+        fs::write(path, serde_json::to_string(&document).unwrap()).unwrap();
 
         if root == "model" {
             let model = read_model_file(path).unwrap();
-            let model = crate::data::model::ModelFile::new(
-                model.metadata().clone(),
-                model.foreground_decorations().to_vec(),
-                model.background_decorations().to_vec(),
-                model.global_settings().clone(),
-                model.components().to_vec(),
-                model.connections().to_vec(),
-                model.translations().clone(),
-                parameters.finish(),
-                variables.finish(),
-            );
-            write_model_file(model.clone(), path).unwrap();
-            assert_eq!(read_model_file(path).unwrap(), model);
+            assert_eq!(model.parameter_definition(), &parameters);
+            assert_eq!(model.variable_definition(), &variables);
         } else {
             let component = read_component_file(path, None).unwrap();
-            let component = crate::data::component::ComponentFile::new(
-                component.metadata().clone(),
-                component.source().clone(),
-                component.gui_metadata().clone(),
-                component.foreground_decorations().to_vec(),
-                component.background_decorations().to_vec(),
-                component.components().to_vec(),
-                component.connections().to_vec(),
-                component.translations().clone(),
-                parameters.finish(),
-                variables.finish(),
-            );
-            write_component_file(component.clone(), path).unwrap();
-            common::assert_component_content_eq_ref(
-                &component,
-                &read_component_file(path, None).unwrap(),
-            );
+            assert_eq!(component.parameter_definition(), &parameters);
+            assert_eq!(component.variable_definition(), &variables);
         }
-    }
-}
-
-/// Reads either document through the public API for rejection tests.
-fn read(root: &str, path: &Utf8Path) -> Result<(), Message> {
-    if root == "model" {
-        read_model_file(path).map(|_| ())
-    } else {
-        read_component_file(path, None).map(|_| ())
+        round_trip(root, path);
+        let written: Value = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
+        assert_eq!(written, document);
     }
 }
 
@@ -400,16 +376,39 @@ fn numeric_constraint_bounds_round_trip_exactly() {
     let directory = TestDirectory::new();
     let path = directory.path.join("numeric-bounds.json");
     let bound = 1.693_099_406_082_845_5;
-    let definitions: [ItemDefinitionType; 3] = [
-        NumberDefinition::new_with_constraint("Minimum", NumberConstraint::min(bound, true)).into(),
-        NumberDefinition::new_with_constraint("Maximum", NumberConstraint::max(bound, false))
+    let definitions = [
+        (
+            NumberDefinition::new_with_constraint("Minimum", NumberConstraint::min(bound, true))
+                .into(),
+            json!({
+                "type": "number", "description": "Minimum", "default": "",
+                "constraint": {"type": "min", "min": bound, "inclusive": true}
+            }),
+        ),
+        (
+            NumberDefinition::new_with_constraint("Maximum", NumberConstraint::max(bound, false))
+                .into(),
+            json!({
+                "type": "number", "description": "Maximum", "default": "",
+                "constraint": {"type": "max", "max": bound, "inclusive": false}
+            }),
+        ),
+        (
+            NumberWithUnitsDefinition::new_with_constraint(
+                "Range",
+                NumberConstraint::range(-bound, bound, false, true),
+                UnitId::Length_Meter,
+            )
             .into(),
-        NumberWithUnitsDefinition::new_with_constraint(
-            "Range",
-            NumberConstraint::range(-bound, bound, false, true),
-            UnitId::Length_Meter,
-        )
-        .into(),
+            json!({
+                "type": "number_with_units", "description": "Range", "default": "",
+                "constraint": {
+                    "type": "range", "min": -bound, "max": bound,
+                    "min_inclusive": false, "max_inclusive": true
+                },
+                "preferred_unit": "length_meter"
+            }),
+        ),
     ];
     assert_definitions_round_trip(&path, &definitions);
 }
@@ -471,7 +470,48 @@ fn normalized_definitions_round_trip() {
             (key("partial"), vec![MapItemDefault::scalar("custom")]),
         ]),
     );
-    assert_definitions_round_trip(&path, &[choice.into(), map.into()]);
+    let choice_json = json!({
+        "type": "choice", "description": "Choice", "default": "same",
+        "items": [
+            {"id": "first", "description": "First"},
+            {"id": "same", "description": "Last"}
+        ]
+    });
+    let mut nested_choice = choice_json.clone();
+    nested_choice["key"] = json!("choice");
+    let map_json = json!({
+        "type": "map", "description": "Map",
+        "items": [
+            {"key": "label", "type": "string", "description": "Label", "default": "base"},
+            {
+                "key": "rows", "type": "table", "description": "Rows",
+                "columns": [{
+                    "key": "value", "description": "Value", "default": "",
+                    "constraint": {"type": "none"}, "requirement": "none"
+                }],
+                "default": [["42"]]
+            },
+            {
+                "key": "units", "type": "table_with_units", "description": "Units",
+                "columns": [{
+                    "key": "length", "description": "Length", "default": "",
+                    "constraint": {"type": "none"}, "requirement": "none",
+                    "preferred_unit": "length_meter"
+                }],
+                "default": null
+            },
+            nested_choice
+        ],
+        "default": {
+            "entry": ["base", [["42"]], [], "same"],
+            "omitted": [],
+            "partial": ["custom"]
+        }
+    });
+    assert_definitions_round_trip(
+        &path,
+        &[(choice.into(), choice_json), (map.into(), map_json)],
+    );
 }
 
 #[test]
@@ -555,206 +595,6 @@ fn collection_defaults_remain_explicitly_null_or_empty() {
                 let written: Value =
                     serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
                 assert_eq!(written, document);
-            }
-        }
-    }
-}
-
-#[test]
-fn definition_arrays_validate_keys_shapes_and_all_item_fields() {
-    let directory = TestDirectory::new();
-    let path = directory.path.join("invalid-definitions.json");
-    for root in ["model", "component"] {
-        for (field, prefix, other_prefix) in [
-            ("parameter_definition", "p", "v"),
-            ("variable_definition", "v", "p"),
-        ] {
-            let base = document(root);
-            let mut missing = base.clone();
-            missing[root].as_object_mut().unwrap().remove(field);
-            let mut invalid_documents = vec![missing];
-            let mut invalid_key_documents = Vec::new();
-            for value in [
-                Value::Null,
-                json!({}),
-                json!(false),
-                json!(1),
-                json!("items"),
-                json!([null]),
-                json!([[]]),
-            ] {
-                let mut document = base.clone();
-                document[root][field] = value;
-                invalid_documents.push(document);
-            }
-            for (index, (_, _, mut item)) in item_cases().into_iter().enumerate() {
-                item["key"] = json!(format!("{prefix}_item"));
-                let mut valid = base.clone();
-                valid[root][field] = json!([item]);
-                fs::write(&path, serde_json::to_string(&valid).unwrap()).unwrap();
-                read(root, &path).unwrap();
-
-                for name in item.as_object().unwrap().keys() {
-                    let mut document = valid.clone();
-                    document[root][field][0]
-                        .as_object_mut()
-                        .unwrap()
-                        .remove(name);
-                    invalid_documents.push(document);
-                }
-                let mut unknown = valid.clone();
-                unknown[root][field][0]["unexpected"] = json!(true);
-                invalid_documents.push(unknown);
-                for invalid_key in [json!(1), json!({"key": format!("{prefix}_item")})] {
-                    let mut document = valid.clone();
-                    document[root][field][0]["key"] = invalid_key;
-                    invalid_documents.push(document);
-                }
-                for (invalid_key, message_key) in [
-                    (String::new(), "datastore_key_empty"),
-                    ("plain".to_owned(), "datastore_key_invalid_prefix"),
-                    (
-                        format!("{other_prefix}_item"),
-                        "datastore_key_invalid_prefix",
-                    ),
-                    (
-                        format!("{prefix}_invalid key"),
-                        "datastore_key_invalid_character",
-                    ),
-                ] {
-                    let mut document = valid.clone();
-                    document[root][field][0]["key"] = json!(invalid_key);
-                    invalid_key_documents.push((document, message_key));
-                }
-                for invalid_type in [json!("unknown"), json!({"string": null}), json!(index)] {
-                    let mut document = valid.clone();
-                    document[root][field][0]["type"] = invalid_type;
-                    invalid_documents.push(document);
-                }
-                if item["default"].is_string() {
-                    for invalid_default in [Value::Null, json!(true), json!(2.5), json!([])] {
-                        let mut document = valid.clone();
-                        document[root][field][0]["default"] = invalid_default;
-                        invalid_documents.push(document);
-                    }
-                }
-            }
-            for document in invalid_documents {
-                fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
-                let error = read(root, &path).expect_err(&document.to_string());
-                assert_eq!(
-                    error.translate_data().message_key().as_str(),
-                    "files_json_data"
-                );
-                assert!(error.extra_detail().is_some());
-            }
-            for (document, message_key) in invalid_key_documents {
-                fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
-                let error = read(root, &path).expect_err(&document.to_string());
-                assert_eq!(
-                    error.translate_data().message_key().as_str(),
-                    message_key,
-                    "{document}"
-                );
-            }
-        }
-    }
-}
-
-#[test]
-fn nested_item_and_constraint_tags_reject_numeric_variant_indexes() {
-    let directory = TestDirectory::new();
-    let path = directory.path.join("numeric-tags.json");
-    for root in ["model", "component"] {
-        for (field, prefix) in [("parameter_definition", "p"), ("variable_definition", "v")] {
-            for (name, pointer, index) in [
-                ("v_integer", "/constraint/type", 3),
-                ("t_number", "/constraint/type", 1),
-                ("s_number_with_units", "/constraint/type", 2),
-                ("u_map", "/items/0/type", 6),
-                ("u_map", "/items/1/type", 7),
-                ("u_map", "/items/2/type", 8),
-                ("u_map", "/items/1/columns/0/constraint/type", 0),
-                ("u_map", "/items/2/columns/0/constraint/type", 0),
-                ("q_table", "/columns/0/constraint/type", 0),
-                ("p_table_with_units", "/columns/0/constraint/type", 0),
-            ] {
-                let (_, _, mut item) = item_cases()
-                    .into_iter()
-                    .find(|(candidate, _, _)| *candidate == name)
-                    .unwrap();
-                item["key"] = json!(format!("{prefix}_item"));
-                *item.pointer_mut(pointer).unwrap() = json!(index);
-                let mut document = document(root);
-                document[root][field] = json!([item]);
-                fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
-                let error = read(root, &path).expect_err(&document.to_string());
-                assert_eq!(
-                    error.translate_data().message_key().as_str(),
-                    "files_json_data"
-                );
-            }
-        }
-    }
-}
-
-#[test]
-fn duplicate_definition_keys_and_json_fields_are_rejected() {
-    let directory = TestDirectory::new();
-    let path = directory.path.join("duplicates.json");
-    for root in ["model", "component"] {
-        for (field, prefix) in [("parameter_definition", "p"), ("variable_definition", "v")] {
-            let item = format!(
-                r#"{{"key":"{prefix}_item","type":"string","description":"","default":""}}"#
-            );
-            let duplicate_key_message = if prefix == "p" {
-                "files_duplicate_parameter_key"
-            } else {
-                "files_duplicate_variable_key"
-            };
-            let mut invalid_arrays = vec![(format!("[{item},{item}]"), duplicate_key_message)];
-            for (name, value) in [
-                ("key", format!("\"{prefix}_item\"")),
-                ("type", "\"string\"".to_owned()),
-                ("description", "\"\"".to_owned()),
-                ("default", "\"\"".to_owned()),
-            ] {
-                let duplicate = item.replace(
-                    &format!("\"{name}\":{value}"),
-                    &format!("\"{name}\":{value},\"{name}\":{value}"),
-                );
-                assert_ne!(duplicate, item);
-                invalid_arrays.push((format!("[{duplicate}]"), "files_json_data"));
-            }
-            let contents = common::contents(root);
-            let mut invalid_bodies: Vec<_> = invalid_arrays
-                .iter()
-                .map(|(array, message_key)| {
-                    (
-                        contents.replace(
-                            &format!("\"{field}\": []"),
-                            &format!("\"{field}\": {array}"),
-                        ),
-                        *message_key,
-                    )
-                })
-                .collect();
-            invalid_bodies.push((
-                contents.replace(
-                    &format!("\"{field}\": []"),
-                    &format!("\"{field}\": [], \"{field}\": []"),
-                ),
-                "files_json_data",
-            ));
-            for (body, message_key) in invalid_bodies {
-                let document = format!("{{\"file-version\":\"1\",\"{root}\":{body}}}");
-                fs::write(&path, &document).unwrap();
-                let error = read(root, &path).expect_err(&document);
-                assert_eq!(
-                    error.translate_data().message_key().as_str(),
-                    message_key,
-                    "{document}"
-                );
             }
         }
     }

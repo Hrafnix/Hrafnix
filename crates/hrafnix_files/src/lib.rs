@@ -116,6 +116,3 @@ pub mod data;
 pub mod formats;
 /// Versioned JSON schemas for model and component files.
 pub mod scheme;
-
-#[cfg(test)]
-mod tests;

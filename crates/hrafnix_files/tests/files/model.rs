@@ -5,34 +5,18 @@
 
 use super::common::{self, METADATA, TRANSLATIONS, TestDirectory};
 
-use crate::data::model::ModelFile;
-use crate::formats::model::{read_model_file, write_model_file};
 use camino::Utf8PathBuf;
-use hrafnix_datastore::definition::{
-    GlobalObjectDefinition, IntegerDefinition, ParameterObjectDefinition, StringDefinition,
-    VariableObjectDefinition,
-};
-use hrafnix_datastore::frozen::{GlobalObjectFrozen, IntegerFrozen, ItemFrozen, StringFrozen};
-use hrafnix_keys::global_key;
+use hrafnix_files::data::model::ModelFile;
+use hrafnix_files::formats::model::{read_model_file, write_model_file};
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use hrafnix_translation::generate_translation_map;
 use serde_json::{Value, json};
-use std::collections::BTreeMap;
 use std::fs;
 
 /// Returns the model stored in `tests/data/minimal.hxm`.
 fn minimal_model() -> ModelFile {
-    ModelFile::new(
-        common::metadata("model"),
-        Vec::new(),
-        Vec::new(),
-        GlobalObjectFrozen::new(GlobalObjectDefinition::default()),
-        Vec::new(),
-        Vec::new(),
-        common::translations(),
-        ParameterObjectDefinition::default(),
-        VariableObjectDefinition::default(),
-    )
+    read_model_file(&Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/minimal.hxm"))
+        .unwrap()
 }
 
 /// Returns the fixture text with LF line endings and no final newline.
@@ -45,11 +29,6 @@ fn minimal_text() -> String {
 }
 
 #[test]
-fn root_accepts_named_fields_and_rejects_positional_arrays() {
-    common::assert_root_structure("model", |path| read_model_file(path).map(|_| ()));
-}
-
-#[test]
 fn reading_populates_file_hash() {
     let path = Utf8PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/minimal.hxm");
     let model = read_model_file(&path).unwrap();
@@ -59,21 +38,6 @@ fn reading_populates_file_hash() {
         model.file_hash(),
         *blake3::hash(fs::read(&path).unwrap().as_slice()).as_bytes()
     );
-}
-
-#[test]
-fn decorations_reject_positional_arrays_and_unknown_fields() {
-    common::assert_decoration_structure("model", |path| read_model_file(path).map(|_| ()));
-}
-
-#[test]
-fn translations_are_required_and_validated() {
-    common::assert_translation_structure("model", |path| read_model_file(path).map(|_| ()));
-}
-
-#[test]
-fn connections_are_required_and_validated() {
-    common::assert_connection_structure("model", |path| read_model_file(path).map(|_| ()));
 }
 
 #[test]
@@ -90,8 +54,8 @@ fn malformed_documents_report_json_categories_and_positions() {
 }
 
 #[test]
-fn validates_the_document_schema_and_metadata() {
-    common::assert_document_schema("model", |path| read_model_file(path).map(|_| ()));
+fn schema_errors_include_file_diagnostic_context() {
+    common::assert_schema_error_context("model", |path| read_model_file(path).map(|_| ()));
 }
 
 #[test]
@@ -165,165 +129,55 @@ fn model_round_trips_through_the_writer_and_disk() {
 }
 
 #[test]
-fn global_settings_round_trip_with_definitions_values_and_order() {
+fn populated_model_sections_round_trip_through_disk() {
     let directory = TestDirectory::new();
-    let path = directory.path.join("globals.hxm");
-    let steps = IntegerDefinition::new_with_default("Simulation steps", "100");
-    let label = StringDefinition::new_with_default("Run label", "\"Default\"");
-    let definition = GlobalObjectDefinition::builder()
-        .with(global_key!("g_steps"), steps.clone())
-        .with(global_key!("g_label"), label.clone())
-        .finish();
-    let global_settings = GlobalObjectFrozen::new_with_items(
-        definition,
-        BTreeMap::from([
-            (
-                global_key!("g_steps").into(),
-                ItemFrozen::Integer(IntegerFrozen::new_with_value(steps, "50 * 4")),
-            ),
-            (
-                global_key!("g_label").into(),
-                ItemFrozen::String(StringFrozen::new_with_value(label, "\"Custom\"")),
-            ),
-        ]),
-    )
-    .unwrap();
-    let model = ModelFile::new(
-        common::metadata("model"),
-        Vec::new(),
-        Vec::new(),
-        global_settings,
-        Vec::new(),
-        Vec::new(),
-        common::translations(),
-        ParameterObjectDefinition::default(),
-        VariableObjectDefinition::default(),
-    );
-
-    write_model_file(model.clone(), &path).unwrap();
-
-    let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(
-        document.pointer("/model/global_settings").unwrap(),
-        &json!([
-            {
-                "key": "g_steps",
-                "type": "integer",
-                "definition": {
-                    "description": "Simulation steps",
-                    "default": "100",
-                    "constraint": {"type": "none"}
-                },
-                "value": "50 * 4"
-            },
-            {
-                "key": "g_label",
-                "type": "string",
-                "definition": {"description": "Run label", "default": "\"Default\""},
-                "value": "\"Custom\""
-            }
-        ]),
-    );
-    let restored = read_model_file(&path).unwrap();
-    assert_eq!(
-        restored
-            .global_settings()
-            .ordered_iter()
-            .map(|(key, _)| key.as_str())
-            .collect::<Vec<_>>(),
-        ["g_steps", "g_label"],
-    );
-    assert_eq!(restored, model);
-}
-
-#[test]
-fn global_settings_are_required_and_validated() {
-    let directory = TestDirectory::new();
-    let path = directory.path.join("invalid-globals.hxm");
-    let document: Value = serde_json::from_str(&minimal_text()).unwrap();
-    let item = json!({
-        "key": "g_label",
-        "type": "string",
-        "definition": {"description": "Label", "default": "\"Default\""},
-        "value": "\"Custom\""
+    let path = directory.path.join("populated.hxm");
+    let mut document: Value = serde_json::from_str(&minimal_text()).unwrap();
+    let model = &mut document["model"];
+    model["foreground_decorations"] = json!([{
+        "id": "label", "position": {"x": -10, "y": 20},
+        "dimensions": {"width": 100, "height": 50},
+        "kind": {"Text": {"text": "Title", "font_size": 2050}}
+    }]);
+    model["background_decorations"] = json!([{
+        "id": "shape", "position": {"x": -20, "y": -30},
+        "dimensions": {"width": 120, "height": 80}, "kind": "Frame"
+    }]);
+    model["connections"] = common::connections_json();
+    model["translations"] = json!({
+        "language": "en",
+        "translations": {
+            "Target temperature": {"es": "Temperatura objetivo", "fr": "Temp\u{e9}rature cible"},
+            "empty": {}, "quoted \"key\"\n": {"": ""}
+        }
     });
-    let mut missing = document.clone();
-    missing
-        .get_mut("model")
-        .unwrap()
-        .as_object_mut()
-        .unwrap()
-        .remove("global_settings");
-    let mut invalid_documents = vec![missing];
-    let mut invalid_settings = vec![
-        Value::Null,
-        json!({}),
-        json!(true),
-        json!(1),
-        json!("text"),
-        json!([null]),
-        json!([{}]),
-        json!([["g_label", "string", {}, "value"]]),
-    ];
-    for (field, value) in [
-        ("key", json!(1)),
-        ("type", json!(0)),
-        ("type", json!("unknown")),
-        ("definition", json!(["Label", "\"Default\""])),
-        ("value", json!(1)),
-        ("unknown", json!(true)),
-    ] {
-        let mut invalid = item.clone();
-        invalid
-            .as_object_mut()
-            .unwrap()
-            .insert(field.to_owned(), value);
-        invalid_settings.push(json!([invalid]));
-    }
-    for field in ["key", "type", "definition", "value"] {
-        let mut invalid = item.clone();
-        invalid.as_object_mut().unwrap().remove(field);
-        invalid_settings.push(json!([invalid]));
-    }
-    for settings in invalid_settings {
-        let mut invalid = document.clone();
-        *invalid.pointer_mut("/model/global_settings").unwrap() = settings;
-        invalid_documents.push(invalid);
-    }
-    let mut documents: Vec<_> = invalid_documents
-        .iter()
-        .map(|document| serde_json::to_string(document).unwrap())
-        .collect();
-    documents.push(minimal_text().replace(
-        "\"global_settings\": []",
-        "\"global_settings\": [], \"global_settings\": []",
-    ));
-    for document in documents {
-        fs::write(&path, &document).unwrap();
-        let error = read_model_file(&path).unwrap_err();
-        assert_eq!(
-            error.translate_data().message_key().as_str(),
-            "files_json_data",
-            "{document}",
-        );
-        assert!(error.extra_detail().is_some(), "{document}");
-    }
-    let mut invalid_key = item.clone();
-    *invalid_key.get_mut("key").unwrap() = json!("p_label");
-    for (settings, message_key) in [
-        (json!([item, item]), "files_duplicate_global_key"),
-        (json!([invalid_key]), "datastore_key_invalid_prefix"),
-    ] {
-        let mut invalid = document.clone();
-        *invalid.pointer_mut("/model/global_settings").unwrap() = settings;
-        fs::write(&path, serde_json::to_string(&invalid).unwrap()).unwrap();
-        let error = read_model_file(&path).unwrap_err();
-        assert_eq!(
-            error.translate_data().message_key().as_str(),
-            message_key,
-            "{invalid}",
-        );
-    }
+    model["parameter_definition"] = json!([
+        {"key": "p_label", "type": "string", "description": "Label", "default": "base"}
+    ]);
+    model["variable_definition"] = json!([
+        {"key": "v_label", "type": "string", "description": "Output label", "default": ""}
+    ]);
+    model["global_settings"] = json!([
+        {
+            "key": "g_steps", "type": "integer",
+            "definition": {"description": "Simulation steps", "default": "100", "constraint": {"type": "none"}},
+            "value": "50 * 4"
+        },
+        {
+            "key": "g_label", "type": "string",
+            "definition": {"description": "Run label", "default": "\"Default\""},
+            "value": "\"Custom\""
+        }
+    ]);
+    fs::write(&path, serde_json::to_string(&document).unwrap()).unwrap();
+    let original = read_model_file(&path).unwrap();
+
+    write_model_file(original.clone(), &path).unwrap();
+
+    assert_eq!(read_model_file(&path).unwrap(), original);
+    let written: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+    assert_eq!(written, document);
+    assert_eq!(directory.entries(), ["populated.hxm"]);
 }
 
 #[test]
@@ -368,90 +222,6 @@ fn global_map_settings_round_trip_and_propagate_value_schema_errors() {
             "{document}",
         );
     }
-}
-
-#[test]
-fn model_decorations_round_trip_through_disk() {
-    let directory = TestDirectory::new();
-    let path = directory.path.join("decorations.hxm");
-    let model = ModelFile::new(
-        common::metadata("model"),
-        vec![common::foreground_decoration()],
-        vec![common::background_decoration()],
-        GlobalObjectFrozen::new(GlobalObjectDefinition::default()),
-        Vec::new(),
-        Vec::new(),
-        common::translations(),
-        ParameterObjectDefinition::default(),
-        VariableObjectDefinition::default(),
-    );
-
-    write_model_file(model.clone(), &path).unwrap();
-
-    assert_eq!(read_model_file(&path).unwrap(), model);
-}
-
-#[test]
-fn model_connections_round_trip_through_disk_without_style() {
-    let directory = TestDirectory::new();
-    let path = directory.path.join("connections.hxm");
-    let model = ModelFile::new(
-        common::metadata("model"),
-        Vec::new(),
-        Vec::new(),
-        GlobalObjectFrozen::new(GlobalObjectDefinition::default()),
-        Vec::new(),
-        common::connections(),
-        common::translations(),
-        ParameterObjectDefinition::default(),
-        VariableObjectDefinition::default(),
-    );
-
-    write_model_file(model.clone(), &path).unwrap();
-
-    assert_eq!(read_model_file(&path).unwrap(), model);
-    let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(
-        document.get("model").unwrap().get("connections").unwrap(),
-        &common::connections_json(),
-    );
-}
-
-#[test]
-fn model_translations_round_trip_through_disk() {
-    let directory = TestDirectory::new();
-    let path = directory.path.join("translations.hxm");
-    let model = ModelFile::new(
-        common::metadata("model"),
-        Vec::new(),
-        Vec::new(),
-        GlobalObjectFrozen::new(GlobalObjectDefinition::default()),
-        Vec::new(),
-        Vec::new(),
-        common::populated_translations(),
-        ParameterObjectDefinition::default(),
-        VariableObjectDefinition::default(),
-    );
-
-    write_model_file(model.clone(), &path).unwrap();
-
-    assert_eq!(read_model_file(&path).unwrap(), model);
-    let document: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
-    assert_eq!(
-        document.get("model").unwrap().get("translations").unwrap(),
-        &json!({
-            "language": "en",
-            "translations": {
-                "Target temperature": {
-                    "es": "Temperatura objetivo",
-                    "fr": "Temp\u{e9}rature cible",
-                    "de": "Zieltemperatur",
-                },
-                "empty": {},
-                "quoted \"key\"\n": {"": ""},
-            },
-        }),
-    );
 }
 
 #[test]

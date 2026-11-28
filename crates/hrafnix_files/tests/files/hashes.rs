@@ -4,11 +4,11 @@
 
 use super::common::{self, TestDirectory};
 
-use crate::formats::component::{read_component_file, write_component_file};
-use crate::formats::model::{read_model_file, write_model_file};
 use camino::Utf8Path;
 use hrafnix_datastore::definition::ItemDefinitionType;
 use hrafnix_datastore::frozen::ItemFrozen;
+use hrafnix_files::formats::component::{read_component_file, write_component_file};
+use hrafnix_files::formats::model::{read_model_file, write_model_file};
 use hrafnix_shareable_string::{ShareableString, SharedStringStore};
 use serde_json::{Value, json};
 use std::fs;
@@ -96,15 +96,15 @@ fn assert_interned(value: &ShareableString, store: &SharedStringStore) {
 
 /// Checks the string-bearing sections shared by both document types.
 fn assert_interned_sections(
-    foreground: &[crate::data::decoration_foreground::ForegroundDecoration],
-    background: &[crate::data::decoration_background::BackgroundDecoration],
-    components: &[crate::data::component_instance::ComponentInstance],
-    connections: &[crate::data::connection::Connection],
-    translations: &crate::data::translations::TranslationsFile,
+    foreground: &[hrafnix_files::data::decoration_foreground::ForegroundDecoration],
+    background: &[hrafnix_files::data::decoration_background::BackgroundDecoration],
+    components: &[hrafnix_files::data::component_instance::ComponentInstance],
+    connections: &[hrafnix_files::data::connection::Connection],
+    translations: &hrafnix_files::data::translations::TranslationsFile,
     store: &SharedStringStore,
 ) {
-    use crate::data::decoration_foreground::ForegroundDecorationKind;
-    use crate::data::source::ComponentSource;
+    use hrafnix_files::data::decoration_foreground::ForegroundDecorationKind;
+    use hrafnix_files::data::source::ComponentSource;
 
     for decoration in foreground {
         assert_interned(decoration.id(), store);
@@ -205,9 +205,9 @@ fn laundering_recursively_interns_strings_and_preserves_file_data() {
                 file.variable_definition().clone(),
             )
         } else {
-            let package = crate::data::source::PackageReference::new(
+            let package = hrafnix_files::data::source::PackageReference::new(
                 ShareableString::new("sensors"),
-                crate::data::source::PackageVersion::new(1, 2, 3),
+                hrafnix_files::data::source::PackageVersion::new(1, 2, 3),
             );
             let original = read_component_file(&path, Some(package)).unwrap();
             let mut file = original.clone();
@@ -225,7 +225,7 @@ fn laundering_recursively_interns_strings_and_preserves_file_data() {
                 file.translations(),
                 &store,
             );
-            let crate::data::source::ComponentSource::File {
+            let hrafnix_files::data::source::ComponentSource::File {
                 package: Some(package),
                 ..
             } = file.source()
@@ -494,9 +494,9 @@ fn component_file_hash_includes_loaded_provenance() {
     let without_package = read_component_file(&first, None).unwrap();
     let with_package = read_component_file(
         &first,
-        Some(crate::data::source::PackageReference::new(
+        Some(hrafnix_files::data::source::PackageReference::new(
             "package".into(),
-            crate::data::source::PackageVersion::new(1, 0, 0),
+            hrafnix_files::data::source::PackageVersion::new(1, 0, 0),
         )),
     )
     .unwrap();
