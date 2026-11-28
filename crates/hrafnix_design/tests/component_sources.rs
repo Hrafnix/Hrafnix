@@ -11,12 +11,12 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use hrafnix_common::port::PortType;
 use hrafnix_datastore::definition::{
-    ChoiceDefinition, ChoiceItemDefinition, IntegerConstraint, IntegerDefinition,
+    ChoiceDefinition, ChoiceItemDefinition, IntegerConstraint, IntegerDefinition, NumberDefinition,
     ParameterObjectDefinition, ParameterObjectDefinitionBuilder, StringDefinition,
     VariableObjectDefinition, VariableObjectDefinitionBuilder,
 };
 use hrafnix_datastore::editable::ItemEditable;
-use hrafnix_datastore::frozen::ItemFrozen;
+use hrafnix_datastore::frozen::{ItemFrozen, ParameterObjectFrozen};
 use hrafnix_design::built_in_component::BuiltInComponent;
 use hrafnix_design::project::Project;
 use hrafnix_design::types::{
@@ -24,6 +24,9 @@ use hrafnix_design::types::{
     PackageReference, PackageVersion, Port, PortLocation, Position, Rotation,
 };
 use hrafnix_design::user_component::UserComponent;
+use hrafnix_expression_engine::prelude::{
+    ArgumentCount, ComputedItem, FunctionDefinition, ParameterObjectInputData,
+};
 use hrafnix_files::formats::component::write_component_file;
 use hrafnix_files::formats::model::read_model_file;
 use hrafnix_keys::{
@@ -131,6 +134,251 @@ fn assert_error(project: &Project, error: &Message, key: &str) {
         assert!(!translated.as_str().contains("%{"));
         for value in error.translate_data().message_params().values() {
             assert!(translated.as_str().contains(value.as_str()));
+        }
+    }
+}
+
+#[test]
+fn bundled_gain_resolves_without_registration_and_retains_static_metadata() {
+    let project = Project::open_project(Utf8Path::new("unused"));
+    let source = ComponentSource::Builtin {
+        name: "gain".into(),
+        version: 1,
+    };
+    let resolved = project
+        .resolve_component_source(&source, Utf8Path::new(""))
+        .unwrap();
+    let descriptor = resolved.built_in().unwrap();
+    let definition = descriptor.registration().unwrap().definition();
+    assert_eq!(resolved.source(), &source);
+    assert!(resolved.file().is_none());
+    assert_eq!(resolved.metadata().display_name().as_str(), "Gain");
+    assert_eq!(
+        resolved.parameter_definition(),
+        &definition.parameters().into_definition(),
+    );
+    assert_eq!(
+        resolved.variable_definition(),
+        &definition.variables().into_definition(),
+    );
+    let gui = resolved.gui_metadata();
+    assert_eq!(gui.dimensions(), Dimension::new(32, 32));
+    assert_eq!(gui.rotation(), Rotation::Degrees0);
+    assert_eq!(gui.icon(), Utf8Path::new(""));
+    assert_eq!(gui.ports().len(), 2);
+    assert_eq!(gui.ports()[0].id().as_str(), "input");
+    assert_eq!(gui.ports()[0].port_type(), PortType::Input);
+    assert_eq!(gui.ports()[0].location(), PortLocation::new(0, 16));
+    assert_eq!(gui.ports()[1].id().as_str(), "output");
+    assert_eq!(gui.ports()[1].port_type(), PortType::Output);
+    assert_eq!(gui.ports()[1].location(), PortLocation::new(32, 16));
+    assert!(definition.icon().svg_image().contains("<svg"));
+    assert!(definition.ports()[0].required());
+    assert!(!definition.ports()[1].required());
+    assert!(std::ptr::eq(
+        descriptor.name().as_str().as_ptr(),
+        project.shared_string_store().get("gain").as_str().as_ptr(),
+    ));
+
+    for version in [0, 2, u32::from(u16::MAX) + 1, u32::MAX] {
+        let error = project
+            .resolve_component_source(
+                &ComponentSource::Builtin {
+                    name: "gain".into(),
+                    version,
+                },
+                Utf8Path::new(""),
+            )
+            .unwrap_err();
+        assert_error(&project, &error, "design_builtin_not_found");
+    }
+}
+
+#[test]
+fn local_overrides_replace_bundled_versions_without_inheriting_factories() {
+    let test = TestProject::new();
+    let source = ComponentSource::Builtin {
+        name: "gain".into(),
+        version: 1,
+    };
+    let original = test
+        .project
+        .resolve_component_source(&source, Utf8Path::new(""))
+        .unwrap();
+    let replacement = BuiltInComponent::new(
+        "gain",
+        1,
+        Metadata::new("Local gain", "", "", 0, 0),
+        gui(80, Rotation::Degrees0),
+        ParameterObjectDefinition::default(),
+        VariableObjectDefinition::default(),
+    );
+    let previous = test.project.clone().register_built_in(replacement).unwrap();
+    assert!(previous.registration().is_some());
+    test.project.reload().unwrap();
+    let updated = test
+        .project
+        .reload_component_source(&source, Utf8Path::new(""))
+        .unwrap();
+    assert_eq!(updated.metadata().display_name().as_str(), "Local gain");
+    assert_eq!(updated.gui_metadata().dimensions().width(), 80);
+    assert!(updated.built_in().unwrap().registration().is_none());
+    assert_eq!(original.metadata().display_name().as_str(), "Gain");
+    assert_eq!(original.gui_metadata().dimensions().width(), 32);
+    assert!(original.built_in().unwrap().registration().is_some());
+
+    let other_project = Project::open_project(Utf8Path::new("unused"));
+    assert_eq!(
+        other_project
+            .resolve_component_source(&source, Utf8Path::new(""))
+            .unwrap()
+            .metadata()
+            .display_name()
+            .as_str(),
+        "Gain",
+    );
+
+    let high_version = BuiltInComponent::new(
+        "gain",
+        u32::MAX,
+        Metadata::new("Local version", "", "", 0, 0),
+        gui(40, Rotation::Degrees0),
+        ParameterObjectDefinition::default(),
+        VariableObjectDefinition::default(),
+    );
+    assert!(test.project.register_built_in(high_version).is_none());
+    assert_eq!(
+        test.project
+            .resolve_component_source(
+                &ComponentSource::Builtin {
+                    name: "gain".into(),
+                    version: u32::MAX
+                },
+                Utf8Path::new(""),
+            )
+            .unwrap()
+            .built_in()
+            .unwrap()
+            .version(),
+        u32::MAX,
+    );
+}
+
+#[test]
+fn bundled_gain_snapshots_round_trip_and_resolve_after_reopening() {
+    let test = TestProject::new();
+    let source = ComponentSource::Builtin {
+        name: "gain".into(),
+        version: 1,
+    };
+    let resolved = test
+        .project
+        .resolve_component_source(&source, Utf8Path::new(""))
+        .unwrap();
+    let model = test
+        .project
+        .create_model("gain.hxm", Metadata::new("Gain model", "", "", 0, 0));
+    let id: ComponentKey = component_key!("amplifier").into();
+    let instance = resolved.instantiate(
+        test.project.shared_string_store(),
+        id.clone(),
+        Position::new(7, 8),
+    );
+    let mut gui = instance.gui_metadata();
+    gui.set_rotation(Rotation::Degrees90);
+    instance.set_gui_metadata(gui);
+    assert!(model.add_component(instance));
+    model.save().unwrap();
+    let stored = read_model_file(&model.file_path()).unwrap();
+    assert_eq!(
+        stored.components()[0].source(),
+        &hrafnix_files::data::source::ComponentSource::Builtin {
+            name: "gain".into(),
+            version: 1,
+        }
+    );
+    assert_eq!(
+        stored.components()[0].gui_metadata().icon(),
+        Utf8Path::new("")
+    );
+    let reopen = Project::load_project(&test.root).unwrap();
+    let model = reopen.open_model("gain.hxm").unwrap();
+    let instance = model.component(&id).unwrap();
+    assert_eq!(instance.source(), source);
+    assert_eq!(instance.position(), Position::new(7, 8));
+    assert_eq!(instance.gui_metadata().rotation(), Rotation::Degrees90);
+    assert!(!model.is_component_interface_stale(&id).unwrap());
+    assert!(!model.refresh_component(&id).unwrap().changed());
+    assert_eq!(instance.gui_metadata().rotation(), Rotation::Degrees90);
+    let definition = model.resolve_component(&id).unwrap();
+    assert!(definition.built_in().unwrap().registration().is_some());
+    let runtime = definition
+        .built_in()
+        .unwrap()
+        .registration()
+        .unwrap()
+        .instantiate()
+        .unwrap();
+    let computed = runtime
+        .engine()
+        .evaluate_parameters(&ParameterObjectInputData::new(&instance.parameters()))
+        .unwrap();
+    assert_eq!(computed.get("p_gain"), Some(&ComputedItem::Float(1.0)));
+}
+
+#[test]
+fn resolved_gain_factory_evaluates_custom_expressions_and_isolates_engines() {
+    let project = Project::open_project(Utf8Path::new("unused"));
+    let resolved = project
+        .resolve_component_source(
+            &ComponentSource::Builtin {
+                name: "gain".into(),
+                version: 1,
+            },
+            Utf8Path::new(""),
+        )
+        .unwrap();
+    let registration = resolved.built_in().unwrap().registration().unwrap();
+    let mut first = registration.instantiate().unwrap();
+    let second = registration.instantiate().unwrap();
+    assert!(!std::ptr::eq(first.engine(), second.engine()));
+    first
+        .engine_mut()
+        .register_function(FunctionDefinition::new(
+            store_key!("project_only"),
+            "Local function",
+            ArgumentCount::Exact { count: 0 },
+            |_| Ok(ComputedItem::Float(1.0)),
+        ))
+        .unwrap();
+    assert!(first.engine().functions().get("project_only").is_some());
+    assert!(second.engine().functions().get("project_only").is_none());
+    let inputs = |expression: &str| {
+        ParameterObjectInputData::new(&ParameterObjectFrozen::new(
+            ParameterObjectDefinitionBuilder::new()
+                .with(
+                    parameter_key!("p_result"),
+                    NumberDefinition::new_with_default("Result", expression),
+                )
+                .finish(),
+        ))
+    };
+    let computed = first
+        .engine()
+        .evaluate_parameters(&inputs("gain(3.0, 2.0)"))
+        .unwrap();
+    assert_eq!(computed.get("p_result"), Some(&ComputedItem::Float(6.0)));
+    let errors = second
+        .engine()
+        .evaluate_parameters(&inputs("gain(true, 2.0)"))
+        .unwrap_err();
+    assert_eq!(errors.len(), 1);
+    for error in &errors {
+        for language in ["en", "zh", "de", "es", "fr", "ja", "ko"] {
+            let translated = error
+                .translated_message(project.translation_map(), language)
+                .unwrap();
+            assert!(!translated.as_str().contains("%{"));
         }
     }
 }

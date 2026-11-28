@@ -9,8 +9,13 @@
 //!
 //! Component sources resolve explicitly through [`project::Project`]. Loose
 //! relative file sources use the containing file's directory; packaged relative
-//! sources use registered package roots. Built-ins require an exact registered
-//! name and version. Resolution preserves stored provenance and does not recurse.
+//! sources use registered package roots. Built-ins use the bundled registry by
+//! exact name and version, with project-local descriptors taking precedence.
+//! Registry-backed descriptors expose static definitions, embedded SVGs, and
+//! isolated runtime factories through [`built_in_component::BuiltInComponent::registration`].
+//! Saved GUI snapshots keep an empty icon path for registry-provided SVGs;
+//! registry-only port metadata remains in the static definition.
+//! Resolution preserves stored provenance and does not recurse.
 //! Interface refresh rereads file sources, keeps placed position and rotation,
 //! and merges compatible parameter values into the latest definitions. Added,
 //! removed, and reset parameters are reported; connections are not rewritten.

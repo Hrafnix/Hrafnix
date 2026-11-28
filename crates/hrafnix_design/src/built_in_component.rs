@@ -1,5 +1,8 @@
 use crate::component_instance::ComponentInstance;
-use crate::types::{ComponentSource, GuiMetadata, Metadata, Position};
+use crate::types::{
+    ComponentSource, Dimension, GuiMetadata, Metadata, Port, PortLocation, Position, Rotation,
+};
+use hrafnix_built_in_registry::BuiltInComponentRegistration;
 use hrafnix_datastore::definition::{ParameterObjectDefinition, VariableObjectDefinition};
 use hrafnix_datastore::frozen::ParameterObjectFrozen;
 use hrafnix_keys::ComponentKey;
@@ -24,6 +27,8 @@ pub struct BuiltInComponent {
     parameter_definition: ParameterObjectDefinition,
     /// Variable definitions exposed by this component.
     variable_definition: VariableObjectDefinition,
+    /// Static definition and runtime factory, absent for project-local descriptors.
+    registration: Option<&'static BuiltInComponentRegistration>,
 }
 
 impl BuiltInComponent {
@@ -44,7 +49,53 @@ impl BuiltInComponent {
             gui_metadata,
             parameter_definition,
             variable_definition,
+            registration: None,
         }
+    }
+
+    /// Creates a design descriptor from a bundled registry registration.
+    ///
+    /// Embedded SVGs stay in the registry; GUI snapshots use an empty icon path.
+    /// Registry-only port details and runtime factories remain available through
+    /// [`Self::registration`], without changing the saved file schema.
+    #[must_use]
+    pub fn from_registration(registration: &'static BuiltInComponentRegistration) -> Self {
+        let definition = registration.definition();
+        let icon = definition.icon();
+        let ports = definition
+            .ports()
+            .iter()
+            .map(|port| {
+                Port::new(
+                    port.id().into(),
+                    port.kind().port_type(),
+                    PortLocation::new(u16::from(port.canvas_x()), u16::from(port.canvas_y())),
+                )
+            })
+            .collect();
+        Self {
+            name: definition.id().as_str().into(),
+            version: u32::from(definition.version()),
+            metadata: Metadata::new(definition.display_name(), "", "", 0, 0),
+            gui_metadata: GuiMetadata::new(
+                Dimension::new(u16::from(icon.width()), u16::from(icon.height())),
+                Rotation::Degrees0,
+                "".into(),
+                ports,
+            ),
+            parameter_definition: definition.parameters().into_definition(),
+            variable_definition: definition.variables().into_definition(),
+            registration: Some(registration),
+        }
+    }
+
+    /// Returns the static definition and isolated runtime factory, when registry-backed.
+    ///
+    /// Project-local overrides created with [`Self::new`] return `None` rather than
+    /// inheriting behavior or embedded icons from the replaced registry definition.
+    #[must_use]
+    pub const fn registration(&self) -> Option<&'static BuiltInComponentRegistration> {
+        self.registration
     }
 
     /// Returns the built-in component name.

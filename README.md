@@ -9,10 +9,10 @@ Hrafnix is an experimental Rust simulation engine.
 
 ## What's in here
 
-It's a Cargo workspace split into eleven crates:
+It's a Cargo workspace:
 
 - `hrafnix` – the command-line application.
-- `hrafnix_common` – shared utilities, such as floating-point helpers, used across the workspace.
+- `hrafnix_common` – shared utilities and component primitives, including floating-point helpers, port types and kinds, and quarter-turn rotations.
 - `hrafnix_shareable_string` – interned, thread-safe strings and translation maps.
 - `hrafnix_keys` – strongly typed identifiers for stores, components, globals, parameters, variables, ports, and units.
 - `hrafnix_message` – messages, object paths, and source spans used for diagnostics.
@@ -22,6 +22,28 @@ It's a Cargo workspace split into eleven crates:
 - `hrafnix_translation` – the application's built-in English translation catalog.
 - `hrafnix_files` – project, model, and component files.
 - `hrafnix_built_in_registry` – registry of the application's built-in components.
+- `hrafnix_design` – editable projects, models, components, and source resolution.
+
+## Built-in components
+
+The built-in registry supplies exact-version definitions, compile-time datastore
+schemas, embedded SVG icons, and factories with isolated expression engines.
+Its generated tables expose all registrations (`COMPONENTS`), the latest version
+of each identifier (`LATEST`), and ascending available versions (`VERSIONS`).
+Version 1 of `gain` provides the `p_gain` parameter and input/output signal ports.
+
+Projects make bundled built-ins available automatically. Project-local
+`register_built_in` descriptors override an exact identifier and version without
+changing previously resolved snapshots. Saved instances retain their explicit
+version; resolution never substitutes the latest version.
+
+Registry-backed design descriptors expose their registration through
+`BuiltInComponent::registration()`. Use its static definition for embedded SVGs,
+port names, physical kinds, orientations, and required flags, or call
+`registration.instantiate()` for runtime behavior. Saved GUI snapshots retain
+dimensions and integer port locations but use an empty icon path for embedded
+SVGs; the file schema is unchanged. Project-local overrides do not inherit a
+registry factory or icon.
 
 ## Status
 

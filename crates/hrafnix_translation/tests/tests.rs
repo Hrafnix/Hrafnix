@@ -6,7 +6,10 @@ use std::collections::{BTreeSet, HashMap};
 
 const LANGUAGES: [&str; 7] = ["en", "zh", "de", "es", "fr", "ja", "ko"];
 
-const TRANSLATION_KEYS: [&str; 193] = [
+const TRANSLATION_KEYS: [&str; 196] = [
+    "built_in_registry_factory_definition_mismatch",
+    "built_in_registry_function_name_conflict",
+    "built_in_registry_gain_requires_two_numbers",
     "design_builtin_not_found",
     "design_package_not_registered",
     "design_component_not_found",

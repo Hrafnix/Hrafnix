@@ -16,12 +16,16 @@ parking_lot = { workspace = true }
 rustc-hash = { workspace = true }
 
 hrafnix_common = { workspace = true }
+hrafnix_built_in_registry = { workspace = true }
 hrafnix_datastore = { workspace = true }
 hrafnix_files = { workspace = true }
 hrafnix_keys = { workspace = true }
 hrafnix_message = { workspace = true }
 hrafnix_shareable_string = { workspace = true }
 hrafnix_translation = { workspace = true }
+
+[dev-dependencies]
+hrafnix_expression_engine = { workspace = true }
 
 [lints]
 workspace = true

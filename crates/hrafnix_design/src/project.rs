@@ -6,6 +6,7 @@ use crate::model::Model;
 use crate::types::{ComponentSource, GuiMetadata, Metadata, PackageReference, Position};
 use crate::user_component::UserComponent;
 use camino::{Utf8Path, Utf8PathBuf};
+use hrafnix_built_in_registry::registry;
 use hrafnix_files::builder::project_file;
 use hrafnix_files::data::project::ProjectFile;
 use hrafnix_files::formats::project::{create_project_file, read_project_file, write_project_file};
@@ -277,6 +278,17 @@ impl Project {
             name: shared_string_store.get(""),
             version: shared_string_store.get(""),
         };
+        let built_in_components = registry::COMPONENTS
+            .values()
+            .map(|registration| {
+                let mut component = BuiltInComponent::from_registration(registration);
+                component.launder(&shared_string_store);
+                (
+                    (component.name().clone(), component.version()),
+                    Arc::new(component),
+                )
+            })
+            .collect();
 
         Self {
             data: ProjectData {
@@ -285,7 +297,7 @@ impl Project {
                 translation_map,
                 file_cache,
                 metadata: Arc::new(Mutex::new(metadata)),
-                built_in_components: Arc::new(RwLock::new(FxHashMap::default())),
+                built_in_components: Arc::new(RwLock::new(built_in_components)),
                 package_roots: Arc::new(RwLock::new(FxHashMap::default())),
             },
         }
@@ -441,7 +453,8 @@ impl Project {
     /// Registers or replaces a built-in descriptor for its exact name and version.
     ///
     /// Returns the previous descriptor, if any. Existing resolved snapshots remain
-    /// immutable; subsequent resolution sees the replacement. Strings are interned
+    /// immutable; subsequent resolution sees the replacement. Bundled registry
+    /// definitions are available by default and may be overridden. Strings are interned
     /// in this project's store, and registration is shared by cloned project handles.
     #[must_use]
     pub fn register_built_in(
