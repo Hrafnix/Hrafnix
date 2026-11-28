@@ -2,19 +2,15 @@ use crate::common::deserialize::RootObject;
 use crate::common::error::{json_error, json_serialization_error};
 use crate::common::file::{read_file_to_string, write_string_to_file};
 use crate::component::data::ComponentFile;
-use crate::component::reader::versions::ComponentReader;
-use crate::component::writer::ComponentWriter;
-use crate::component_instance::writer::ensure_unique_component_ids;
+use crate::scheme::reader::component::ComponentReader;
+use crate::scheme::writer::component::ComponentWriter;
+use crate::scheme::writer::component_instance::ensure_unique_component_ids;
 use crate::source::data::{ComponentSource, PackageReference};
 use camino::Utf8Path;
 use hrafnix_message::message::Message;
 
 /// In-memory component file data.
 pub mod data;
-/// Versioned component file deserialization.
-pub(crate) mod reader;
-/// Component file serialization.
-pub(crate) mod writer;
 
 /// Reads a component file from disk with optional package provenance.
 ///

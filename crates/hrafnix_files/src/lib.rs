@@ -72,6 +72,10 @@
 //! their strings recursively in place, preserving values, ordering, paths, and hashes.
 //!
 //! The public read and write functions live in [`model`] and [`component`].
+//! JSON readers and writers live under [`scheme`], with version-1 readers grouped
+//! in [`scheme::reader::v1`] and current-format writers in [`scheme::writer`].
+//! File-version dispatch lives in [`scheme::reader`]; in-memory data stays
+//! in each domain's `data` module.
 //! Writers consume the file data and atomically replace the destination with
 //! pretty-printed JSON, without a final newline. Reads and writes are limited to
 //! 256 MiB.
@@ -111,20 +115,10 @@ pub mod component;
 pub mod component_instance;
 /// Connections between component ports and their drawing paths.
 pub mod connection;
-/// Shared datastore definition codecs used by parameter and variable files.
-mod datastore;
 /// Shapes drawn behind model and component contents.
 pub mod decoration_background;
 /// Text and images drawn in front of model and component contents.
 pub mod decoration_foreground;
-/// Ordered parameter-definition codecs.
-pub mod definition_parameter;
-/// Ordered variable-definition codecs.
-pub mod definition_variable;
-/// Frozen global-value codecs.
-pub mod frozen_global;
-/// Frozen parameter-value codecs.
-pub mod frozen_parameter;
 /// Geometry and styling values shared by graphical elements.
 pub mod graphics;
 /// Metadata shared by model and component files.
@@ -133,6 +127,8 @@ pub mod metadata_general;
 pub mod metadata_gui;
 /// Simulation model definitions.
 pub mod model;
+/// Versioned JSON schemas for model and component files.
+pub mod scheme;
 /// Component source references and package provenance.
 pub mod source;
 /// Source languages and translated text shared by model and component files.

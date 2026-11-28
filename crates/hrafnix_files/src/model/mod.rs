@@ -1,19 +1,15 @@
 use crate::common::deserialize::RootObject;
 use crate::common::error::{json_error, json_serialization_error};
 use crate::common::file::{read_file_to_string, write_string_to_file};
-use crate::component_instance::writer::ensure_unique_component_ids;
 use crate::model::data::ModelFile;
-use crate::model::reader::versions::ModelReader;
-use crate::model::writer::ModelWriter;
+use crate::scheme::reader::model::ModelReader;
+use crate::scheme::writer::component_instance::ensure_unique_component_ids;
+use crate::scheme::writer::model::ModelWriter;
 use camino::Utf8Path;
 use hrafnix_message::message::Message;
 
 /// In-memory model file data.
 pub mod data;
-/// Versioned model file deserialization.
-pub(crate) mod reader;
-/// Model file serialization.
-pub(crate) mod writer;
 
 /// Reads a model file from disk.
 ///
